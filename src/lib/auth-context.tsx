@@ -12,11 +12,7 @@ interface Ctx {
 const AuthContext = createContext<Ctx | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [state, setState] = useState<AuthState | null>(null);
-
-  useEffect(() => {
-    setState(loadAuth());
-  }, []);
+  const [state, setState] = useState<AuthState | null>(() => loadAuth());
 
   const login = useCallback(async (username: string, password: string) => {
     try {
