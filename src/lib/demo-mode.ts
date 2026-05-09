@@ -86,7 +86,7 @@ export function demoHandle(path: string, init: RequestInit = {}): unknown {
   // /tests
   if (path === "/tests" && method === "GET") return store.tests.filter(t => t.active);
   if (path === "/tests" && method === "POST") {
-    const t: DemoTest = { id: uid(), name: body.name, rate: Number(body.rate) || 0, outsourced: !!body.outsourced, outsourcedLab: body.outsourcedLab ?? null, active: true };
+    const t: DemoTest = { id: uid(), name: body.name, rate: String(Number(body.rate) || 0), outsourced: !!body.outsourced, outsourcedLab: body.outsourcedLab ?? null, active: true };
     store.tests.push(t); return t;
   }
 
@@ -97,13 +97,22 @@ export function demoHandle(path: string, init: RequestInit = {}): unknown {
     store.users.push(u); return u;
   }
 
+  // /patients/search?q=...
+  if (path.startsWith("/patients/search") && method === "GET") {
+    const url = new URL("http://x" + path);
+    const q = (url.searchParams.get("q") || "").toLowerCase();
+    return store.patients
+      .filter(p => p.name.toLowerCase().includes(q) || p.mobile.includes(q) || String(p.dailySerial) === q)
+      .sort((a, b) => b.entryDate.localeCompare(a.entryDate) || b.dailySerial - a.dailySerial);
+  }
+
   // /patients?date=YYYY-MM-DD
   if (path.startsWith("/patients") && method === "GET") {
     const url = new URL("http://x" + path);
     const date = url.searchParams.get("date") || today;
     const q = (url.searchParams.get("q") || "").toLowerCase();
-    let rows = store.patients.filter(p => p.date === date || !url.searchParams.get("date"));
-    if (q) rows = rows.filter(p => p.fullName.toLowerCase().includes(q) || (p.phone || "").includes(q));
+    let rows = store.patients.filter(p => p.entryDate === date || !url.searchParams.get("date"));
+    if (q) rows = rows.filter(p => p.name.toLowerCase().includes(q) || p.mobile.includes(q));
     return rows.sort((a, b) => a.dailySerial - b.dailySerial);
   }
   if (path === "/patients" && method === "POST") {
