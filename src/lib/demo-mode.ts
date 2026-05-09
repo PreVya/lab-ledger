@@ -119,18 +119,23 @@ export function demoHandle(path: string, init: RequestInit = {}): unknown {
     store.serial += 1;
     const tests = (body.testIds as string[] || []).map(id => {
       const t = store.tests.find(x => x.id === id)!;
-      return { id: uid(), testId: id, testName: t?.name || "?", rate: t?.rate || 0 };
+      return { id: uid(), testId: id, rateAtEntry: t?.rate || "0", test: t };
     });
-    const total = body.totalAmount ?? tests.reduce((s, t) => s + t.rate, 0);
+    const total = tests.reduce((s, t) => s + Number(t.rateAtEntry), 0);
     const discount = Number(body.discount) || 0;
+    const advanceCash = Number(body.advanceCash) || 0;
+    const advanceUpi = Number(body.advanceUpi) || 0;
+    const balanceCash = Number(body.balanceCash) || 0;
+    const balanceUpi = Number(body.balanceUpi) || 0;
+    const net = Math.max(0, total - discount);
     const p: DemoPatient = {
-      id: uid(), dailySerial: store.serial, date: today,
-      fullName: body.fullName, age: body.age ?? null, sex: body.sex ?? null,
-      phone: body.phone ?? null, referredBy: body.referredBy ?? null, notes: body.notes ?? null,
-      totalAmount: total, discount, netAmount: total - discount,
-      advanceCash: +body.advanceCash || 0, advanceUpi: +body.advanceUpi || 0, advanceCard: +body.advanceCard || 0, advanceCheque: +body.advanceCheque || 0,
-      balanceCash: +body.balanceCash || 0, balanceUpi: +body.balanceUpi || 0, balanceCard: +body.balanceCard || 0, balanceCheque: +body.balanceCheque || 0,
-      outsourcedPaid: +body.outsourcedPaid || 0,
+      id: uid(), dailySerial: store.serial, entryDate: today,
+      name: body.name, mobile: body.mobile, age: Number(body.age) || 0, sex: body.sex ?? "M",
+      referredDoctor: body.referredDoctor ?? null, notes: body.notes ?? null,
+      total: String(total), discount: String(discount), net: String(net),
+      advanceCash: String(advanceCash), advanceUpi: String(advanceUpi), advancePaidOn: body.advancePaidOn ?? null,
+      balance: String(net - advanceCash - advanceUpi - balanceCash - balanceUpi),
+      balanceCash: String(balanceCash), balanceUpi: String(balanceUpi), balancePaidOn: body.balancePaidOn ?? null,
       tests,
     };
     store.patients.push(p);
@@ -141,12 +146,7 @@ export function demoHandle(path: string, init: RequestInit = {}): unknown {
   if (path.startsWith("/ledger")) {
     const url = new URL("http://x" + path.replace("/today", ""));
     const date = url.searchParams.get("date") || today;
-    const dayPatients = store.patients.filter(p => p.date === date);
-    const collected = dayPatients.reduce((s, p) => s + sumPatient(p).collected, 0);
-    const expenses = store.expenses.filter(e => e.date === date).reduce((s, e) => s + e.amount, 0);
-    const opening = 0;
-    const net = collected - expenses;
-    return { date, openingBalance: opening, totalCollected: collected, totalExpenses: expenses, netForDay: net, closingBalance: opening + net };
+    return todayResponse(date);
   }
 
   // /expenses
@@ -156,7 +156,7 @@ export function demoHandle(path: string, init: RequestInit = {}): unknown {
     return store.expenses.filter(e => e.date === date);
   }
   if (path === "/expenses" && method === "POST") {
-    const e: DemoExpense = { id: uid(), date: today, description: body.description, amount: Number(body.amount) || 0, createdAt: new Date().toISOString() };
+    const e: DemoExpense = { id: uid(), date: today, description: body.description, amount: String(Number(body.amount) || 0), mode: body.mode ?? "cash", createdAt: new Date().toISOString() };
     store.expenses.push(e); return e;
   }
 
