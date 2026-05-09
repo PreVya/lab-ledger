@@ -4,18 +4,36 @@ import * as bcrypt from 'bcrypt';
 const prisma = new PrismaClient();
 
 async function main() {
-  const adminUsername = 'admin';
-  const existing = await prisma.user.findUnique({ where: { username: adminUsername } });
-  if (!existing) {
-    await prisma.user.create({
-      data: {
-        username: adminUsername,
-        passwordHash: await bcrypt.hash('admin123', 10),
-        fullName: 'System Admin',
-        role: Role.admin,
-      },
-    });
-    console.log('Created default admin: admin / admin123');
+  const users: Array<{ username: string; password: string; fullName: string; role: Role }> = [
+    { username: 'admin', password: 'admin', fullName: 'System Admin', role: Role.admin },
+    { username: 'prer', password: 'prer', fullName: 'Prer', role: Role.receptionist },
+    { username: 'gaya', password: 'gaya', fullName: 'Gaya', role: Role.technician },
+  ];
+
+  for (const u of users) {
+    const existing = await prisma.user.findUnique({ where: { username: u.username } });
+    if (existing) {
+      await prisma.user.update({
+        where: { username: u.username },
+        data: {
+          passwordHash: await bcrypt.hash(u.password, 10),
+          fullName: u.fullName,
+          role: u.role,
+          active: true,
+        },
+      });
+      console.log(`Updated user: ${u.username} / ${u.password}`);
+    } else {
+      await prisma.user.create({
+        data: {
+          username: u.username,
+          passwordHash: await bcrypt.hash(u.password, 10),
+          fullName: u.fullName,
+          role: u.role,
+        },
+      });
+      console.log(`Created user: ${u.username} / ${u.password}`);
+    }
   }
 
   const samples = [

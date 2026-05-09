@@ -19,13 +19,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = useCallback(async (username: string, password: string) => {
-    const res = await api<AuthState>("/auth/login", {
-      method: "POST",
-      body: JSON.stringify({ username, password }),
-      auth: false,
-    });
-    saveAuth(res);
-    setState(res);
+    try {
+      const res = await api<AuthState>("/auth/login", {
+        method: "POST",
+        body: JSON.stringify({ username, password }),
+        auth: false,
+      });
+      saveAuth(res);
+      setState(res);
+      return;
+    } catch (err) {
+      const { tryDemoLogin } = await import("./demo-mode");
+      const demo = tryDemoLogin(username, password);
+      if (demo) {
+        saveAuth(demo);
+        setState(demo);
+        return;
+      }
+      throw err;
+    }
   }, []);
 
   const logout = useCallback(() => {
