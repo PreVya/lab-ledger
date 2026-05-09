@@ -52,11 +52,28 @@ export async function api<T = unknown>(
   const { auth = true, headers, ...rest } = init;
   const h = new Headers(headers);
   if (!h.has("Content-Type") && rest.body) h.set("Content-Type", "application/json");
-  if (auth) {
-    const a = loadAuth();
-    if (a) h.set("Authorization", `Bearer ${a.accessToken}`);
+  const a = auth ? loadAuth() : null;
+  if (a) h.set("Authorization", `Bearer ${a.accessToken}`);
+
+  // Demo-mode short-circuit: if signed in with a demo token, serve from in-memory store.
+  const { isDemoToken, demoHandle } = await import("./demo-mode");
+  if (a && isDemoToken(a.accessToken)) {
+    const out = demoHandle(path, init);
+    if (out !== null) return out as T;
   }
-  const res = await fetch(`${API_BASE_URL}/api${path}`, { ...rest, headers: h });
+
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE_URL}/api${path}`, { ...rest, headers: h });
+  } catch (netErr) {
+    // Backend unreachable (e.g., previewing in Lovable without NestJS running).
+    // Fall back to demo data for any signed-in user so the UI is browsable.
+    if (a) {
+      const out = demoHandle(path, init);
+      if (out !== null) return out as T;
+    }
+    throw new ApiError(0, "Backend unreachable. Start NestJS at " + API_BASE_URL + " or sign in with a demo user (admin/admin, prer/prer, gaya/gaya).");
+  }
   const text = await res.text();
   const body = text ? safeJson(text) : null;
   if (!res.ok) {
