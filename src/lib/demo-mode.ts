@@ -115,31 +115,54 @@ export function demoHandle(path: string, init: RequestInit = {}): unknown {
     if (q) rows = rows.filter(p => p.name.toLowerCase().includes(q) || p.mobile.includes(q));
     return rows.sort((a, b) => a.dailySerial - b.dailySerial);
   }
-  if (path === "/patients" && method === "POST") {
-    store.serial += 1;
-    const tests = (body.testIds as string[] || []).map(id => {
+  function buildPatient(b: Record<string, unknown>, existing?: DemoPatient): DemoPatient {
+    const testIds = (b.testIds as string[]) || [];
+    const tests = testIds.map(id => {
       const t = store.tests.find(x => x.id === id)!;
       return { id: uid(), testId: id, rateAtEntry: t?.rate || "0", test: t };
     });
     const total = tests.reduce((s, t) => s + Number(t.rateAtEntry), 0);
-    const discount = Number(body.discount) || 0;
-    const advanceCash = Number(body.advanceCash) || 0;
-    const advanceUpi = Number(body.advanceUpi) || 0;
-    const balanceCash = Number(body.balanceCash) || 0;
-    const balanceUpi = Number(body.balanceUpi) || 0;
+    const discount = Number(b.discount) || 0;
+    const advanceCash = Number(b.advanceCash) || 0;
+    const advanceUpi = Number(b.advanceUpi) || 0;
+    const balanceCash = Number(b.balanceCash) || 0;
+    const balanceUpi = Number(b.balanceUpi) || 0;
     const net = Math.max(0, total - discount);
-    const p: DemoPatient = {
-      id: uid(), dailySerial: store.serial, entryDate: today,
-      name: body.name, mobile: body.mobile, age: Number(body.age) || 0, sex: body.sex ?? "M",
-      referredDoctor: body.referredDoctor ?? null, notes: body.notes ?? null,
+    const balance = net - advanceCash - advanceUpi - balanceCash - balanceUpi;
+    return {
+      id: existing?.id ?? uid(),
+      dailySerial: existing?.dailySerial ?? (++store.serial),
+      entryDate: existing?.entryDate ?? today,
+      name: String(b.name ?? ""), mobile: String(b.mobile ?? ""),
+      age: Number(b.age) || 0, sex: (b.sex as DemoPatient["sex"]) ?? "M",
+      referredDoctor: (b.referredDoctor as string) ?? null,
+      notes: (b.notes as string) ?? null,
       total: String(total), discount: String(discount), net: String(net),
-      advanceCash: String(advanceCash), advanceUpi: String(advanceUpi), advancePaidOn: body.advancePaidOn ?? null,
-      balance: String(net - advanceCash - advanceUpi - balanceCash - balanceUpi),
-      balanceCash: String(balanceCash), balanceUpi: String(balanceUpi), balancePaidOn: body.balancePaidOn ?? null,
+      advanceCash: String(advanceCash), advanceUpi: String(advanceUpi),
+      advancePaidOn: (b.advancePaidOn as string) ?? null,
+      balance: String(balance),
+      balanceCash: String(balanceCash), balanceUpi: String(balanceUpi),
+      balancePaidOn: (b.balancePaidOn as string) ?? null,
       tests,
     };
+  }
+
+  if (path === "/patients" && method === "POST") {
+    const p = buildPatient(body);
     store.patients.push(p);
     return p;
+  }
+  const patientIdMatch = path.match(/^\/patients\/([^/?]+)$/);
+  if (patientIdMatch && (method === "PUT" || method === "PATCH")) {
+    const id = patientIdMatch[1];
+    const idx = store.patients.findIndex(p => p.id === id);
+    if (idx === -1) return null;
+    const updated = buildPatient(body, store.patients[idx]);
+    store.patients[idx] = updated;
+    return updated;
+  }
+  if (patientIdMatch && method === "GET") {
+    return store.patients.find(p => p.id === patientIdMatch[1]) || null;
   }
 
   // /ledger/today or /ledger?date=
