@@ -114,3 +114,29 @@ model Expense {
 
   @@index([date])
 }
+
+enum PaymentKind {
+  advance
+  balance
+}
+
+/// Append-only audit log of payment events.
+/// Patient.advanceCash/advanceUpi/balanceCash/balanceUpi remain the source of truth
+/// for ledger math. Rows here record WHEN/HOW each payment was taken, for history & receipts.
+model Payment {
+  id         String      @id @default(uuid())
+  patientId  String
+  date       DateTime    @db.Date
+  kind       PaymentKind
+  mode       PaymentMode
+  amount     Decimal     @db.Decimal(10, 2)
+  notes      String?
+  createdAt  DateTime    @default(now())
+  createdById String?
+
+  patient    Patient     @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@index([patientId])
+  @@index([date])
+}
+
