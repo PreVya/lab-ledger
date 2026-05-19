@@ -76,6 +76,8 @@ model Patient {
   createdById     String?
 
   tests           PatientTest[]
+  payments        Payment[]
+
 
   @@unique([entryDate, dailySerial])
   @@index([mobile])
