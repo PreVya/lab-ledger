@@ -7,6 +7,8 @@ import { TestsModule } from './modules/tests/tests.module';
 import { PatientsModule } from './modules/patients/patients.module';
 import { LedgerModule } from './modules/ledger/ledger.module';
 import { ExpensesModule } from './modules/expenses/expenses.module';
+import { PaymentsModule } from './modules/payments/payments.module';
+
 
 @Module({
   imports: [
