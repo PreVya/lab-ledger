@@ -20,6 +20,7 @@ import { PaymentsModule } from './modules/payments/payments.module';
     PatientsModule,
     LedgerModule,
     ExpensesModule,
+    PaymentsModule,
   ],
 })
 export class AppModule {}
