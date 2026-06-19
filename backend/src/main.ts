@@ -1,18 +1,26 @@
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, Logger } from '@nestjs/common';
 import { AppModule } from './app.module';
+import { validateEnv } from './config/env.validation';
 
 async function bootstrap() {
+  const env = validateEnv();
+
   const app = await NestFactory.create(AppModule);
   app.setGlobalPrefix('api');
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
   app.enableCors({
-    origin: (process.env.CORS_ORIGIN ?? '').split(',').filter(Boolean),
+    origin: env.CORS_ORIGIN,
     credentials: true,
   });
-  await app.listen(process.env.PORT ?? 3000);
-  // eslint-disable-next-line no-console
-  console.log(`API on :${process.env.PORT ?? 3000}/api`);
+
+  await app.listen(env.PORT);
+  Logger.log(`API on :${env.PORT}/api`, 'Bootstrap');
 }
-bootstrap();
+
+bootstrap().catch((err) => {
+  // eslint-disable-next-line no-console
+  console.error('[bootstrap] Fatal error starting server:', err?.message ?? err);
+  process.exit(1);
+});
