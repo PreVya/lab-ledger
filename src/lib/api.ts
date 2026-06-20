@@ -63,18 +63,23 @@ export async function api<T = unknown>(
   }
 
   let res: Response;
+  const method = (rest.method ?? "GET").toUpperCase();
+  const label = `[perf] FE ${method} ${path}`;
+  const t0 = performance.now();
   try {
     res = await fetch(`${API_BASE_URL}/api${path}`, { ...rest, headers: h });
   } catch (netErr) {
-    // Backend unreachable (e.g., previewing in Lovable without NestJS running).
-    // Fall back to demo data for any signed-in user so the UI is browsable.
+    console.log(`${label} -> NETWORK ERROR in ${(performance.now() - t0).toFixed(0)}ms`);
     if (a) {
       const out = demoHandle(path, init);
       if (out !== null) return out as T;
     }
     throw new ApiError(0, "Backend unreachable. Start NestJS at " + API_BASE_URL + " or sign in with a demo user (admin/admin, prer/prer, gaya/gaya).");
   }
+  const tFetch = performance.now() - t0;
   const text = await res.text();
+  const tTotal = performance.now() - t0;
+  console.log(`${label} -> ${res.status} fetch=${tFetch.toFixed(0)}ms total=${tTotal.toFixed(0)}ms bytes=${text.length}`);
   const body = text ? safeJson(text) : null;
   if (!res.ok) {
     if (res.status === 401) clearAuth();
