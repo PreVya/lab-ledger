@@ -50,10 +50,13 @@ export class LedgerService {
     const expenses = expensesAgg._sum.amount ?? new Prisma.Decimal(0);
 
     const closing = new Prisma.Decimal(ledger.openingBalance).plus(collected).minus(expenses);
-    return this.prisma.dailyLedger.update({
+    const updated = await this.prisma.dailyLedger.update({
       where: { id: ledger.id },
       data: { closingBalance: closing },
     });
+    // eslint-disable-next-line no-console
+    console.log(`[perf] ledger.recompute(${date.toISOString().slice(0,10)}) ${Date.now() - __t0}ms`);
+    return updated;
   }
 
   async todaySummary(today: Date = dateOnly()) {
