@@ -48,13 +48,14 @@ export class PatientsService {
     const pay = this.computePayment(tests.map(t => Number(t.rate)), input);
 
     const patient = await this.prisma.$transaction(async (tx) => {
+      const __tTx = Date.now();
       const last = await tx.patient.findFirst({
         where: { entryDate: today },
         orderBy: { dailySerial: 'desc' },
         select: { dailySerial: true },
       });
       const dailySerial = (last?.dailySerial ?? 0) + 1;
-      return tx.patient.create({
+      const created = await tx.patient.create({
         data: {
           dailySerial,
           entryDate: today,
@@ -80,6 +81,8 @@ export class PatientsService {
         },
         include: { tests: { include: { test: true } } },
       });
+      console.log(`[perf] patients.create TX ${Date.now() - __tTx}ms`);
+      return created;
     });
 
     await this.ledger.recompute(today);
