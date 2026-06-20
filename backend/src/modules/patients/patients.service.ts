@@ -100,8 +100,9 @@ export class PatientsService {
     const pay = this.computePayment(tests.map(t => Number(t.rate)), input);
 
     const updated = await this.prisma.$transaction(async (tx) => {
+      const __tTx = Date.now();
       await tx.patientTest.deleteMany({ where: { patientId: id } });
-      return tx.patient.update({
+      const u = await tx.patient.update({
         where: { id },
         data: {
           name: input.name,
@@ -124,9 +125,13 @@ export class PatientsService {
         },
         include: { tests: { include: { test: true } } },
       });
+      console.log(`[perf] patients.update TX ${Date.now() - __tTx}ms`);
+      return u;
     });
 
+    const __tRecompute = Date.now();
     await this.ledger.recompute(existing.entryDate);
+    console.log(`[perf] patients.update ledger.recompute ${Date.now() - __tRecompute}ms`);
     return updated;
   }
 
