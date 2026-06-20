@@ -9,6 +9,7 @@ export class ExpensesService {
 
   async create(input: { description: string; amount: number; mode: PaymentMode }) {
     const today = dateOnly();
+    const __tDb = Date.now();
     const e = await this.prisma.expense.create({
       data: {
         date: today,
@@ -17,7 +18,10 @@ export class ExpensesService {
         mode: input.mode,
       },
     });
+    console.log(`[perf] expenses.create DB ${Date.now() - __tDb}ms`);
+    const __tRecompute = Date.now();
     await this.ledger.recompute(today);
+    console.log(`[perf] expenses.create ledger.recompute ${Date.now() - __tRecompute}ms`);
     return e;
   }
 

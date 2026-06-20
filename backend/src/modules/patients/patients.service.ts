@@ -48,13 +48,14 @@ export class PatientsService {
     const pay = this.computePayment(tests.map(t => Number(t.rate)), input);
 
     const patient = await this.prisma.$transaction(async (tx) => {
+      const __tTx = Date.now();
       const last = await tx.patient.findFirst({
         where: { entryDate: today },
         orderBy: { dailySerial: 'desc' },
         select: { dailySerial: true },
       });
       const dailySerial = (last?.dailySerial ?? 0) + 1;
-      return tx.patient.create({
+      const created = await tx.patient.create({
         data: {
           dailySerial,
           entryDate: today,
@@ -80,9 +81,13 @@ export class PatientsService {
         },
         include: { tests: { include: { test: true } } },
       });
+      console.log(`[perf] patients.create TX ${Date.now() - __tTx}ms`);
+      return created;
     });
 
+    const __tRecompute = Date.now();
     await this.ledger.recompute(today);
+    console.log(`[perf] patients.create ledger.recompute ${Date.now() - __tRecompute}ms`);
     return patient;
   }
 
@@ -95,8 +100,9 @@ export class PatientsService {
     const pay = this.computePayment(tests.map(t => Number(t.rate)), input);
 
     const updated = await this.prisma.$transaction(async (tx) => {
+      const __tTx = Date.now();
       await tx.patientTest.deleteMany({ where: { patientId: id } });
-      return tx.patient.update({
+      const u = await tx.patient.update({
         where: { id },
         data: {
           name: input.name,
@@ -119,9 +125,13 @@ export class PatientsService {
         },
         include: { tests: { include: { test: true } } },
       });
+      console.log(`[perf] patients.update TX ${Date.now() - __tTx}ms`);
+      return u;
     });
 
+    const __tRecompute = Date.now();
     await this.ledger.recompute(existing.entryDate);
+    console.log(`[perf] patients.update ledger.recompute ${Date.now() - __tRecompute}ms`);
     return updated;
   }
 

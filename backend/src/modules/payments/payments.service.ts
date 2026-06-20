@@ -46,6 +46,7 @@ export class PaymentsService {
     //   .minus(input.kind === 'balance' && input.mode === 'cash' ? newValue : patient.balanceCash)
     //   .minus(input.kind === 'balance' && input.mode === 'upi' ? newValue : patient.balanceUpi);
 
+    const __tDb = Date.now();
     const [, updated] = await this.prisma.$transaction([
       this.prisma.payment.create({
         data: {
@@ -67,8 +68,11 @@ export class PaymentsService {
         } as any,
       }),
     ]);
+    console.log(`[perf] payments.record DB ${Date.now() - __tDb}ms`);
 
+    const __tRecompute = Date.now();
     await this.ledger.recompute(patient.entryDate);
+    console.log(`[perf] payments.record ledger.recompute ${Date.now() - __tRecompute}ms`);
     return { patient: updated };
   }
 

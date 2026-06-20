@@ -27,6 +27,7 @@ export class LedgerService {
 
   /** Recompute & persist closing balance for a given date. */
   async recompute(date: Date = dateOnly()) {
+    const __t0 = Date.now();
     const ledger = await this.ensureToday(date);
     const dayStart = date;
     const dayEnd = new Date(date.getTime() + 24 * 3600 * 1000);
@@ -49,21 +50,30 @@ export class LedgerService {
     const expenses = expensesAgg._sum.amount ?? new Prisma.Decimal(0);
 
     const closing = new Prisma.Decimal(ledger.openingBalance).plus(collected).minus(expenses);
-    return this.prisma.dailyLedger.update({
+    const updated = await this.prisma.dailyLedger.update({
       where: { id: ledger.id },
       data: { closingBalance: closing },
     });
+    // eslint-disable-next-line no-console
+    console.log(`[perf] ledger.recompute(${date.toISOString().slice(0,10)}) ${Date.now() - __t0}ms`);
+    return updated;
   }
 
   async todaySummary(today: Date = dateOnly()) {
+    const __tAll = Date.now();
     const ledger = await this.ensureToday(today);
+    const __tRecompute = Date.now();
     const recomputed = await this.recompute(today);
+    const __tAfterRecompute = Date.now();
+    console.log(`[perf] todaySummary.recompute ${__tAfterRecompute - __tRecompute}ms`);
 
+    const __tPatients = Date.now();
     const patients = await this.prisma.patient.findMany({
       where: { entryDate: today },
       orderBy: { dailySerial: 'asc' },
       include: { tests: { include: { test: true } } },
     });
+    console.log(`[perf] todaySummary.patientsFindMany ${Date.now() - __tPatients}ms count=${patients.length}`);
 
     const totals = patients.reduce(
       (acc, p) => {
@@ -85,11 +95,14 @@ export class LedgerService {
       },
     );
 
+    const __tExp = Date.now();
     const expenses = await this.prisma.expense.findMany({
       where: { date: today },
       orderBy: { createdAt: 'asc' },
     });
+    console.log(`[perf] todaySummary.expensesFindMany ${Date.now() - __tExp}ms count=${expenses.length}`);
     const expenseTotal = expenses.reduce((s, e) => s.plus(e.amount), new Prisma.Decimal(0));
+    console.log(`[perf] todaySummary TOTAL ${Date.now() - __tAll}ms`);
 
     return {
       date: today,
