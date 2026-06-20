@@ -40,11 +40,11 @@ export class PaymentsService {
 
     const current = new Prisma.Decimal((patient as any)[field] ?? 0);
     const newValue = current.plus(amount);
-    const newBalance = new Prisma.Decimal(patient.net)
-      .minus(input.kind === 'advance' ? newValue : patient.advanceCash)
-      .minus(input.kind === 'advance' ? patient.advanceUpi : (input.mode === 'upi' && input.kind === 'advance' ? newValue : patient.advanceUpi))
-      .minus(input.kind === 'balance' && input.mode === 'cash' ? newValue : patient.balanceCash)
-      .minus(input.kind === 'balance' && input.mode === 'upi' ? newValue : patient.balanceUpi);
+    // const newBalance = new Prisma.Decimal(patient.net)
+    //   .minus(input.kind === 'advance' ? newValue : patient.advanceCash)
+    //   .minus(input.kind === 'advance' ? patient.advanceUpi : (input.mode === 'upi' && input.kind === 'advance' ? newValue : patient.advanceUpi))
+    //   .minus(input.kind === 'balance' && input.mode === 'cash' ? newValue : patient.balanceCash)
+    //   .minus(input.kind === 'balance' && input.mode === 'upi' ? newValue : patient.balanceUpi);
 
     const [, updated] = await this.prisma.$transaction([
       this.prisma.payment.create({
