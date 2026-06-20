@@ -27,6 +27,7 @@ export class LedgerService {
 
   /** Recompute & persist closing balance for a given date. */
   async recompute(date: Date = dateOnly()) {
+    const __t0 = Date.now();
     const ledger = await this.ensureToday(date);
     const dayStart = date;
     const dayEnd = new Date(date.getTime() + 24 * 3600 * 1000);
