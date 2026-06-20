@@ -60,14 +60,20 @@ export class LedgerService {
   }
 
   async todaySummary(today: Date = dateOnly()) {
+    const __tAll = Date.now();
     const ledger = await this.ensureToday(today);
+    const __tRecompute = Date.now();
     const recomputed = await this.recompute(today);
+    const __tAfterRecompute = Date.now();
+    console.log(`[perf] todaySummary.recompute ${__tAfterRecompute - __tRecompute}ms`);
 
+    const __tPatients = Date.now();
     const patients = await this.prisma.patient.findMany({
       where: { entryDate: today },
       orderBy: { dailySerial: 'asc' },
       include: { tests: { include: { test: true } } },
     });
+    console.log(`[perf] todaySummary.patientsFindMany ${Date.now() - __tPatients}ms count=${patients.length}`);
 
     const totals = patients.reduce(
       (acc, p) => {
