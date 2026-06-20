@@ -95,11 +95,14 @@ export class LedgerService {
       },
     );
 
+    const __tExp = Date.now();
     const expenses = await this.prisma.expense.findMany({
       where: { date: today },
       orderBy: { createdAt: 'asc' },
     });
+    console.log(`[perf] todaySummary.expensesFindMany ${Date.now() - __tExp}ms count=${expenses.length}`);
     const expenseTotal = expenses.reduce((s, e) => s.plus(e.amount), new Prisma.Decimal(0));
+    console.log(`[perf] todaySummary TOTAL ${Date.now() - __tAll}ms`);
 
     return {
       date: today,
