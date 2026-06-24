@@ -70,9 +70,9 @@ export class PaymentsService {
     ]);
     console.log(`[perf] payments.record DB ${Date.now() - __tDb}ms`);
 
-    const __tRecompute = Date.now();
-    await this.ledger.recompute(patient.entryDate);
-    console.log(`[perf] payments.record ledger.recompute ${Date.now() - __tRecompute}ms`);
+    void this.ledger
+      .recompute(patient.entryDate)
+      .catch((err) => console.error('[payments.record] background recompute failed', err));
     return { patient: updated };
   }
 
