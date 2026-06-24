@@ -110,7 +110,7 @@ export function PatientFormDialog({ open, onOpenChange, patient }: Props) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl">
         <DialogHeader>
-          <DialogTitle>{patient ? `Edit Patient #${patient.dailySerial}` : "New Patient Entry"}</DialogTitle>
+          <DialogTitle>{patient ? `Edit Patient #${patient.registerNumber ?? patient.dailySerial}${patient.financialYear ? ` · FY ${patient.financialYear}` : ""}` : "New Patient Entry"}</DialogTitle>
         </DialogHeader>
 
         <div className="grid grid-cols-12 gap-4">
