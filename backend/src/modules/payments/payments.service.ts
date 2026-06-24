@@ -130,7 +130,9 @@ export class PaymentsService {
           balance: this.recomputePatientBalance(patient, field as any, newValue),
         } as any,
       });
-      await this.ledger.recompute(patient.entryDate);
+      void this.ledger
+        .recompute(patient.entryDate)
+        .catch((err) => console.error('[payments.remove] background recompute failed', err));
     }
     return { ok: true };
   }
