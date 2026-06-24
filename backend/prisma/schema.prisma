@@ -54,6 +54,9 @@ model TestCatalog {
 model Patient {
   id              String        @id @default(uuid())
   dailySerial     Int
+  // Financial-year-wise continuous patient number (resets on 1 April).
+  financialYear   String        // e.g. "2026-27"
+  registerNumber  Int           // continuous within financialYear
   entryDate       DateTime      @db.Date
   name            String
   mobile          String
@@ -83,9 +86,11 @@ model Patient {
 
 
   @@unique([entryDate, dailySerial])
+  @@unique([financialYear, registerNumber])
   @@index([mobile])
   @@index([name])
   @@index([entryDate])
+  @@index([financialYear])
 }
 
 model PatientTest {

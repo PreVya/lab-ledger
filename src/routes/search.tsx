@@ -28,7 +28,8 @@ function SearchPage() {
           <thead className="bg-secondary text-xs uppercase text-muted-foreground">
             <tr>
               <th className="px-3 py-2 text-left">Date</th>
-              <th className="px-3 py-2 text-left">#</th>
+              <th className="px-3 py-2 text-left">Reg #</th>
+              <th className="px-3 py-2 text-left">FY</th>
               <th className="px-3 py-2 text-left">Name</th>
               <th className="px-3 py-2 text-left">Mobile</th>
               <th className="px-3 py-2 text-right">Net</th>
@@ -39,7 +40,8 @@ function SearchPage() {
             {data.map(p => (
               <tr key={p.id} onClick={() => setEditing(p)} className="cursor-pointer border-b hover:bg-secondary/40">
                 <td className="px-3 py-2">{new Date(p.entryDate).toLocaleDateString()}</td>
-                <td className="px-3 py-2 font-mono">{p.dailySerial}</td>
+                <td className="px-3 py-2 font-mono">{p.registerNumber ?? p.dailySerial}</td>
+                <td className="px-3 py-2 font-mono text-xs text-muted-foreground">{p.financialYear ?? "—"}</td>
                 <td className="px-3 py-2 font-medium">{p.name}</td>
                 <td className="px-3 py-2">{p.mobile}</td>
                 <td className="px-3 py-2 text-right tabular-nums">₹{Number(p.net).toFixed(2)}</td>
@@ -47,10 +49,10 @@ function SearchPage() {
               </tr>
             ))}
             {!isFetching && q && data.length === 0 && (
-              <tr><td colSpan={6} className="p-6 text-center text-muted-foreground">No matches.</td></tr>
+              <tr><td colSpan={7} className="p-6 text-center text-muted-foreground">No matches.</td></tr>
             )}
             {!q && (
-              <tr><td colSpan={6} className="p-6 text-center text-muted-foreground">Type to search.</td></tr>
+              <tr><td colSpan={7} className="p-6 text-center text-muted-foreground">Type to search.</td></tr>
             )}
           </tbody>
         </table>

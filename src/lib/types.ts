@@ -20,6 +20,8 @@ export interface PatientTest {
 export interface Patient {
   id: string;
   dailySerial: number;
+  registerNumber: number;
+  financialYear: string;
   entryDate: string;
   name: string;
   mobile: string;
