@@ -42,7 +42,7 @@ export class PatientsController {
   }
 
   @Get('search')
-  search(@Query('q') q: string) { return this.patients.search(q ?? ''); }
+  search(@Query('q') q: string, @Query('fy') fy?: string) { return this.patients.search(q ?? '', fy); }
 
   @Get(':id')
   get(@Param('id') id: string) { return this.patients.get(id); }
