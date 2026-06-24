@@ -2,16 +2,21 @@ import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tansta
 import { api } from "./api";
 import type { Expense, Patient, TestCatalog, TodayResponse, UpsertPatientInput } from "./types";
 
+/** Today's date as YYYY-MM-DD in UTC (matches backend dateOnly). */
+export function todayKey(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
 export const qk = {
-  today: ["today"] as const,
+  ledger: (date: string) => ["ledger", date] as const,
+  today: ["ledger", todayKey()] as const, // legacy alias; resolved at import time
   tests: ["tests"] as const,
-  search: (q: string) => ["search", q] as const,
+  search: (q: string, fy?: string) => ["search", q, fy ?? ""] as const,
   patient: (id: string) => ["patient", id] as const,
   users: ["users"] as const,
 };
 
-// --- Cache helpers: instantly patch the Today register so the UI updates
-// without waiting for the refetch round-trip. ---
+// --- Cache helpers ------------------------------------------------------
 
 function recomputeTotals(patients: Patient[], expenses: Expense[], openingBalance: string) {
   const total = patients.reduce((s, p) => s + Number(p.total), 0);
@@ -38,54 +43,64 @@ function recomputeTotals(patients: Patient[], expenses: Expense[], openingBalanc
   };
 }
 
-function patchToday(qc: QueryClient, mutator: (prev: TodayResponse) => TodayResponse) {
-  qc.setQueryData<TodayResponse>(qk.today, (prev) => (prev ? mutator(prev) : prev));
+function patchLedger(qc: QueryClient, date: string, mutator: (prev: TodayResponse) => TodayResponse) {
+  qc.setQueryData<TodayResponse>(qk.ledger(date), (prev) => (prev ? mutator(prev) : prev));
 }
 
-function upsertPatientInToday(qc: QueryClient, patient: Patient) {
-  patchToday(qc, (prev) => {
+function upsertPatient(qc: QueryClient, date: string, patient: Patient) {
+  patchLedger(qc, date, (prev) => {
     const idx = prev.patients.findIndex((p) => p.id === patient.id);
     const patients = idx === -1
-      ? [...prev.patients, patient].sort((a, b) => a.dailySerial - b.dailySerial)
+      ? [...prev.patients, patient].sort((a, b) => a.registerNumber - b.registerNumber)
       : prev.patients.map((p) => (p.id === patient.id ? patient : p));
     const { totals, closingBalance } = recomputeTotals(patients, prev.expenses, prev.ledger.openingBalance);
     return { ...prev, patients, totals, ledger: { ...prev.ledger, closingBalance } };
   });
 }
 
-function addExpenseToToday(qc: QueryClient, expense: Expense) {
-  patchToday(qc, (prev) => {
+function addExpense(qc: QueryClient, date: string, expense: Expense) {
+  patchLedger(qc, date, (prev) => {
     const expenses = [expense, ...prev.expenses.filter((e) => e.id !== expense.id)];
     const { totals, closingBalance } = recomputeTotals(prev.patients, expenses, prev.ledger.openingBalance);
     return { ...prev, expenses, totals, ledger: { ...prev.ledger, closingBalance } };
   });
 }
 
-function removeExpenseFromToday(qc: QueryClient, id: string) {
-  patchToday(qc, (prev) => {
+function removeExpense(qc: QueryClient, date: string, id: string) {
+  patchLedger(qc, date, (prev) => {
     const expenses = prev.expenses.filter((e) => e.id !== id);
     const { totals, closingBalance } = recomputeTotals(prev.patients, expenses, prev.ledger.openingBalance);
     return { ...prev, expenses, totals, ledger: { ...prev.ledger, closingBalance } };
   });
 }
 
-// --- Queries ---
+// --- Queries ------------------------------------------------------------
 
-export function useToday() {
+/** Generic ledger query for any date (YYYY-MM-DD). */
+export function useLedger(date: string) {
+  const isToday = date === todayKey();
   return useQuery({
-    queryKey: qk.today,
-    queryFn: () => api<TodayResponse>("/ledger/today"),
-    refetchOnWindowFocus: true,
+    queryKey: qk.ledger(date),
+    queryFn: () =>
+      api<TodayResponse>(isToday ? "/ledger/today" : `/ledger?date=${date}`),
+    refetchOnWindowFocus: isToday,
     refetchOnMount: "always",
-    staleTime: 0,
+    staleTime: isToday ? 0 : 30_000,
   });
+}
+
+/** Today-only convenience (back-compat). */
+export function useToday() {
+  return useLedger(todayKey());
 }
 
 export function useTests() {
   return useQuery({ queryKey: qk.tests, queryFn: () => api<TestCatalog[]>("/tests"), staleTime: 60_000 });
 }
 
-// --- Mutations: optimistic cache patch + invalidate as safety net ---
+// --- Mutations ----------------------------------------------------------
+// Patient mutations always affect today (entry date = today server-side).
+// Expense mutations are scoped to today as well.
 
 export function useCreatePatient() {
   const qc = useQueryClient();
@@ -93,8 +108,9 @@ export function useCreatePatient() {
     mutationFn: (input: UpsertPatientInput) =>
       api<Patient>("/patients", { method: "POST", body: JSON.stringify(input) }),
     onSuccess: (patient) => {
-      upsertPatientInToday(qc, patient);
-      qc.invalidateQueries({ queryKey: qk.today });
+      const date = patient.entryDate.slice(0, 10);
+      upsertPatient(qc, date, patient);
+      qc.invalidateQueries({ queryKey: qk.ledger(date) });
     },
   });
 }
@@ -105,18 +121,23 @@ export function useUpdatePatient(id: string) {
     mutationFn: (input: UpsertPatientInput) =>
       api<Patient>(`/patients/${id}`, { method: "PUT", body: JSON.stringify(input) }),
     onSuccess: (patient) => {
-      upsertPatientInToday(qc, patient);
+      const date = patient.entryDate.slice(0, 10);
+      upsertPatient(qc, date, patient);
       qc.setQueryData(qk.patient(id), patient);
-      qc.invalidateQueries({ queryKey: qk.today });
+      qc.invalidateQueries({ queryKey: qk.ledger(date) });
       qc.invalidateQueries({ queryKey: qk.patient(id) });
     },
   });
 }
 
-export function useSearch(q: string) {
+export function useSearch(q: string, fy?: string) {
   return useQuery({
-    queryKey: qk.search(q),
-    queryFn: () => api<Patient[]>(`/patients/search?q=${encodeURIComponent(q)}`),
+    queryKey: qk.search(q, fy),
+    queryFn: () => {
+      const params = new URLSearchParams({ q });
+      if (fy) params.set("fy", fy);
+      return api<Patient[]>(`/patients/search?${params.toString()}`);
+    },
     enabled: q.trim().length > 0,
   });
 }
@@ -127,28 +148,28 @@ export function useCreateExpense() {
     mutationFn: (input: { description: string; amount: number; mode: "cash" | "upi" }) =>
       api<Expense>("/expenses", { method: "POST", body: JSON.stringify(input) }),
     onSuccess: (expense) => {
-      addExpenseToToday(qc, expense);
-      qc.invalidateQueries({ queryKey: qk.today });
+      const date = expense.date.slice(0, 10);
+      addExpense(qc, date, expense);
+      qc.invalidateQueries({ queryKey: qk.ledger(date) });
     },
   });
 }
 
-export function useDeleteExpense() {
+export function useDeleteExpense(date: string = todayKey()) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => api(`/expenses/${id}`, { method: "DELETE" }).then(() => id),
     onMutate: async (id: string) => {
-      // Optimistic remove — UI updates before the network roundtrip finishes.
-      await qc.cancelQueries({ queryKey: qk.today });
-      const prev = qc.getQueryData<TodayResponse>(qk.today);
-      removeExpenseFromToday(qc, id);
+      await qc.cancelQueries({ queryKey: qk.ledger(date) });
+      const prev = qc.getQueryData<TodayResponse>(qk.ledger(date));
+      removeExpense(qc, date, id);
       return { prev };
     },
     onError: (_e, _id, ctx) => {
-      if (ctx?.prev) qc.setQueryData(qk.today, ctx.prev);
+      if (ctx?.prev) qc.setQueryData(qk.ledger(date), ctx.prev);
     },
     onSettled: () => {
-      qc.invalidateQueries({ queryKey: qk.today });
+      qc.invalidateQueries({ queryKey: qk.ledger(date) });
     },
   });
 }
