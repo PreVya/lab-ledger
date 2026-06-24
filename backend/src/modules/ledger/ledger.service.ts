@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 
@@ -7,33 +7,43 @@ export function dateOnly(d: Date = new Date()): Date {
   return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
 }
 
+/** Parse a YYYY-MM-DD string into a UTC date-only Date. Throws on bad input. */
+export function parseDateOnly(s: string): Date {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) throw new BadRequestException('date must be YYYY-MM-DD');
+  const [y, m, d] = s.split('-').map(Number);
+  const date = new Date(Date.UTC(y, m - 1, d));
+  if (isNaN(date.getTime())) throw new BadRequestException('invalid date');
+  return date;
+}
+
 @Injectable()
 export class LedgerService {
   constructor(private prisma: PrismaService) {}
 
-  /** Ensures today's ledger row exists. Opening = previous closing or 0. */
-  async ensureToday(today: Date = dateOnly()) {
-    const existing = await this.prisma.dailyLedger.findUnique({ where: { date: today } });
+  /** Ensures a day's ledger row exists. Opening = previous closing or 0. */
+  async ensureDay(day: Date = dateOnly()) {
+    const existing = await this.prisma.dailyLedger.findUnique({ where: { date: day } });
     if (existing) return existing;
     const previous = await this.prisma.dailyLedger.findFirst({
-      where: { date: { lt: today } },
+      where: { date: { lt: day } },
       orderBy: { date: 'desc' },
     });
     const opening = previous ? new Prisma.Decimal(previous.closingBalance) : new Prisma.Decimal(0);
     return this.prisma.dailyLedger.create({
-      data: { date: today, openingBalance: opening, closingBalance: opening },
+      data: { date: day, openingBalance: opening, closingBalance: opening },
     });
   }
 
+  /** Back-compat alias. */
+  ensureToday(today: Date = dateOnly()) { return this.ensureDay(today); }
+
   /**
-   * Recompute & persist closing balance for a given date.
-   * Kept for backwards compatibility (e.g. delete flows). Prefer todaySummary
-   * which computes closing inline from already-fetched data.
+   * Recompute & persist closing balance for a given date. Fire-and-forget from mutations.
    */
   async recompute(date: Date = dateOnly()) {
     const __t0 = Date.now();
     const [ledger, patients, expensesAgg] = await Promise.all([
-      this.ensureToday(date),
+      this.ensureDay(date),
       this.prisma.patient.findMany({
         where: { entryDate: date },
         select: { advanceCash: true, advanceUpi: true, balanceCash: true, balanceUpi: true },
@@ -52,28 +62,26 @@ export class LedgerService {
       where: { id: ledger.id },
       data: { closingBalance: closing },
     });
-    console.log(`[perf] ledger.recompute(${date.toISOString().slice(0,10)}) ${Date.now() - __t0}ms`);
+    console.log(`[perf] ledger.recompute(${date.toISOString().slice(0, 10)}) ${Date.now() - __t0}ms`);
     return updated;
   }
 
   /**
-   * Optimized today summary:
-   * - Parallel fetch of ledger row, patients (with tests), expenses
-   * - Closing balance computed inline from in-memory data (no extra recompute round-trip)
-   * - Ledger closingBalance persisted in background (fire-and-forget) so it doesn't block the response
+   * Ledger summary for any date. Used by both /ledger/today and /ledger?date=...
+   * Parallel fetch + inline closing calc; persists closing in background.
    */
-  async todaySummary(today: Date = dateOnly()) {
+  async summary(day: Date = dateOnly()) {
     const __tAll = Date.now();
 
     const [ledger, patients, expenses] = await Promise.all([
-      this.ensureToday(today),
+      this.ensureDay(day),
       this.prisma.patient.findMany({
-        where: { entryDate: today },
-        orderBy: { dailySerial: 'asc' },
+        where: { entryDate: day },
+        orderBy: { registerNumber: 'asc' },
         include: { tests: { include: { test: true } } },
       }),
       this.prisma.expense.findMany({
-        where: { date: today },
+        where: { date: day },
         orderBy: { createdAt: 'asc' },
       }),
     ]);
@@ -101,22 +109,23 @@ export class LedgerService {
     const expenseTotal = expenses.reduce((s, e) => s.plus(e.amount), new Prisma.Decimal(0));
     const closing = new Prisma.Decimal(ledger.openingBalance).plus(totals.collected).minus(expenseTotal);
 
-    // Persist closing balance in the background — do NOT block the response.
     if (!new Prisma.Decimal(ledger.closingBalance).equals(closing)) {
       this.prisma.dailyLedger
         .update({ where: { id: ledger.id }, data: { closingBalance: closing } })
         .catch((err) => console.error('[ledger] background closingBalance update failed', err));
     }
 
-    console.log(`[perf] todaySummary TOTAL ${Date.now() - __tAll}ms`);
+    console.log(`[perf] ledger.summary(${day.toISOString().slice(0, 10)}) TOTAL ${Date.now() - __tAll}ms`);
 
     return {
-      date: today,
+      date: day,
       ledger: { ...ledger, closingBalance: closing },
       patients,
       totals: { ...totals, expenses: expenseTotal, count: patients.length },
       expenses,
     };
   }
-}
 
+  /** Back-compat alias. */
+  todaySummary(today: Date = dateOnly()) { return this.summary(today); }
+}
