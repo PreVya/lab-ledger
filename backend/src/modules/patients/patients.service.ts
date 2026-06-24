@@ -85,9 +85,10 @@ export class PatientsService {
       return created;
     });
 
-    const __tRecompute = Date.now();
-    await this.ledger.recompute(today);
-    console.log(`[perf] patients.create ledger.recompute ${Date.now() - __tRecompute}ms`);
+    // Fire-and-forget recompute — response returns immediately.
+    void this.ledger
+      .recompute(today)
+      .catch((err) => console.error('[patients.create] background recompute failed', err));
     return patient;
   }
 
