@@ -25,55 +25,58 @@ export class LedgerService {
     });
   }
 
-  /** Recompute & persist closing balance for a given date. */
+  /**
+   * Recompute & persist closing balance for a given date.
+   * Kept for backwards compatibility (e.g. delete flows). Prefer todaySummary
+   * which computes closing inline from already-fetched data.
+   */
   async recompute(date: Date = dateOnly()) {
     const __t0 = Date.now();
-    const ledger = await this.ensureToday(date);
-    const dayStart = date;
-    const dayEnd = new Date(date.getTime() + 24 * 3600 * 1000);
+    const [ledger, patients, expensesAgg] = await Promise.all([
+      this.ensureToday(date),
+      this.prisma.patient.findMany({
+        where: { entryDate: date },
+        select: { advanceCash: true, advanceUpi: true, balanceCash: true, balanceUpi: true },
+      }),
+      this.prisma.expense.aggregate({ where: { date }, _sum: { amount: true } }),
+    ]);
 
-    const patients = await this.prisma.patient.findMany({
-      where: { entryDate: dayStart },
-      select: { advanceCash: true, advanceUpi: true, balanceCash: true, balanceUpi: true },
-    });
-
-    const collected = patients.reduce((sum, p) => {
-      return sum
-        .plus(p.advanceCash).plus(p.advanceUpi)
-        .plus(p.balanceCash).plus(p.balanceUpi);
-    }, new Prisma.Decimal(0));
-
-    const expensesAgg = await this.prisma.expense.aggregate({
-      where: { date: dayStart },
-      _sum: { amount: true },
-    });
+    const collected = patients.reduce(
+      (sum, p) => sum.plus(p.advanceCash).plus(p.advanceUpi).plus(p.balanceCash).plus(p.balanceUpi),
+      new Prisma.Decimal(0),
+    );
     const expenses = expensesAgg._sum.amount ?? new Prisma.Decimal(0);
-
     const closing = new Prisma.Decimal(ledger.openingBalance).plus(collected).minus(expenses);
+
     const updated = await this.prisma.dailyLedger.update({
       where: { id: ledger.id },
       data: { closingBalance: closing },
     });
-    // eslint-disable-next-line no-console
     console.log(`[perf] ledger.recompute(${date.toISOString().slice(0,10)}) ${Date.now() - __t0}ms`);
     return updated;
   }
 
+  /**
+   * Optimized today summary:
+   * - Parallel fetch of ledger row, patients (with tests), expenses
+   * - Closing balance computed inline from in-memory data (no extra recompute round-trip)
+   * - Ledger closingBalance persisted in background (fire-and-forget) so it doesn't block the response
+   */
   async todaySummary(today: Date = dateOnly()) {
     const __tAll = Date.now();
-    const ledger = await this.ensureToday(today);
-    const __tRecompute = Date.now();
-    const recomputed = await this.recompute(today);
-    const __tAfterRecompute = Date.now();
-    console.log(`[perf] todaySummary.recompute ${__tAfterRecompute - __tRecompute}ms`);
 
-    const __tPatients = Date.now();
-    const patients = await this.prisma.patient.findMany({
-      where: { entryDate: today },
-      orderBy: { dailySerial: 'asc' },
-      include: { tests: { include: { test: true } } },
-    });
-    console.log(`[perf] todaySummary.patientsFindMany ${Date.now() - __tPatients}ms count=${patients.length}`);
+    const [ledger, patients, expenses] = await Promise.all([
+      this.ensureToday(today),
+      this.prisma.patient.findMany({
+        where: { entryDate: today },
+        orderBy: { dailySerial: 'asc' },
+        include: { tests: { include: { test: true } } },
+      }),
+      this.prisma.expense.findMany({
+        where: { date: today },
+        orderBy: { createdAt: 'asc' },
+      }),
+    ]);
 
     const totals = patients.reduce(
       (acc, p) => {
@@ -95,21 +98,25 @@ export class LedgerService {
       },
     );
 
-    const __tExp = Date.now();
-    const expenses = await this.prisma.expense.findMany({
-      where: { date: today },
-      orderBy: { createdAt: 'asc' },
-    });
-    console.log(`[perf] todaySummary.expensesFindMany ${Date.now() - __tExp}ms count=${expenses.length}`);
     const expenseTotal = expenses.reduce((s, e) => s.plus(e.amount), new Prisma.Decimal(0));
+    const closing = new Prisma.Decimal(ledger.openingBalance).plus(totals.collected).minus(expenseTotal);
+
+    // Persist closing balance in the background — do NOT block the response.
+    if (!new Prisma.Decimal(ledger.closingBalance).equals(closing)) {
+      this.prisma.dailyLedger
+        .update({ where: { id: ledger.id }, data: { closingBalance: closing } })
+        .catch((err) => console.error('[ledger] background closingBalance update failed', err));
+    }
+
     console.log(`[perf] todaySummary TOTAL ${Date.now() - __tAll}ms`);
 
     return {
       date: today,
-      ledger: recomputed,
+      ledger: { ...ledger, closingBalance: closing },
       patients,
       totals: { ...totals, expenses: expenseTotal, count: patients.length },
       expenses,
     };
   }
 }
+
