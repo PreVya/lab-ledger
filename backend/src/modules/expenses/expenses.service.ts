@@ -19,15 +19,19 @@ export class ExpensesService {
       },
     });
     console.log(`[perf] expenses.create DB ${Date.now() - __tDb}ms`);
-    const __tRecompute = Date.now();
-    await this.ledger.recompute(today);
-    console.log(`[perf] expenses.create ledger.recompute ${Date.now() - __tRecompute}ms`);
+    // Fire-and-forget: do not block the response on full ledger recompute.
+    // GET /ledger/today computes closing balance inline from fresh data.
+    void this.ledger
+      .recompute(today)
+      .catch((err) => console.error('[expenses.create] background recompute failed', err));
     return e;
   }
 
   async remove(id: string) {
     const e = await this.prisma.expense.delete({ where: { id } });
-    await this.ledger.recompute(e.date);
+    void this.ledger
+      .recompute(e.date)
+      .catch((err) => console.error('[expenses.remove] background recompute failed', err));
     return { ok: true };
   }
 }
