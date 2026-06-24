@@ -130,9 +130,9 @@ export class PatientsService {
       return u;
     });
 
-    const __tRecompute = Date.now();
-    await this.ledger.recompute(existing.entryDate);
-    console.log(`[perf] patients.update ledger.recompute ${Date.now() - __tRecompute}ms`);
+    void this.ledger
+      .recompute(existing.entryDate)
+      .catch((err) => console.error('[patients.update] background recompute failed', err));
     return updated;
   }
 
