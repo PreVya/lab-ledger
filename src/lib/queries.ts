@@ -2,9 +2,14 @@ import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tansta
 import { api } from "./api";
 import type { Expense, Patient, TestCatalog, TodayResponse, UpsertPatientInput } from "./types";
 
-/** Today's date as YYYY-MM-DD in UTC (matches backend dateOnly). */
+/**
+ * Today's IST (Asia/Kolkata) business date as YYYY-MM-DD.
+ * The lab operates in IST; using UTC would shift the "today" key for any
+ * activity between 00:00–05:30 IST. Matches backend ledger.dateOnly().
+ */
 export function todayKey(): string {
-  return new Date().toISOString().slice(0, 10);
+  const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
+  return new Date(Date.now() + IST_OFFSET_MS).toISOString().slice(0, 10);
 }
 
 export const qk = {
