@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma, Sex } from '@prisma/client';
+import { Prisma, Sex, PaymentKind, PaymentMode } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { dateOnly, LedgerService } from '../ledger/ledger.service';
 import { financialYearFor } from './fy';
@@ -21,6 +21,14 @@ export interface UpsertPatientInput {
   balancePaidOn?: string | null;
 }
 
+type Bucket = { kind: PaymentKind; mode: PaymentMode; field: 'advanceCash' | 'advanceUpi' | 'balanceCash' | 'balanceUpi' };
+const BUCKETS: Bucket[] = [
+  { kind: 'advance', mode: 'cash', field: 'advanceCash' },
+  { kind: 'advance', mode: 'upi',  field: 'advanceUpi'  },
+  { kind: 'balance', mode: 'cash', field: 'balanceCash' },
+  { kind: 'balance', mode: 'upi',  field: 'balanceUpi'  },
+];
+
 @Injectable()
 export class PatientsService {
   constructor(private prisma: PrismaService, private ledger: LedgerService) {}
@@ -33,8 +41,14 @@ export class PatientsService {
     const advanceUpi = Number(input.advanceUpi ?? 0);
     const balanceCash = Number(input.balanceCash ?? 0);
     const balanceUpi = Number(input.balanceUpi ?? 0);
+    // Formula preserved: balance = net - advanceCash - advanceUpi - balanceCash - balanceUpi
     const balance = net - advanceCash - advanceUpi - balanceCash - balanceUpi;
     return { total, discount, net, advanceCash, advanceUpi, balanceCash, balanceUpi, balance };
+  }
+
+  /** IST date-only for an optional ISO/YYYY-MM-DD string; falls back to provided default. */
+  private resolveDate(s: string | null | undefined, fallback: Date): Date {
+    return s ? dateOnly(new Date(s)) : fallback;
   }
 
   /**
@@ -69,10 +83,7 @@ export class PatientsService {
         });
       } catch (e) {
         lastErr = e;
-        if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
-          // unique collision (concurrent insert) — retry
-          continue;
-        }
+        if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') continue;
         throw e;
       }
     }
@@ -88,6 +99,9 @@ export class PatientsService {
     if (tests.length !== input.testIds.length) throw new BadRequestException('Invalid test selection');
     const pay = this.computePayment(tests.map((t) => Number(t.rate)), input);
 
+    const advanceDate = this.resolveDate(input.advancePaidOn, today);
+    const balanceDate = this.resolveDate(input.balancePaidOn, today);
+
     const __tTx = Date.now();
     const patient = await this.assignNumbersAndCreate(today, {
       name: input.name,
@@ -101,16 +115,42 @@ export class PatientsService {
       net: new Prisma.Decimal(pay.net),
       advanceCash: new Prisma.Decimal(pay.advanceCash),
       advanceUpi: new Prisma.Decimal(pay.advanceUpi),
-      advancePaidOn: input.advancePaidOn ? new Date(input.advancePaidOn) : null,
+      advancePaidOn: input.advancePaidOn ? new Date(input.advancePaidOn) : (pay.advanceCash + pay.advanceUpi > 0 ? today : null),
       balance: new Prisma.Decimal(pay.balance),
       balanceCash: new Prisma.Decimal(pay.balanceCash),
       balanceUpi: new Prisma.Decimal(pay.balanceUpi),
-      balancePaidOn: input.balancePaidOn ? new Date(input.balancePaidOn) : null,
+      balancePaidOn: input.balancePaidOn ? new Date(input.balancePaidOn) : (pay.balanceCash + pay.balanceUpi > 0 ? today : null),
       tests: { create: tests.map((t) => ({ testId: t.id, rateAtEntry: t.rate })) },
     });
     console.log(`[perf] patients.create TX ${Date.now() - __tTx}ms`);
 
-    void this.ledger.recompute(today).catch((err) => console.error('[patients.create] bg recompute failed', err));
+    // Mirror each non-zero bucket into the Payment audit log so date-wise
+    // ledger collection is consistent (sums Payment.date, not Patient.entryDate).
+    const paymentRows: Prisma.PaymentCreateManyInput[] = [];
+    for (const b of BUCKETS) {
+      const amount = (pay as any)[b.field] as number;
+      if (amount > 0) {
+        paymentRows.push({
+          patientId: patient.id,
+          date: b.kind === 'advance' ? advanceDate : balanceDate,
+          kind: b.kind,
+          mode: b.mode,
+          amount: new Prisma.Decimal(amount),
+        });
+      }
+    }
+    if (paymentRows.length) {
+      await this.prisma.payment.createMany({ data: paymentRows });
+    }
+
+    // Recompute every distinct payment date affected (today + any payment dates).
+    const distinctDates = new Set<string>([today.toISOString().slice(0, 10)]);
+    paymentRows.forEach((r) => distinctDates.add((r.date as Date).toISOString().slice(0, 10)));
+    for (const iso of distinctDates) {
+      void this.ledger
+        .recompute(new Date(iso))
+        .catch((err) => console.error('[patients.create] bg recompute failed', err));
+    }
     return patient;
   }
 
@@ -119,6 +159,10 @@ export class PatientsService {
     if (!existing) throw new NotFoundException();
     const tests = await this.prisma.testCatalog.findMany({ where: { id: { in: input.testIds } } });
     const pay = this.computePayment(tests.map((t) => Number(t.rate)), input);
+
+    const today = dateOnly();
+    const advanceDate = this.resolveDate(input.advancePaidOn, today);
+    const balanceDate = this.resolveDate(input.balancePaidOn, today);
 
     const updated = await this.prisma.$transaction(async (tx) => {
       const __tTx = Date.now();
@@ -137,11 +181,11 @@ export class PatientsService {
           net: new Prisma.Decimal(pay.net),
           advanceCash: new Prisma.Decimal(pay.advanceCash),
           advanceUpi: new Prisma.Decimal(pay.advanceUpi),
-          advancePaidOn: input.advancePaidOn ? new Date(input.advancePaidOn) : null,
+          advancePaidOn: input.advancePaidOn ? new Date(input.advancePaidOn) : existing.advancePaidOn,
           balance: new Prisma.Decimal(pay.balance),
           balanceCash: new Prisma.Decimal(pay.balanceCash),
           balanceUpi: new Prisma.Decimal(pay.balanceUpi),
-          balancePaidOn: input.balancePaidOn ? new Date(input.balancePaidOn) : null,
+          balancePaidOn: input.balancePaidOn ? new Date(input.balancePaidOn) : existing.balancePaidOn,
           tests: { create: tests.map((t) => ({ testId: t.id, rateAtEntry: t.rate })) },
         },
         include: { tests: { include: { test: true } } },
@@ -150,14 +194,54 @@ export class PatientsService {
       return u;
     });
 
-    void this.ledger.recompute(existing.entryDate).catch((err) => console.error('[patients.update] bg recompute failed', err));
+    // Reconcile Payment audit log with new bucket values. For each (kind,mode)
+    // compute delta vs existing Payment sum and write a single delta row.
+    // This preserves the full audit history (including rows from payments.record).
+    const affectedDates = new Set<string>([existing.entryDate.toISOString().slice(0, 10)]);
+    const existingByBucket = await this.prisma.payment.groupBy({
+      by: ['kind', 'mode'],
+      where: { patientId: id },
+      _sum: { amount: true },
+    });
+    const lookup = new Map<string, Prisma.Decimal>();
+    for (const r of existingByBucket) {
+      lookup.set(`${r.kind}:${r.mode}`, r._sum.amount ?? new Prisma.Decimal(0));
+    }
+
+    const deltaRows: Prisma.PaymentCreateManyInput[] = [];
+    for (const b of BUCKETS) {
+      const target = new Prisma.Decimal((pay as any)[b.field] as number);
+      const current = lookup.get(`${b.kind}:${b.mode}`) ?? new Prisma.Decimal(0);
+      const delta = target.minus(current);
+      if (!delta.isZero()) {
+        const d = b.kind === 'advance' ? advanceDate : balanceDate;
+        deltaRows.push({
+          patientId: id,
+          date: d,
+          kind: b.kind,
+          mode: b.mode,
+          amount: delta, // may be negative; reflects audit-log correction
+          notes: '[form-sync delta]',
+        });
+        affectedDates.add(d.toISOString().slice(0, 10));
+      }
+    }
+    if (deltaRows.length) {
+      await this.prisma.payment.createMany({ data: deltaRows });
+    }
+
+    for (const iso of affectedDates) {
+      void this.ledger
+        .recompute(new Date(iso))
+        .catch((err) => console.error('[patients.update] bg recompute failed', err));
+    }
     return updated;
   }
 
   get(id: string) {
     return this.prisma.patient.findUnique({
       where: { id },
-      include: { tests: { include: { test: true } } },
+      include: { tests: { include: { test: true } }, payments: { orderBy: { createdAt: 'asc' } } },
     });
   }
 
