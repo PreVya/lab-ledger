@@ -1,18 +1,21 @@
-import { Body, Controller, Get, Param, Post, Put, Query, UseGuards } from '@nestjs/common';
-import { Type } from 'class-transformer';
+import { BadRequestException, Body, Controller, Get, Param, Post, Put, Query, UseGuards } from '@nestjs/common';
 import {
-  ArrayMinSize, IsArray, IsEnum, IsInt, IsNumber, IsOptional, IsString, Min, MinLength,
+  ArrayMinSize, IsArray, IsEnum, IsIn, IsInt, IsNumber, IsOptional, IsString, Min, MinLength,
 } from 'class-validator';
 import { Role, Sex } from '@prisma/client';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { CurrentUser, JwtUser } from '../../common/decorators/current-user.decorator';
 import { PatientsService } from './patients.service';
 
 class UpsertPatientDto {
   @IsString() @MinLength(1) name!: string;
   @IsString() mobile!: string;
-  @IsInt() @Min(0) age!: number;
+  // Legacy single age (years) — still accepted for back-compat; ignored if ageValue is given.
+  @IsOptional() @IsInt() @Min(0) age?: number;
+  @IsOptional() @IsInt() @Min(0) ageValue?: number;
+  @IsOptional() @IsIn(['days', 'months', 'years']) ageUnit?: 'days' | 'months' | 'years';
   @IsEnum(Sex) sex!: Sex;
   @IsOptional() @IsString() referredDoctor?: string;
   @IsOptional() @IsString() notes?: string;
@@ -33,7 +36,10 @@ export class PatientsController {
 
   @Roles(Role.admin, Role.receptionist)
   @Post()
-  create(@Body() dto: UpsertPatientDto) { return this.patients.create(dto); }
+  create(@Body() dto: UpsertPatientDto, @CurrentUser() user: JwtUser) {
+    if (!user?.sub) throw new BadRequestException('Auth context missing');
+    return this.patients.create({ ...dto, createdById: user.sub });
+  }
 
   @Roles(Role.admin, Role.receptionist)
   @Put(':id')

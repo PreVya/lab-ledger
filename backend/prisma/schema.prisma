@@ -6,8 +6,6 @@ generator client {
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
-  // Optional: set DIRECT_URL when using a pooled connection (e.g. Supabase pgbouncer)
-  // so Prisma Migrate can open a direct session. Safe to leave unset for plain Postgres.
   directUrl = env("DIRECT_URL")
 }
 
@@ -27,6 +25,8 @@ enum Sex {
 enum PaymentMode {
   cash
   upi
+  card
+  other
 }
 
 model User {
@@ -42,30 +42,36 @@ model User {
 
 model TestCatalog {
   id              String       @id @default(uuid())
-  name            String       @unique
+  // Name is NOT globally unique anymore. Uniqueness is enforced via a
+  // functional index over (lower(trim(name)), coalesce(lower(trim(outsourcedLab)), 'INHOUSE'))
+  // created in migration phase_1_75_reception_book_alignment/migration.sql.
+  name            String
   rate            Decimal      @db.Decimal(10, 2)
   outsourced      Boolean      @default(false)
   outsourcedLab   String?
   active          Boolean      @default(true)
   createdAt       DateTime     @default(now())
   patientTests    PatientTest[]
+
+  @@index([name])
 }
 
 model Patient {
   id              String        @id @default(uuid())
   dailySerial     Int
-  // Financial-year-wise continuous patient number (resets on 1 April).
-  financialYear   String        // e.g. "2026-27"
-  registerNumber  Int           // continuous within financialYear
+  financialYear   String
+  registerNumber  Int
   entryDate       DateTime      @db.Date
   name            String
   mobile          String
+  // Legacy column kept for back-compat (in years). New code reads ageValue/ageUnit.
   age             Int
+  ageValue        Int?
+  ageUnit         String        @default("years")
   sex             Sex
   referredDoctor  String?
   notes           String?
 
-  // Payment — exact fields, do not change
   total           Decimal       @db.Decimal(10, 2) @default(0)
   discount        Decimal       @db.Decimal(10, 2) @default(0)
   net             Decimal       @db.Decimal(10, 2) @default(0)
@@ -83,7 +89,6 @@ model Patient {
 
   tests           PatientTest[]
   payments        Payment[]
-
 
   @@unique([entryDate, dailySerial])
   @@unique([financialYear, registerNumber])
@@ -105,6 +110,9 @@ model PatientTest {
 }
 
 model DailyLedger {
+  // openingBalance/closingBalance are CASH balances (post Phase 1.75).
+  // UPI/card collection is tracked separately via Payment rows and does not
+  // affect physical cash balance carried day-to-day.
   id              String   @id @default(uuid())
   date            DateTime @unique @db.Date
   openingBalance  Decimal  @db.Decimal(12, 2)
@@ -130,9 +138,6 @@ enum PaymentKind {
   balance
 }
 
-/// Append-only audit log of payment events.
-/// Patient.advanceCash/advanceUpi/balanceCash/balanceUpi remain the source of truth
-/// for ledger math. Rows here record WHEN/HOW each payment was taken, for history & receipts.
 model Payment {
   id         String      @id @default(uuid())
   patientId  String
@@ -148,5 +153,19 @@ model Payment {
 
   @@index([patientId])
   @@index([date])
+  @@index([kind, date])
 }
 
+/// Manual end-of-day cash taken away by the doctor/owner.
+/// Reduces closing cash balance; multiple per day allowed.
+model CashHandover {
+  id          String   @id @default(uuid())
+  date        DateTime @db.Date
+  amount      Decimal  @db.Decimal(10, 2)
+  notes       String?
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([date])
+}
