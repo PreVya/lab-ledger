@@ -4,26 +4,16 @@ import { PrismaService } from '../../prisma/prisma.service';
 
 /**
  * IST (Asia/Kolkata, UTC+5:30) business-date helpers.
- *
- * The lab runs on Indian Standard Time. All "date-only" columns
- * (Patient.entryDate, Expense.date, Payment.date, DailyLedger.date)
- * must represent the IST calendar day, NOT the UTC day. Otherwise the
- * register and ledger jump a day around midnight IST (= 18:30 UTC).
- *
- * We canonicalize an IST calendar day as a JS Date at UTC midnight whose
- * Y/M/D components equal the IST Y/M/D. Prisma's @db.Date then stores
- * exactly that calendar date. The frontend uses the same convention
- * (see src/lib/queries.ts -> todayKey()).
+ * See Phase 1.5 notes for rationale — all date-only columns store the IST
+ * calendar day as a UTC-midnight Date whose Y/M/D match IST Y/M/D.
  */
 const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
 
-/** Today's IST business date as a UTC-midnight Date matching the IST Y/M/D. */
 export function dateOnly(d: Date = new Date()): Date {
   const ist = new Date(d.getTime() + IST_OFFSET_MS);
   return new Date(Date.UTC(ist.getUTCFullYear(), ist.getUTCMonth(), ist.getUTCDate()));
 }
 
-/** Parse a YYYY-MM-DD string (an IST calendar date) into a UTC-midnight Date. */
 export function parseDateOnly(s: string): Date {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) throw new BadRequestException('date must be YYYY-MM-DD');
   const [y, m, d] = s.split('-').map(Number);
@@ -32,16 +22,20 @@ export function parseDateOnly(s: string): Date {
   return date;
 }
 
-/** Format an IST-canonical Date as YYYY-MM-DD. */
 export function formatDateOnly(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
+
+const ZERO = () => new Prisma.Decimal(0);
 
 @Injectable()
 export class LedgerService {
   constructor(private prisma: PrismaService) {}
 
-  /** Ensures a day's ledger row exists. Opening = previous closing or 0. */
+  /**
+   * Ensure DailyLedger row for given day. Opening = previous day's closing
+   * (cash-only since Phase 1.75) or 0 if no prior row.
+   */
   async ensureDay(day: Date = dateOnly()) {
     const existing = await this.prisma.dailyLedger.findUnique({ where: { date: day } });
     if (existing) return existing;
@@ -49,67 +43,57 @@ export class LedgerService {
       where: { date: { lt: day } },
       orderBy: { date: 'desc' },
     });
-    const opening = previous ? new Prisma.Decimal(previous.closingBalance) : new Prisma.Decimal(0);
+    const opening = previous ? new Prisma.Decimal(previous.closingBalance) : ZERO();
     return this.prisma.dailyLedger.create({
       data: { date: day, openingBalance: opening, closingBalance: opening },
     });
   }
 
-  /** Back-compat alias. */
   ensureToday(today: Date = dateOnly()) { return this.ensureDay(today); }
 
-  /**
-   * Recompute & persist closing balance for a given date. Fire-and-forget from mutations.
-   *
-   * Collection is summed from the Payment audit log by actual payment date,
-   * NOT from Patient buckets filtered by entryDate. A balance paid later
-   * is credited to that later date's ledger.
-   */
+  /** Recompute & persist closing CASH balance for the given date. */
   async recompute(date: Date = dateOnly()) {
     const __t0 = Date.now();
-    const [ledger, paymentsAgg, expensesAgg] = await Promise.all([
+    const [ledger, payments, expenses, handovers] = await Promise.all([
       this.ensureDay(date),
-      this.prisma.payment.aggregate({ where: { date }, _sum: { amount: true } }),
-      this.prisma.expense.aggregate({ where: { date }, _sum: { amount: true } }),
+      this.prisma.payment.findMany({ where: { date }, select: { amount: true, mode: true } }),
+      this.prisma.expense.findMany({ where: { date }, select: { amount: true, mode: true } }),
+      this.prisma.cashHandover.aggregate({ where: { date }, _sum: { amount: true } }),
     ]);
 
-    const collected = paymentsAgg._sum.amount ?? new Prisma.Decimal(0);
-    const expenses = expensesAgg._sum.amount ?? new Prisma.Decimal(0);
-    const closing = new Prisma.Decimal(ledger.openingBalance).plus(collected).minus(expenses);
+    const cashCollected = payments
+      .filter((p) => p.mode === 'cash')
+      .reduce((s, p) => s.plus(p.amount), ZERO());
+    const cashExpenses = expenses
+      .filter((e) => e.mode === 'cash')
+      .reduce((s, e) => s.plus(e.amount), ZERO());
+    const takenAway = handovers._sum.amount ?? ZERO();
+
+    const closingCash = new Prisma.Decimal(ledger.openingBalance)
+      .plus(cashCollected)
+      .minus(cashExpenses)
+      .minus(takenAway);
 
     const updated = await this.prisma.dailyLedger.update({
       where: { id: ledger.id },
-      data: { closingBalance: closing },
+      data: { closingBalance: closingCash },
     });
     console.log(`[perf] ledger.recompute(${formatDateOnly(date)}) ${Date.now() - __t0}ms`);
     return updated;
   }
 
-  /**
-   * Ledger summary for any date. Used by both /ledger/today and /ledger?date=...
-   *
-   * - patients[]: those whose entryDate == day (the day's register).
-   * - totals.total/discount/net/balance: derived from that day's patients (billing-side).
-   * - totals.collected: sum of Payment.amount where Payment.date == day
-   *   (payment-side; includes balance payments collected today from older patients).
-   * - expenses: that day's expenses.
-   * - payments: today's payment rows (with patient summary) for UI display.
-   */
+  /** Ledger summary for any date — drives Today Register UI. */
   async summary(day: Date = dateOnly()) {
     const __tAll = Date.now();
 
-    const [ledger, patients, expenses, paymentsAgg, paymentsToday] = await Promise.all([
+    const [ledger, patients, expenses, paymentsToday, handovers] = await Promise.all([
       this.ensureDay(day),
       this.prisma.patient.findMany({
         where: { entryDate: day },
         orderBy: { registerNumber: 'asc' },
         include: { tests: { include: { test: true } } },
       }),
-      this.prisma.expense.findMany({
-        where: { date: day },
-        orderBy: { createdAt: 'asc' },
-      }),
-      this.prisma.payment.aggregate({ where: { date: day }, _sum: { amount: true } }),
+      this.prisma.expense.findMany({ where: { date: day }, orderBy: { createdAt: 'asc' } }),
       this.prisma.payment.findMany({
         where: { date: day },
         orderBy: { createdAt: 'asc' },
@@ -117,16 +101,38 @@ export class LedgerService {
           patient: {
             select: {
               id: true, name: true, mobile: true,
-              registerNumber: true, dailySerial: true, entryDate: true,
+              registerNumber: true, dailySerial: true, entryDate: true, financialYear: true,
             },
           },
         },
       }),
+      this.prisma.cashHandover.findMany({ where: { date: day }, orderBy: { createdAt: 'asc' } }),
     ]);
 
-    const collected = paymentsAgg._sum.amount ?? new Prisma.Decimal(0);
+    // Collection split by mode (from Payment audit log, by payment date).
+    let cashCollected = ZERO(), upiCollected = ZERO(), cardCollected = ZERO(), otherCollected = ZERO();
+    for (const p of paymentsToday) {
+      const a = new Prisma.Decimal(p.amount);
+      if (p.mode === 'cash') cashCollected = cashCollected.plus(a);
+      else if (p.mode === 'upi') upiCollected = upiCollected.plus(a);
+      else if (p.mode === 'card') cardCollected = cardCollected.plus(a);
+      else otherCollected = otherCollected.plus(a);
+    }
+    const totalCollected = cashCollected.plus(upiCollected).plus(cardCollected).plus(otherCollected);
 
-    const totals = patients.reduce(
+    // Expense split by mode.
+    let cashExpenses = ZERO(), otherExpenses = ZERO();
+    for (const e of expenses) {
+      const a = new Prisma.Decimal(e.amount);
+      if (e.mode === 'cash') cashExpenses = cashExpenses.plus(a);
+      else otherExpenses = otherExpenses.plus(a);
+    }
+    const expenseTotal = cashExpenses.plus(otherExpenses);
+
+    const cashTakenAway = handovers.reduce((s, h) => s.plus(h.amount), ZERO());
+
+    // Billing-side totals from today's register (entryDate==day).
+    const billing = patients.reduce(
       (acc, p) => {
         acc.total = acc.total.plus(p.total);
         acc.discount = acc.discount.plus(p.discount);
@@ -134,21 +140,18 @@ export class LedgerService {
         acc.balance = acc.balance.plus(p.balance);
         return acc;
       },
-      {
-        total: new Prisma.Decimal(0),
-        discount: new Prisma.Decimal(0),
-        net: new Prisma.Decimal(0),
-        collected,
-        balance: new Prisma.Decimal(0),
-      },
+      { total: ZERO(), discount: ZERO(), net: ZERO(), balance: ZERO() },
     );
 
-    const expenseTotal = expenses.reduce((s, e) => s.plus(e.amount), new Prisma.Decimal(0));
-    const closing = new Prisma.Decimal(ledger.openingBalance).plus(collected).minus(expenseTotal);
+    const openingCashBalance = new Prisma.Decimal(ledger.openingBalance);
+    const closingCashBalance = openingCashBalance
+      .plus(cashCollected)
+      .minus(cashExpenses)
+      .minus(cashTakenAway);
 
-    if (!new Prisma.Decimal(ledger.closingBalance).equals(closing)) {
+    if (!new Prisma.Decimal(ledger.closingBalance).equals(closingCashBalance)) {
       this.prisma.dailyLedger
-        .update({ where: { id: ledger.id }, data: { closingBalance: closing } })
+        .update({ where: { id: ledger.id }, data: { closingBalance: closingCashBalance } })
         .catch((err) => console.error('[ledger] background closingBalance update failed', err));
     }
 
@@ -156,14 +159,27 @@ export class LedgerService {
 
     return {
       date: day,
-      ledger: { ...ledger, closingBalance: closing },
+      ledger: { ...ledger, openingBalance: openingCashBalance, closingBalance: closingCashBalance },
       patients,
-      totals: { ...totals, expenses: expenseTotal, count: patients.length },
+      totals: {
+        ...billing,
+        collected: totalCollected,
+        cashCollected,
+        upiCollected,
+        cardCollected,
+        otherCollected,
+        expenses: expenseTotal,
+        cashExpenses,
+        cashTakenAway,
+        openingCashBalance,
+        closingCashBalance,
+        count: patients.length,
+      },
       expenses,
       payments: paymentsToday,
+      cashHandovers: handovers,
     };
   }
 
-  /** Back-compat alias. */
   todaySummary(today: Date = dateOnly()) { return this.summary(today); }
 }

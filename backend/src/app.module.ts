@@ -8,7 +8,7 @@ import { PatientsModule } from './modules/patients/patients.module';
 import { LedgerModule } from './modules/ledger/ledger.module';
 import { ExpensesModule } from './modules/expenses/expenses.module';
 import { PaymentsModule } from './modules/payments/payments.module';
-
+import { CashHandoverModule } from './modules/cash-handover/cash-handover.module';
 
 @Module({
   imports: [
@@ -21,6 +21,7 @@ import { PaymentsModule } from './modules/payments/payments.module';
     LedgerModule,
     ExpensesModule,
     PaymentsModule,
+    CashHandoverModule,
   ],
 })
 export class AppModule {}

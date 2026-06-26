@@ -19,6 +19,5 @@ export class ExpensesController {
   constructor(private expenses: ExpensesService) {}
 
   @Post() create(@Body() dto: CreateExpenseDto) { return this.expenses.create(dto); }
-
   @Delete(':id') remove(@Param('id') id: string) { return this.expenses.remove(id); }
 }

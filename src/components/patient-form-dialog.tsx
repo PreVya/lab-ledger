@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useTests, useCreatePatient, useUpdatePatient } from "@/lib/queries";
-import type { Patient, Sex, UpsertPatientInput } from "@/lib/types";
+import type { AgeUnit, Patient, Sex, UpsertPatientInput } from "@/lib/types";
 import { Check, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -26,7 +26,8 @@ export function PatientFormDialog({ open, onOpenChange, patient }: Props) {
 
   const [name, setName] = useState("");
   const [mobile, setMobile] = useState("");
-  const [age, setAge] = useState("");
+  const [ageValue, setAgeValue] = useState("");
+  const [ageUnit, setAgeUnit] = useState<AgeUnit>("years");
   const [sex, setSex] = useState<Sex>("M");
   const [referredDoctor, setReferredDoctor] = useState("");
   const [notes, setNotes] = useState("");
@@ -46,7 +47,9 @@ export function PatientFormDialog({ open, onOpenChange, patient }: Props) {
   useEffect(() => {
     if (!open) return;
     if (patient) {
-      setName(patient.name); setMobile(patient.mobile); setAge(String(patient.age));
+      setName(patient.name); setMobile(patient.mobile);
+      setAgeValue(String(patient.ageValue ?? patient.age ?? ""));
+      setAgeUnit((patient.ageUnit ?? "years") as AgeUnit);
       setSex(patient.sex); setReferredDoctor(patient.referredDoctor ?? "");
       setNotes(patient.notes ?? "");
       setSelectedTests(patient.tests.map(t => t.testId));
@@ -55,7 +58,8 @@ export function PatientFormDialog({ open, onOpenChange, patient }: Props) {
       setBalanceCash(patient.balanceCash); setBalanceUpi(patient.balanceUpi);
       setBalancePaidOn(patient.balancePaidOn?.slice(0, 10) ?? "");
     } else {
-      setName(""); setMobile(""); setAge(""); setSex("M"); setReferredDoctor(""); setNotes("");
+      setName(""); setMobile(""); setAgeValue(""); setAgeUnit("years");
+      setSex("M"); setReferredDoctor(""); setNotes("");
       setSelectedTests([]); setDiscount(""); setAdvanceCash(""); setAdvanceUpi("");
       setAdvancePaidOn(""); setBalanceCash(""); setBalanceUpi(""); setBalancePaidOn("");
     }
@@ -73,7 +77,7 @@ export function PatientFormDialog({ open, onOpenChange, patient }: Props) {
 
   const filteredTests = useMemo(() => {
     const q = testFilter.toLowerCase();
-    return tests.filter(t => t.active && (!q || t.name.toLowerCase().includes(q)));
+    return tests.filter(t => t.active && (!q || t.name.toLowerCase().includes(q) || (t.outsourcedLab ?? "").toLowerCase().includes(q)));
   }, [tests, testFilter]);
 
   function toggleTest(id: string) {
@@ -81,12 +85,14 @@ export function PatientFormDialog({ open, onOpenChange, patient }: Props) {
   }
 
   async function handleSave() {
-    if (!name.trim() || !mobile.trim() || !age || !selectedTests.length) {
+    if (!name.trim() || !mobile.trim() || !ageValue || !selectedTests.length) {
       toast.error("Name, mobile, age, and at least one test are required");
       return;
     }
     const input: UpsertPatientInput = {
-      name: name.trim(), mobile: mobile.trim(), age: Number(age), sex,
+      name: name.trim(), mobile: mobile.trim(),
+      ageValue: Number(ageValue), ageUnit,
+      sex,
       referredDoctor: referredDoctor.trim() || undefined,
       notes: notes.trim() || undefined,
       testIds: selectedTests,
@@ -114,7 +120,6 @@ export function PatientFormDialog({ open, onOpenChange, patient }: Props) {
         </DialogHeader>
 
         <div className="grid grid-cols-12 gap-4">
-          {/* Left: patient + tests */}
           <div className="col-span-7 space-y-4">
             <div className="grid grid-cols-6 gap-3">
               <Field label="Name" className="col-span-3">
@@ -124,7 +129,17 @@ export function PatientFormDialog({ open, onOpenChange, patient }: Props) {
                 <Input value={mobile} onChange={e => setMobile(e.target.value)} inputMode="tel" />
               </Field>
               <Field label="Age" className="col-span-2">
-                <Input value={age} onChange={e => setAge(e.target.value.replace(/\D/g, ""))} inputMode="numeric" />
+                <div className="flex gap-1">
+                  <Input value={ageValue} onChange={e => setAgeValue(e.target.value.replace(/\D/g, ""))} inputMode="numeric" className="w-16" />
+                  <Select value={ageUnit} onValueChange={v => setAgeUnit(v as AgeUnit)}>
+                    <SelectTrigger className="flex-1"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="days">Days</SelectItem>
+                      <SelectItem value="months">Months</SelectItem>
+                      <SelectItem value="years">Years</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </Field>
               <Field label="Sex" className="col-span-2">
                 <Select value={sex} onValueChange={v => setSex(v as Sex)}>
@@ -147,16 +162,12 @@ export function PatientFormDialog({ open, onOpenChange, patient }: Props) {
             <div className="rounded-md border">
               <div className="flex items-center justify-between border-b bg-secondary/40 px-3 py-2">
                 <div className="text-sm font-medium">Tests ({selectedTests.length})</div>
-                <Input
-                  value={testFilter}
-                  onChange={e => setTestFilter(e.target.value)}
-                  placeholder="Filter tests..."
-                  className="h-7 w-48"
-                />
+                <Input value={testFilter} onChange={e => setTestFilter(e.target.value)} placeholder="Filter by name or lab..." className="h-7 w-56" />
               </div>
               <div className="max-h-64 overflow-auto">
                 {filteredTests.map(t => {
                   const sel = selectedTests.includes(t.id);
+                  const provider = t.outsourced ? (t.outsourcedLab || "Outsourced") : "In-house";
                   return (
                     <button
                       type="button"
@@ -171,8 +182,11 @@ export function PatientFormDialog({ open, onOpenChange, patient }: Props) {
                         <span className={cn("flex h-4 w-4 items-center justify-center rounded border", sel && "border-primary bg-primary text-primary-foreground")}>
                           {sel && <Check className="h-3 w-3" />}
                         </span>
-                        {t.name}
-                        {t.outsourced && <span className="rounded bg-amber-100 px-1 text-[10px] uppercase text-amber-800">Outsourced</span>}
+                        <span className="font-medium">{t.name}</span>
+                        <span className={cn(
+                          "rounded px-1.5 py-0.5 text-[10px] uppercase",
+                          t.outsourced ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800",
+                        )}>{provider}</span>
                       </span>
                       <span className="tabular-nums">₹{Number(t.rate).toFixed(2)}</span>
                     </button>
@@ -183,7 +197,6 @@ export function PatientFormDialog({ open, onOpenChange, patient }: Props) {
             </div>
           </div>
 
-          {/* Right: payment */}
           <div className="col-span-5 space-y-3 rounded-md border bg-secondary/30 p-4">
             <div className="text-sm font-semibold">Payment</div>
             <Row label="Total"><Money value={total} /></Row>

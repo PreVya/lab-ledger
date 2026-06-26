@@ -1,10 +1,12 @@
 export type Sex = "M" | "F" | "O";
-export type PaymentMode = "cash" | "upi";
+export type PaymentMode = "cash" | "upi" | "card" | "other";
+export type AgeUnit = "days" | "months" | "years";
+export type PaymentKind = "advance" | "balance";
 
 export interface TestCatalog {
   id: string;
   name: string;
-  rate: string; // Decimal serialized as string
+  rate: string;
   outsourced: boolean;
   outsourcedLab?: string | null;
   active: boolean;
@@ -25,10 +27,14 @@ export interface Patient {
   entryDate: string;
   name: string;
   mobile: string;
+  /** Legacy (years). Prefer ageValue + ageUnit for display. */
   age: number;
+  ageValue?: number | null;
+  ageUnit?: AgeUnit;
   sex: Sex;
   referredDoctor?: string | null;
   notes?: string | null;
+  createdById?: string | null;
   total: string;
   discount: string;
   net: string;
@@ -58,6 +64,35 @@ export interface Expense {
   mode: PaymentMode;
 }
 
+export interface CashHandover {
+  id: string;
+  date: string;
+  amount: string;
+  notes?: string | null;
+  createdById?: string | null;
+  createdAt: string;
+}
+
+export interface PaymentRow {
+  id: string;
+  patientId: string;
+  date: string;
+  kind: PaymentKind;
+  mode: PaymentMode;
+  amount: string;
+  notes?: string | null;
+  createdAt: string;
+  patient?: {
+    id: string;
+    name: string;
+    mobile: string;
+    registerNumber: number;
+    dailySerial: number;
+    entryDate: string;
+    financialYear: string;
+  };
+}
+
 export interface TodayResponse {
   date: string;
   ledger: DailyLedger;
@@ -67,17 +102,28 @@ export interface TodayResponse {
     discount: string;
     net: string;
     collected: string;
+    cashCollected: string;
+    upiCollected: string;
+    cardCollected: string;
+    otherCollected: string;
     balance: string;
     expenses: string;
+    cashExpenses: string;
+    cashTakenAway: string;
+    openingCashBalance: string;
+    closingCashBalance: string;
     count: number;
   };
   expenses: Expense[];
+  payments: PaymentRow[];
+  cashHandovers: CashHandover[];
 }
 
 export interface UpsertPatientInput {
   name: string;
   mobile: string;
-  age: number;
+  ageValue: number;
+  ageUnit: AgeUnit;
   sex: Sex;
   referredDoctor?: string;
   notes?: string;
@@ -89,4 +135,10 @@ export interface UpsertPatientInput {
   balanceCash?: number;
   balanceUpi?: number;
   balancePaidOn?: string | null;
+}
+
+export function formatAge(p: Pick<Patient, "age" | "ageValue" | "ageUnit">): string {
+  const val = p.ageValue ?? p.age ?? 0;
+  const unit = p.ageUnit ?? "years";
+  return `${val} ${unit}`;
 }
