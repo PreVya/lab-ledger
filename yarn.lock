@@ -633,25 +633,25 @@
     "@jridgewell/resolve-uri" "^3.1.0"
     "@jridgewell/sourcemap-codec" "^1.4.14"
 
-"@lovable.dev/vite-plugin-dev-server-bridge@^1.0.0":
+"@lovable.dev/vite-plugin-dev-server-bridge@^1.0.2":
   version "1.0.2"
   resolved "https://registry.yarnpkg.com/@lovable.dev/vite-plugin-dev-server-bridge/-/vite-plugin-dev-server-bridge-1.0.2.tgz#b31895bbb91edbdc9dbd80fd6e5cd02b2cddb5b6"
   integrity sha512-1c4XLFkpS614VxPyq+IX0us52vm5JWxdO1NfG2L1FjH0asKvHNu5//6wpnKHWmx60Y4HR1gcLaIiLACXIdeFyg==
 
-"@lovable.dev/vite-plugin-hmr-gate@^1.0.0":
+"@lovable.dev/vite-plugin-hmr-gate@^1.1.0":
   version "1.1.0"
   resolved "https://registry.yarnpkg.com/@lovable.dev/vite-plugin-hmr-gate/-/vite-plugin-hmr-gate-1.1.0.tgz#2b7c0fb35bf156865a3815cc60101e4edd4d53c5"
   integrity sha512-6pFl5PW867oN0g/AV9dGg6d7U+aLwnrOuW2lC5i9LCfMmTFPDERhl+cKXQ5GOrll51xESVPmMos2964+txupCw==
 
-"@lovable.dev/vite-tanstack-config@^1.5.1":
-  version "1.8.0"
-  resolved "https://registry.yarnpkg.com/@lovable.dev/vite-tanstack-config/-/vite-tanstack-config-1.8.0.tgz#7263a9a9d261c583b7e4e8057ef05addeb1a9d05"
-  integrity sha512-uQnupjOxD625Lw19QjMNkP6MM0exmOe57R0cpRrbebLrxtaKWoMZaeFhWvnhStzOaASP+MYR0rvr3lf8LOt2Iw==
+"@lovable.dev/vite-tanstack-config@2.6.2":
+  version "2.6.2"
+  resolved "https://registry.yarnpkg.com/@lovable.dev/vite-tanstack-config/-/vite-tanstack-config-2.6.2.tgz#6d510163894c6ff61b0bf6d95b8074c5ac3fd866"
+  integrity sha512-STrsGQ3MLlqd4DYtySOm8Qt7gOEX1mT736wfTVBFV3Ln77+O5JU6gW2x4ogTpgSjRQtl3gvYw/qMgPJd55ZfLQ==
   dependencies:
-    "@lovable.dev/vite-plugin-dev-server-bridge" "^1.0.0"
-    "@lovable.dev/vite-plugin-hmr-gate" "^1.0.0"
+    "@lovable.dev/vite-plugin-dev-server-bridge" "^1.0.2"
+    "@lovable.dev/vite-plugin-hmr-gate" "^1.1.0"
+    lightningcss "^1.30.0"
     lovable-tagger "1.2.0"
-    nitro "3.0.260429-beta"
 
 "@napi-rs/wasm-runtime@^1.1.4", "@napi-rs/wasm-runtime@^1.1.5":
   version "1.1.5"
@@ -2485,7 +2485,7 @@ enhanced-resolve@5.21.6:
     graceful-fs "^4.2.4"
     tapable "^2.3.3"
 
-env-runner@^0.1.7:
+env-runner@^0.1.9:
   version "0.1.14"
   resolved "https://registry.yarnpkg.com/env-runner/-/env-runner-0.1.14.tgz#fb37baee6cbc344a5e688de89379b78409549d2b"
   integrity sha512-qdk5mmgFsd+zPg3r1bkZ+IbvpfUfypyDvNhMGypSMRpz7kOa/kI6SpW8fgyukuEM4Lo24M65r+1Ne0DtT7vFBA==
@@ -2853,7 +2853,7 @@ graceful-fs@^4.2.4:
     rou3 "^0.8.1"
     srvx "^0.11.13"
 
-h3@^2.0.1-rc.20:
+h3@^2.0.1-rc.22:
   version "2.0.1-rc.22"
   resolved "https://registry.yarnpkg.com/h3/-/h3-2.0.1-rc.22.tgz#12c94d2f99e9afa42b490ebfda6163035e98be2a"
   integrity sha512-Esv0DMIuPkCTSWCA0vO73vcTqwzH1wjSrAO1TXNu/K3up1sZHa9EKMapbmxCDYBeymC3fVTk4qxp7ogQWQ+KgA==
@@ -3074,7 +3074,7 @@ lightningcss-win32-x64-msvc@1.32.0:
   resolved "https://registry.yarnpkg.com/lightningcss-win32-x64-msvc/-/lightningcss-win32-x64-msvc-1.32.0.tgz#141aa5605645064928902bb4af045fa7d9f4220a"
   integrity sha512-Amq9B/SoZYdDi1kFrojnoqPLxYhQ4Wo5XiL8EVJrVsB8ARoC1PWW6VGtT0WKCemjy8aC+louJnjS7U18x3b06Q==
 
-lightningcss@1.32.0, lightningcss@^1.32.0:
+lightningcss@1.32.0, lightningcss@^1.30.0, lightningcss@^1.32.0:
   version "1.32.0"
   resolved "https://registry.yarnpkg.com/lightningcss/-/lightningcss-1.32.0.tgz#b85aae96486dcb1bf49a7c8571221273f4f1e4a9"
   integrity sha512-NXYBzinNrblfraPGyrbPoD19C1h9lfI/1mzgWYvXUTe414Gz/X1FD2XBZSZM7rRTrMA8JL3OtAaGifrIKhQ5yQ==
@@ -3205,28 +3205,28 @@ natural-compare@^1.4.0:
   resolved "https://registry.yarnpkg.com/natural-compare/-/natural-compare-1.4.0.tgz#4abebfeed7541f2c27acfb29bdbbd15c8d5ba4f7"
   integrity sha512-OWND8ei3VtNC9h7V60qff3SVobHr996CTwgxubgyQYEpg290h9J0buyECNNJexkFm5sOajh5G116RYA1c8ZMSw==
 
-nf3@^0.3.16:
+nf3@^0.3.17:
   version "0.3.17"
   resolved "https://registry.yarnpkg.com/nf3/-/nf3-0.3.17.tgz#d27bc4d8e851e6a1eeebaf8db4169607ff87d753"
   integrity sha512-N9zEWySuJFw+gR0lhS5863YsvNeudOdqRyFvNb+jMXbeTJOdrjDqkCpDginIZfUm0LzT1t1nCRiDeqQm/8kirQ==
 
-nitro@3.0.260429-beta:
-  version "3.0.260429-beta"
-  resolved "https://registry.yarnpkg.com/nitro/-/nitro-3.0.260429-beta.tgz#6fde79e87f8c235b9e88fc497bf834278e7e285f"
-  integrity sha512-KweLVCUN5X9v9g+4yxAyRcz3FcOlnjmt9FyrAIWDxJETJmNT7I0JV0clgsONjo2nI0U5gwedXYA3RaNtF5XWzg==
+nitro@3.0.260603-beta:
+  version "3.0.260603-beta"
+  resolved "https://registry.yarnpkg.com/nitro/-/nitro-3.0.260603-beta.tgz#9d3920832a7b80c42cad61b1e7f5edd823167879"
+  integrity sha512-ffaSHK00a7YDlDizoEHwcxPwpQpdBRRA8k42ymTsRnfl3ipGeKgv4gnPr6DgmCNTo4tYVPK3bHBEv1gNhWpo/A==
   dependencies:
     consola "^3.4.2"
     crossws "^0.4.5"
     db0 "^0.3.4"
-    env-runner "^0.1.7"
-    h3 "^2.0.1-rc.20"
+    env-runner "^0.1.9"
+    h3 "^2.0.1-rc.22"
     hookable "^6.1.1"
-    nf3 "^0.3.16"
+    nf3 "^0.3.17"
     ocache "^0.1.4"
     ofetch "^2.0.0-alpha.3"
     ohash "^2.0.11"
-    rolldown "^1.0.0-rc.17"
-    srvx "^0.11.15"
+    rolldown "^1.0.3"
+    srvx "^0.11.16"
     unenv "^2.0.0-rc.24"
     unstorage "^2.0.0-alpha.7"
 
@@ -3586,7 +3586,7 @@ reusify@^1.0.4:
   resolved "https://registry.yarnpkg.com/reusify/-/reusify-1.1.0.tgz#0fe13b9522e1473f51b558ee796e08f11f9b489f"
   integrity sha512-g6QUff04oZpHs0eG5p83rFLhHeV00ug/Yf9nZM6fLeUrPguBTkTQOdpAWWspMh55TZfVQDPaN3NQJfbVRAxdIw==
 
-rolldown@^1.0.0-rc.17:
+rolldown@^1.0.3:
   version "1.1.2"
   resolved "https://registry.yarnpkg.com/rolldown/-/rolldown-1.1.2.tgz#accb41e26c872ad2c5198a39c1281c7b6b844097"
   integrity sha512-x0CrQQqCXWGeI8dTvFfN/Dnv3yMKT9hv5jFjlOreKAx9wqLq9wz7VvLLHyaAXC90/CpggTu9SisSbsJJTPSjNQ==

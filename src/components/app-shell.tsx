@@ -26,7 +26,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="flex h-screen flex-col bg-background text-foreground">
       <header className="flex h-12 items-center justify-between border-b bg-card px-4">
         <div className="flex items-center gap-6">
-          <div className="font-semibold tracking-tight">Pathology Lab</div>
+          <div className="font-semibold tracking-tight">Pratham Pathology</div>
           <nav className="flex items-center gap-1 text-sm">
             {navItems
               .filter(n => !n.roles || hasRole(...n.roles))
