@@ -29,19 +29,17 @@ class UpsertPatientDto {
   @IsOptional() @IsString() balancePaidOn?: string;
 }
 
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard)
 @Controller('patients')
 export class PatientsController {
   constructor(private patients: PatientsService) {}
 
-  @Roles(Role.admin, Role.receptionist)
   @Post()
   create(@Body() dto: UpsertPatientDto, @CurrentUser() user: JwtUser) {
     if (!user?.sub) throw new BadRequestException('Auth context missing');
     return this.patients.create({ ...dto, createdById: user.sub });
   }
 
-  @Roles(Role.admin, Role.receptionist)
   @Put(':id')
   update(@Param('id') id: string, @Body() dto: UpsertPatientDto) {
     return this.patients.update(id, dto);

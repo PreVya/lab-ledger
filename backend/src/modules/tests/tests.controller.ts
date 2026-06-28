@@ -21,7 +21,7 @@ class UpdateTestDto {
   @IsOptional() @IsBoolean() active?: boolean;
 }
 
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard)
 @Controller('tests')
 export class TestsController {
   constructor(private tests: TestsService) {}
@@ -29,11 +29,9 @@ export class TestsController {
   @Get()
   list(@Query('all') all?: string) { return this.tests.list(all === '1'); }
 
-  @Roles(Role.admin)
   @Post()
   create(@Body() dto: CreateTestDto) { return this.tests.create(dto); }
 
-  @Roles(Role.admin)
   @Patch(':id')
   update(@Param('id') id: string, @Body() dto: UpdateTestDto) { return this.tests.update(id, dto); }
 }
