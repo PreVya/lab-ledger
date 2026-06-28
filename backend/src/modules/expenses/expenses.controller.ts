@@ -12,8 +12,7 @@ class CreateExpenseDto {
   @IsEnum(PaymentMode) mode!: PaymentMode;
 }
 
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(Role.admin, Role.receptionist)
+@UseGuards(JwtAuthGuard)
 @Controller('expenses')
 export class ExpensesController {
   constructor(private expenses: ExpensesService) {}

@@ -16,8 +16,7 @@ class RecordPaymentDto {
   @IsOptional() @IsString() date?: string;
 }
 
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(Role.admin, Role.receptionist)
+@UseGuards(JwtAuthGuard)
 @Controller('payments')
 export class PaymentsController {
   constructor(private payments: PaymentsService) {}

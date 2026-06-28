@@ -18,7 +18,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const navItems = [
     { to: "/", icon: ClipboardList, label: "Today Register" },
     { to: "/search", icon: Search, label: "Search" },
-    { to: "/tests", icon: FlaskConical, label: "Test Catalog", roles: ["admin"] as const },
+    { to: "/tests", icon: FlaskConical, label: "Test Catalog" },
     { to: "/users", icon: Users, label: "Users", roles: ["admin"] as const },
   ];
 

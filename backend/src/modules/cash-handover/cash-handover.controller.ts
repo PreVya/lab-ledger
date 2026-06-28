@@ -13,12 +13,11 @@ class CreateCashHandoverDto {
   @IsOptional() @IsString() date?: string;
 }
 
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard)
 @Controller('cash-handover')
 export class CashHandoverController {
   constructor(private svc: CashHandoverService) {}
 
-  @Roles(Role.admin, Role.receptionist)
   @Post()
   create(@Body() dto: CreateCashHandoverDto, @CurrentUser() user: JwtUser) {
     if (!user?.sub) throw new BadRequestException('Auth context missing');
@@ -28,7 +27,6 @@ export class CashHandoverController {
   @Get()
   list(@Query('date') date?: string) { return this.svc.list(date); }
 
-  @Roles(Role.admin)
   @Delete(':id')
   remove(@Param('id') id: string) { return this.svc.remove(id); }
 }
