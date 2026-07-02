@@ -77,7 +77,12 @@ export function PatientFormDialog({ open, onOpenChange, patient }: Props) {
 
   const filteredTests = useMemo(() => {
     const q = testFilter.toLowerCase();
-    return tests.filter(t => t.active && (!q || t.name.toLowerCase().includes(q) || (t.outsourcedLab ?? "").toLowerCase().includes(q)));
+    return tests.filter(t => t.active && (
+      !q ||
+      t.name.toLowerCase().includes(q) ||
+      (t.outsourcedLab ?? "").toLowerCase().includes(q) ||
+      (t.testCode ?? "").toLowerCase().includes(q)
+    ));
   }, [tests, testFilter]);
 
   function toggleTest(id: string) {
