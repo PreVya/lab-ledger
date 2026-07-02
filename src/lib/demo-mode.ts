@@ -21,7 +21,7 @@ function todayIST() {
   return new Date(Date.now() + IST).toISOString().slice(0, 10);
 }
 
-interface DemoTest { id: string; name: string; rate: string; outsourced: boolean; outsourcedLab?: string | null; active: boolean }
+interface DemoTest { id: string; name: string; rate: string; outsourced: boolean; outsourcedLab?: string | null; testCode?: string | null; active: boolean }
 interface DemoPatient {
   id: string; dailySerial: number; registerNumber: number; financialYear: string;
   entryDate: string; name: string; mobile: string;
