@@ -11,6 +11,7 @@ class CreateTestDto {
   @IsNumber() @Min(0) rate!: number;
   @IsBoolean() outsourced!: boolean;
   @IsOptional() @IsString() outsourcedLab?: string;
+  @IsOptional() @IsString() testCode?: string;
 }
 
 class UpdateTestDto {
@@ -18,6 +19,7 @@ class UpdateTestDto {
   @IsOptional() @IsNumber() @Min(0) rate?: number;
   @IsOptional() @IsBoolean() outsourced?: boolean;
   @IsOptional() @IsString() outsourcedLab?: string | null;
+  @IsOptional() @IsString() testCode?: string | null;
   @IsOptional() @IsBoolean() active?: boolean;
 }
 

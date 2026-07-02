@@ -9,6 +9,8 @@ export interface TestCatalog {
   rate: string;
   outsourced: boolean;
   outsourcedLab?: string | null;
+  /** Only used for outsourced tests (e.g. Metropolis M1234). Nullable. */
+  testCode?: string | null;
   active: boolean;
 }
 
