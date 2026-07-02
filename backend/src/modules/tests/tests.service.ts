@@ -19,7 +19,7 @@ export class TestsService {
     });
   }
 
-  async create(data: { name: string; rate: number; outsourced: boolean; outsourcedLab?: string | null }) {
+  async create(data: { name: string; rate: number; outsourced: boolean; outsourcedLab?: string | null; testCode?: string | null }) {
     try {
       return await this.prisma.testCatalog.create({
         data: {
@@ -27,6 +27,8 @@ export class TestsService {
           rate: data.rate,
           outsourced: data.outsourced,
           outsourcedLab: data.outsourced ? (data.outsourcedLab?.trim() || null) : null,
+          // testCode only meaningful for outsourced tests; force null otherwise.
+          testCode: data.outsourced ? (data.testCode?.trim() || null) : null,
         },
       });
     } catch (e) {
@@ -39,7 +41,7 @@ export class TestsService {
 
   async update(
     id: string,
-    data: Partial<{ name: string; rate: number; outsourced: boolean; outsourcedLab: string | null; active: boolean }>,
+    data: Partial<{ name: string; rate: number; outsourced: boolean; outsourcedLab: string | null; testCode: string | null; active: boolean }>,
   ) {
     try {
       return await this.prisma.testCatalog.update({
@@ -52,6 +54,12 @@ export class TestsService {
               ? null
               : data.outsourcedLab !== undefined
                 ? data.outsourcedLab?.trim() || null
+                : undefined,
+          testCode:
+            data.outsourced === false
+              ? null
+              : data.testCode !== undefined
+                ? (data.testCode?.trim() || null)
                 : undefined,
         },
       });
