@@ -192,6 +192,11 @@ export function PatientFormDialog({ open, onOpenChange, patient }: Props) {
                           "rounded px-1.5 py-0.5 text-[10px] uppercase",
                           t.outsourced ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800",
                         )}>{provider}</span>
+                        {t.outsourced && (
+                          <span className="rounded bg-secondary px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
+                            Code: {t.testCode ? t.testCode : <span className="italic">Not added</span>}
+                          </span>
+                        )}
                       </span>
                       <span className="tabular-nums">₹{Number(t.rate).toFixed(2)}</span>
                     </button>
