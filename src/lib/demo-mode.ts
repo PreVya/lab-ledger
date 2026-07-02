@@ -199,12 +199,13 @@ export function demoHandle(path: string, init: RequestInit = {}): unknown {
   if (path === "/tests" && method === "POST") {
     const name = String(body.name || "").trim();
     const lab = body.outsourced ? String(body.outsourcedLab || "").trim() || null : null;
+    const testCode = body.outsourced ? (String(body.testCode || "").trim() || null) : null;
     const dupe = store.tests.find(t =>
       t.name.toLowerCase() === name.toLowerCase() &&
       ((t.outsourcedLab || "INHOUSE").toLowerCase() === (lab || "INHOUSE").toLowerCase()),
     );
     if (dupe) throw new Error("A test with the same name and provider already exists.");
-    const t: DemoTest = { id: uid(), name, rate: String(Number(body.rate) || 0), outsourced: !!body.outsourced, outsourcedLab: lab, active: true };
+    const t: DemoTest = { id: uid(), name, rate: String(Number(body.rate) || 0), outsourced: !!body.outsourced, outsourcedLab: lab, testCode, active: true };
     store.tests.push(t); return t;
   }
 
