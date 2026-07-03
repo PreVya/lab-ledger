@@ -24,6 +24,7 @@ export interface UpsertPatientInput {
   balanceUpi?: number;
   balancePaidOn?: string | null;
   createdById?: string;
+  entryDate?: string | null;
 }
 
 type Bucket = { kind: PaymentKind; mode: PaymentMode; field: 'advanceCash' | 'advanceUpi' | 'balanceCash' | 'balanceUpi' };
