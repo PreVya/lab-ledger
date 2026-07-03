@@ -1,18 +1,18 @@
 import { Injectable } from '@nestjs/common';
 import { PaymentMode, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
-import { dateOnly, LedgerService } from '../ledger/ledger.service';
+import { dateOnly, LedgerService, parseDateOnly } from '../ledger/ledger.service';
 
 @Injectable()
 export class ExpensesService {
   constructor(private prisma: PrismaService, private ledger: LedgerService) {}
 
-  async create(input: { description: string; amount: number; mode: PaymentMode }) {
-    const today = dateOnly();
+  async create(input: { description: string; amount: number; mode: PaymentMode; date?: string }) {
+    const day = input.date ? parseDateOnly(input.date) : dateOnly();
     const __tDb = Date.now();
     const e = await this.prisma.expense.create({
       data: {
-        date: today,
+        date: day,
         description: input.description,
         amount: new Prisma.Decimal(input.amount),
         mode: input.mode,
