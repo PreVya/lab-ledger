@@ -17,9 +17,11 @@ interface Props {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   patient?: Patient | null;
+  /** For new entries, the date to record patient/payments on. Defaults to today. */
+  entryDate?: string;
 }
 
-export function PatientFormDialog({ open, onOpenChange, patient }: Props) {
+export function PatientFormDialog({ open, onOpenChange, patient, entryDate }: Props) {
   const { data: tests = [] } = useTests();
   const create = useCreatePatient();
   const update = useUpdatePatient(patient?.id ?? "");
