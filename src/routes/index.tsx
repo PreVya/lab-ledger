@@ -16,6 +16,8 @@ import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/")({ component: () => <AppShell><Register /></AppShell> });
 
+const MIN_ENTRY_DATE = "2026-04-01";
+
 function Register() {
   const today = todayKey();
   const [selectedDate, setSelectedDate] = useState<string>(today);
@@ -29,6 +31,9 @@ function Register() {
   const dateStr = new Date(selectedDate + "T00:00:00Z").toLocaleDateString(undefined, {
     weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: "UTC",
   });
+  const shortDateStr = new Date(selectedDate + "T00:00:00Z").toLocaleDateString("en-GB", {
+    day: "2-digit", month: "short", year: "numeric", timeZone: "UTC",
+  });
 
   const balancePayments = (data?.payments ?? []).filter(
     (p) => p.kind === "balance" && (p.patient ? p.patient.entryDate.slice(0, 10) !== selectedDate : true),
@@ -39,7 +44,7 @@ function Register() {
       <div className="flex flex-wrap items-center justify-between gap-3 border-b bg-card px-6 py-3">
         <div>
           <div className="text-xs uppercase tracking-wide text-muted-foreground">
-            {isToday ? "Today's Register" : "Historical Ledger"}
+            {isToday ? "Today's Register" : "Ledger"}
           </div>
           <div className="text-lg font-semibold">{dateStr}</div>
         </div>
@@ -49,7 +54,7 @@ function Register() {
             <input
               type="date"
               value={selectedDate}
-              max={today}
+              min={MIN_ENTRY_DATE}
               onChange={(e) => setSelectedDate(e.target.value || today)}
               className="bg-transparent text-sm outline-none"
             />
@@ -59,13 +64,18 @@ function Register() {
               </Button>
             )}
           </div>
-          {isToday && (
-            <Button onClick={() => { setEditing(null); setOpen(true); }} size="lg" className="gap-2">
-              <Plus className="h-4 w-4" /> Quick Patient Entry <kbd className="ml-2 rounded bg-primary-foreground/20 px-1.5 py-0.5 text-[10px]">N</kbd>
-            </Button>
-          )}
+          <Button onClick={() => { setEditing(null); setOpen(true); }} size="lg" className="gap-2">
+            <Plus className="h-4 w-4" /> Add Patient {isToday && <kbd className="ml-2 rounded bg-primary-foreground/20 px-1.5 py-0.5 text-[10px]">N</kbd>}
+          </Button>
         </div>
       </div>
+
+      {!isToday && (
+        <div className="flex items-center gap-2 border-b bg-amber-50 px-6 py-2 text-sm text-amber-900">
+          <AlertCircle className="h-4 w-4" />
+          Entries will be saved for: <span className="font-semibold">{shortDateStr}</span>
+        </div>
+      )}
 
       {isLoading && <div className="p-6 text-sm text-muted-foreground">Loading…</div>}
       {!isLoading && data && (
@@ -89,7 +99,6 @@ function Register() {
               <PatientTable
                 patients={data.patients}
                 onEdit={(p) => { setEditing(p); setOpen(true); }}
-                readOnly={!isToday}
               />
               <BalanceReceivedPanel rows={balancePayments} />
             </div>
@@ -98,20 +107,23 @@ function Register() {
                 date={selectedDate}
                 handovers={data.cashHandovers}
                 total={data.totals.cashTakenAway}
-                readOnly={!isToday}
               />
               <ExpensesPanel
                 date={selectedDate}
                 expenses={data.expenses}
                 totalExpenses={data.totals.expenses}
-                readOnly={!isToday}
               />
             </div>
           </div>
         </>
       )}
 
-      <PatientFormDialog open={open} onOpenChange={setOpen} patient={editing} />
+      <PatientFormDialog
+        open={open}
+        onOpenChange={setOpen}
+        patient={editing}
+        entryDate={!editing && !isToday ? selectedDate : undefined}
+      />
       {isToday && <Hotkeys onNew={() => { setEditing(null); setOpen(true); }} />}
     </div>
   );
