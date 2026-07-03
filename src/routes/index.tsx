@@ -230,7 +230,7 @@ function BalanceReceivedPanel({ rows }: { rows: PaymentRow[] }) {
   );
 }
 
-function CashHandoverPanel({ date, handovers, total, readOnly }: { date: string; handovers: CashHandover[]; total: string; readOnly?: boolean }) {
+function CashHandoverPanel({ date, handovers, total }: { date: string; handovers: CashHandover[]; total: string }) {
   const create = useCreateCashHandover(date);
   const del = useDeleteCashHandover(date);
   const [amt, setAmt] = useState("");
