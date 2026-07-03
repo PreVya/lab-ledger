@@ -92,8 +92,8 @@ export class PatientsService {
   async create(input: UpsertPatientInput) {
     if (!input.testIds?.length) throw new BadRequestException('At least one test required');
     if (!input.createdById) throw new BadRequestException('createdById missing — login required');
-    const today = dateOnly();
-    await this.ledger.ensureDay(today);
+    const entryDay = input.entryDate ? dateOnly(new Date(input.entryDate)) : dateOnly();
+    await this.ledger.ensureDay(entryDay);
 
     const tests = await this.prisma.testCatalog.findMany({ where: { id: { in: input.testIds } } });
     if (tests.length !== input.testIds.length) throw new BadRequestException('Invalid test selection');
