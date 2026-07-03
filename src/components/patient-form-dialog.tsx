@@ -109,6 +109,7 @@ export function PatientFormDialog({ open, onOpenChange, patient, entryDate }: Pr
       advancePaidOn: advancePaidOn || null,
       balanceCash: num(balanceCash), balanceUpi: num(balanceUpi),
       balancePaidOn: balancePaidOn || null,
+      entryDate: !patient && entryDate ? entryDate : undefined,
     };
     try {
       if (patient) await update.mutateAsync(input);
