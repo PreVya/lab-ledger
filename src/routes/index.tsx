@@ -272,8 +272,8 @@ function CashHandoverPanel({ date, handovers, total }: { date: string; handovers
   );
 }
 
-function ExpensesPanel({ date, expenses, totalExpenses, readOnly }: { date: string; expenses: Expense[]; totalExpenses: string; readOnly?: boolean }) {
-  const create = useCreateExpense();
+function ExpensesPanel({ date, expenses, totalExpenses }: { date: string; expenses: Expense[]; totalExpenses: string }) {
+  const create = useCreateExpense(date);
   const del = useDeleteExpense(date);
   const [desc, setDesc] = useState("");
   const [amt, setAmt] = useState("");
@@ -292,24 +292,22 @@ function ExpensesPanel({ date, expenses, totalExpenses, readOnly }: { date: stri
         <div className="flex items-center gap-2 text-sm font-medium"><AlertCircle className="h-4 w-4" /> Expenses</div>
         <div className="text-sm font-semibold tabular-nums">{money(totalExpenses)}</div>
       </div>
-      {!readOnly && (
-        <form onSubmit={add} className="space-y-2 border-b p-3">
-          <Input placeholder="Description" value={desc} onChange={e => setDesc(e.target.value)} className="h-8" />
-          <div className="flex gap-2">
-            <Input placeholder="Amount" value={amt} onChange={e => setAmt(e.target.value)} inputMode="decimal" className="h-8" />
-            <Select value={mode} onValueChange={(v) => setMode(v as PaymentMode)}>
-              <SelectTrigger className="h-8 w-24"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="cash">Cash</SelectItem>
-                <SelectItem value="upi">UPI</SelectItem>
-                <SelectItem value="card">Card</SelectItem>
-                <SelectItem value="other">Other</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <Button type="submit" size="sm" className="w-full">Add Expense</Button>
-        </form>
-      )}
+      <form onSubmit={add} className="space-y-2 border-b p-3">
+        <Input placeholder="Description" value={desc} onChange={e => setDesc(e.target.value)} className="h-8" />
+        <div className="flex gap-2">
+          <Input placeholder="Amount" value={amt} onChange={e => setAmt(e.target.value)} inputMode="decimal" className="h-8" />
+          <Select value={mode} onValueChange={(v) => setMode(v as PaymentMode)}>
+            <SelectTrigger className="h-8 w-24"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="cash">Cash</SelectItem>
+              <SelectItem value="upi">UPI</SelectItem>
+              <SelectItem value="card">Card</SelectItem>
+              <SelectItem value="other">Other</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <Button type="submit" size="sm" className="w-full">Add Expense</Button>
+      </form>
       <div>
         {expenses.map(e => (
           <div key={e.id} className="flex items-center justify-between border-b px-3 py-2 text-sm">
@@ -319,11 +317,9 @@ function ExpensesPanel({ date, expenses, totalExpenses, readOnly }: { date: stri
             </div>
             <div className="flex items-center gap-2">
               <span className="tabular-nums">{money(e.amount)}</span>
-              {!readOnly && (
-                <button onClick={() => del.mutate(e.id)} className="text-muted-foreground hover:text-destructive">
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
-              )}
+              <button onClick={() => del.mutate(e.id)} className="text-muted-foreground hover:text-destructive">
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
             </div>
           </div>
         ))}
