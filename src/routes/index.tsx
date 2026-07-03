@@ -261,11 +261,9 @@ function CashHandoverPanel({ date, handovers, total }: { date: string; handovers
               <div className="tabular-nums font-medium">{money(h.amount)}</div>
               {h.notes && <div className="text-xs text-muted-foreground">{h.notes}</div>}
             </div>
-            {!readOnly && (
-              <button onClick={() => del.mutate(h.id)} className="text-muted-foreground hover:text-destructive">
-                <Trash2 className="h-3.5 w-3.5" />
-              </button>
-            )}
+            <button onClick={() => del.mutate(h.id)} className="text-muted-foreground hover:text-destructive">
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
           </div>
         ))}
         {handovers.length === 0 && <div className="p-3 text-xs text-muted-foreground">No cash taken away.</div>}
