@@ -27,6 +27,7 @@ class UpsertPatientDto {
   @IsOptional() @IsNumber() @Min(0) balanceCash?: number;
   @IsOptional() @IsNumber() @Min(0) balanceUpi?: number;
   @IsOptional() @IsString() balancePaidOn?: string;
+  @IsOptional() @IsString() entryDate?: string;
 }
 
 @UseGuards(JwtAuthGuard)

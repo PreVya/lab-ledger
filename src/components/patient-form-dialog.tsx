@@ -17,9 +17,11 @@ interface Props {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   patient?: Patient | null;
+  /** For new entries, the date to record patient/payments on. Defaults to today. */
+  entryDate?: string;
 }
 
-export function PatientFormDialog({ open, onOpenChange, patient }: Props) {
+export function PatientFormDialog({ open, onOpenChange, patient, entryDate }: Props) {
   const { data: tests = [] } = useTests();
   const create = useCreatePatient();
   const update = useUpdatePatient(patient?.id ?? "");
@@ -58,13 +60,14 @@ export function PatientFormDialog({ open, onOpenChange, patient }: Props) {
       setBalanceCash(patient.balanceCash); setBalanceUpi(patient.balanceUpi);
       setBalancePaidOn(patient.balancePaidOn?.slice(0, 10) ?? "");
     } else {
+      const d = entryDate ?? "";
       setName(""); setMobile(""); setAgeValue(""); setAgeUnit("years");
       setSex("M"); setReferredDoctor(""); setNotes("");
       setSelectedTests([]); setDiscount(""); setAdvanceCash(""); setAdvanceUpi("");
-      setAdvancePaidOn(""); setBalanceCash(""); setBalanceUpi(""); setBalancePaidOn("");
+      setAdvancePaidOn(d); setBalanceCash(""); setBalanceUpi(""); setBalancePaidOn(d);
     }
     setTimeout(() => nameRef.current?.focus(), 50);
-  }, [open, patient]);
+  }, [open, patient, entryDate]);
 
   const total = useMemo(
     () => selectedTests.reduce((s, id) => s + Number(tests.find(t => t.id === id)?.rate ?? 0), 0),
@@ -106,6 +109,7 @@ export function PatientFormDialog({ open, onOpenChange, patient }: Props) {
       advancePaidOn: advancePaidOn || null,
       balanceCash: num(balanceCash), balanceUpi: num(balanceUpi),
       balancePaidOn: balancePaidOn || null,
+      entryDate: !patient && entryDate ? entryDate : undefined,
     };
     try {
       if (patient) await update.mutateAsync(input);
@@ -121,7 +125,7 @@ export function PatientFormDialog({ open, onOpenChange, patient }: Props) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl">
         <DialogHeader>
-          <DialogTitle>{patient ? `Edit Patient #${patient.registerNumber ?? patient.dailySerial}${patient.financialYear ? ` · FY ${patient.financialYear}` : ""}` : "New Patient Entry"}</DialogTitle>
+          <DialogTitle>{patient ? `Edit Patient #${patient.registerNumber ?? patient.dailySerial}${patient.financialYear ? ` · FY ${patient.financialYear}` : ""}` : `New Patient Entry${entryDate ? ` — ${entryDate}` : ""}`}</DialogTitle>
         </DialogHeader>
 
         <div className="grid grid-cols-12 gap-4">

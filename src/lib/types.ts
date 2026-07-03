@@ -137,6 +137,8 @@ export interface UpsertPatientInput {
   balanceCash?: number;
   balanceUpi?: number;
   balancePaidOn?: string | null;
+  /** Explicit entryDate (YYYY-MM-DD) — allows historical/future entries. Defaults to today on backend. */
+  entryDate?: string | null;
 }
 
 export function formatAge(p: Pick<Patient, "age" | "ageValue" | "ageUnit">): string {

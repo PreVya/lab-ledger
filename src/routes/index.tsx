@@ -16,6 +16,8 @@ import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/")({ component: () => <AppShell><Register /></AppShell> });
 
+const MIN_ENTRY_DATE = "2026-04-01";
+
 function Register() {
   const today = todayKey();
   const [selectedDate, setSelectedDate] = useState<string>(today);
@@ -29,6 +31,9 @@ function Register() {
   const dateStr = new Date(selectedDate + "T00:00:00Z").toLocaleDateString(undefined, {
     weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: "UTC",
   });
+  const shortDateStr = new Date(selectedDate + "T00:00:00Z").toLocaleDateString("en-GB", {
+    day: "2-digit", month: "short", year: "numeric", timeZone: "UTC",
+  });
 
   const balancePayments = (data?.payments ?? []).filter(
     (p) => p.kind === "balance" && (p.patient ? p.patient.entryDate.slice(0, 10) !== selectedDate : true),
@@ -39,7 +44,7 @@ function Register() {
       <div className="flex flex-wrap items-center justify-between gap-3 border-b bg-card px-6 py-3">
         <div>
           <div className="text-xs uppercase tracking-wide text-muted-foreground">
-            {isToday ? "Today's Register" : "Historical Ledger"}
+            {isToday ? "Today's Register" : "Ledger"}
           </div>
           <div className="text-lg font-semibold">{dateStr}</div>
         </div>
@@ -49,7 +54,7 @@ function Register() {
             <input
               type="date"
               value={selectedDate}
-              max={today}
+              min={MIN_ENTRY_DATE}
               onChange={(e) => setSelectedDate(e.target.value || today)}
               className="bg-transparent text-sm outline-none"
             />
@@ -59,13 +64,18 @@ function Register() {
               </Button>
             )}
           </div>
-          {isToday && (
-            <Button onClick={() => { setEditing(null); setOpen(true); }} size="lg" className="gap-2">
-              <Plus className="h-4 w-4" /> Quick Patient Entry <kbd className="ml-2 rounded bg-primary-foreground/20 px-1.5 py-0.5 text-[10px]">N</kbd>
-            </Button>
-          )}
+          <Button onClick={() => { setEditing(null); setOpen(true); }} size="lg" className="gap-2">
+            <Plus className="h-4 w-4" /> Add Patient {isToday && <kbd className="ml-2 rounded bg-primary-foreground/20 px-1.5 py-0.5 text-[10px]">N</kbd>}
+          </Button>
         </div>
       </div>
+
+      {!isToday && (
+        <div className="flex items-center gap-2 border-b bg-amber-50 px-6 py-2 text-sm text-amber-900">
+          <AlertCircle className="h-4 w-4" />
+          Entries will be saved for: <span className="font-semibold">{shortDateStr}</span>
+        </div>
+      )}
 
       {isLoading && <div className="p-6 text-sm text-muted-foreground">Loading…</div>}
       {!isLoading && data && (
@@ -89,7 +99,6 @@ function Register() {
               <PatientTable
                 patients={data.patients}
                 onEdit={(p) => { setEditing(p); setOpen(true); }}
-                readOnly={!isToday}
               />
               <BalanceReceivedPanel rows={balancePayments} />
             </div>
@@ -98,20 +107,23 @@ function Register() {
                 date={selectedDate}
                 handovers={data.cashHandovers}
                 total={data.totals.cashTakenAway}
-                readOnly={!isToday}
               />
               <ExpensesPanel
                 date={selectedDate}
                 expenses={data.expenses}
                 totalExpenses={data.totals.expenses}
-                readOnly={!isToday}
               />
             </div>
           </div>
         </>
       )}
 
-      <PatientFormDialog open={open} onOpenChange={setOpen} patient={editing} />
+      <PatientFormDialog
+        open={open}
+        onOpenChange={setOpen}
+        patient={editing}
+        entryDate={!editing && !isToday ? selectedDate : undefined}
+      />
       {isToday && <Hotkeys onNew={() => { setEditing(null); setOpen(true); }} />}
     </div>
   );
@@ -128,7 +140,7 @@ function Stat({ label, value, accent }: { label: string; value: string; accent?:
   );
 }
 
-function PatientTable({ patients, onEdit, readOnly }: { patients: Patient[]; onEdit: (p: Patient) => void; readOnly?: boolean }) {
+function PatientTable({ patients, onEdit }: { patients: Patient[]; onEdit: (p: Patient) => void }) {
   return (
     <div className="overflow-auto">
       <div className="sticky top-0 z-10 border-b bg-secondary px-3 py-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -151,7 +163,7 @@ function PatientTable({ patients, onEdit, readOnly }: { patients: Patient[]; onE
         <tbody>
           {patients.length === 0 && (
             <tr><td colSpan={9} className="p-6 text-center text-muted-foreground">
-              {readOnly ? "No entries for this date." : <>No entries yet. Press <kbd className="rounded border px-1">N</kbd> to add the first one.</>}
+              No entries yet. Click <span className="font-medium">Add Patient</span> to add the first one.
             </td></tr>
           )}
           {patients.map(p => {
@@ -218,7 +230,7 @@ function BalanceReceivedPanel({ rows }: { rows: PaymentRow[] }) {
   );
 }
 
-function CashHandoverPanel({ date, handovers, total, readOnly }: { date: string; handovers: CashHandover[]; total: string; readOnly?: boolean }) {
+function CashHandoverPanel({ date, handovers, total }: { date: string; handovers: CashHandover[]; total: string }) {
   const create = useCreateCashHandover(date);
   const del = useDeleteCashHandover(date);
   const [amt, setAmt] = useState("");
@@ -237,13 +249,11 @@ function CashHandoverPanel({ date, handovers, total, readOnly }: { date: string;
         <div className="flex items-center gap-2 text-sm font-medium"><HandCoins className="h-4 w-4" /> Cash Taken Away</div>
         <div className="text-sm font-semibold tabular-nums">{money(total)}</div>
       </div>
-      {!readOnly && (
-        <form onSubmit={add} className="space-y-2 border-b p-3">
-          <Input placeholder="Amount" value={amt} onChange={e => setAmt(e.target.value)} inputMode="decimal" className="h-8" />
-          <Input placeholder="Notes (e.g. handed to Dr. Mam)" value={notes} onChange={e => setNotes(e.target.value)} className="h-8" />
-          <Button type="submit" size="sm" className="w-full">Add Cash Taken Away</Button>
-        </form>
-      )}
+      <form onSubmit={add} className="space-y-2 border-b p-3">
+        <Input placeholder="Amount" value={amt} onChange={e => setAmt(e.target.value)} inputMode="decimal" className="h-8" />
+        <Input placeholder="Notes (e.g. handed to Dr. Mam)" value={notes} onChange={e => setNotes(e.target.value)} className="h-8" />
+        <Button type="submit" size="sm" className="w-full">Add Cash Taken Away</Button>
+      </form>
       <div>
         {handovers.map(h => (
           <div key={h.id} className="flex items-center justify-between border-b px-3 py-2 text-sm">
@@ -251,11 +261,9 @@ function CashHandoverPanel({ date, handovers, total, readOnly }: { date: string;
               <div className="tabular-nums font-medium">{money(h.amount)}</div>
               {h.notes && <div className="text-xs text-muted-foreground">{h.notes}</div>}
             </div>
-            {!readOnly && (
-              <button onClick={() => del.mutate(h.id)} className="text-muted-foreground hover:text-destructive">
-                <Trash2 className="h-3.5 w-3.5" />
-              </button>
-            )}
+            <button onClick={() => del.mutate(h.id)} className="text-muted-foreground hover:text-destructive">
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
           </div>
         ))}
         {handovers.length === 0 && <div className="p-3 text-xs text-muted-foreground">No cash taken away.</div>}
@@ -264,8 +272,8 @@ function CashHandoverPanel({ date, handovers, total, readOnly }: { date: string;
   );
 }
 
-function ExpensesPanel({ date, expenses, totalExpenses, readOnly }: { date: string; expenses: Expense[]; totalExpenses: string; readOnly?: boolean }) {
-  const create = useCreateExpense();
+function ExpensesPanel({ date, expenses, totalExpenses }: { date: string; expenses: Expense[]; totalExpenses: string }) {
+  const create = useCreateExpense(date);
   const del = useDeleteExpense(date);
   const [desc, setDesc] = useState("");
   const [amt, setAmt] = useState("");
@@ -284,24 +292,22 @@ function ExpensesPanel({ date, expenses, totalExpenses, readOnly }: { date: stri
         <div className="flex items-center gap-2 text-sm font-medium"><AlertCircle className="h-4 w-4" /> Expenses</div>
         <div className="text-sm font-semibold tabular-nums">{money(totalExpenses)}</div>
       </div>
-      {!readOnly && (
-        <form onSubmit={add} className="space-y-2 border-b p-3">
-          <Input placeholder="Description" value={desc} onChange={e => setDesc(e.target.value)} className="h-8" />
-          <div className="flex gap-2">
-            <Input placeholder="Amount" value={amt} onChange={e => setAmt(e.target.value)} inputMode="decimal" className="h-8" />
-            <Select value={mode} onValueChange={(v) => setMode(v as PaymentMode)}>
-              <SelectTrigger className="h-8 w-24"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="cash">Cash</SelectItem>
-                <SelectItem value="upi">UPI</SelectItem>
-                <SelectItem value="card">Card</SelectItem>
-                <SelectItem value="other">Other</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <Button type="submit" size="sm" className="w-full">Add Expense</Button>
-        </form>
-      )}
+      <form onSubmit={add} className="space-y-2 border-b p-3">
+        <Input placeholder="Description" value={desc} onChange={e => setDesc(e.target.value)} className="h-8" />
+        <div className="flex gap-2">
+          <Input placeholder="Amount" value={amt} onChange={e => setAmt(e.target.value)} inputMode="decimal" className="h-8" />
+          <Select value={mode} onValueChange={(v) => setMode(v as PaymentMode)}>
+            <SelectTrigger className="h-8 w-24"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="cash">Cash</SelectItem>
+              <SelectItem value="upi">UPI</SelectItem>
+              <SelectItem value="card">Card</SelectItem>
+              <SelectItem value="other">Other</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <Button type="submit" size="sm" className="w-full">Add Expense</Button>
+      </form>
       <div>
         {expenses.map(e => (
           <div key={e.id} className="flex items-center justify-between border-b px-3 py-2 text-sm">
@@ -311,11 +317,9 @@ function ExpensesPanel({ date, expenses, totalExpenses, readOnly }: { date: stri
             </div>
             <div className="flex items-center gap-2">
               <span className="tabular-nums">{money(e.amount)}</span>
-              {!readOnly && (
-                <button onClick={() => del.mutate(e.id)} className="text-muted-foreground hover:text-destructive">
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
-              )}
+              <button onClick={() => del.mutate(e.id)} className="text-muted-foreground hover:text-destructive">
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
             </div>
           </div>
         ))}
