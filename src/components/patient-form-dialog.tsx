@@ -60,13 +60,14 @@ export function PatientFormDialog({ open, onOpenChange, patient, entryDate }: Pr
       setBalanceCash(patient.balanceCash); setBalanceUpi(patient.balanceUpi);
       setBalancePaidOn(patient.balancePaidOn?.slice(0, 10) ?? "");
     } else {
+      const d = entryDate ?? "";
       setName(""); setMobile(""); setAgeValue(""); setAgeUnit("years");
       setSex("M"); setReferredDoctor(""); setNotes("");
       setSelectedTests([]); setDiscount(""); setAdvanceCash(""); setAdvanceUpi("");
-      setAdvancePaidOn(""); setBalanceCash(""); setBalanceUpi(""); setBalancePaidOn("");
+      setAdvancePaidOn(d); setBalanceCash(""); setBalanceUpi(""); setBalancePaidOn(d);
     }
     setTimeout(() => nameRef.current?.focus(), 50);
-  }, [open, patient]);
+  }, [open, patient, entryDate]);
 
   const total = useMemo(
     () => selectedTests.reduce((s, id) => s + Number(tests.find(t => t.id === id)?.rate ?? 0), 0),
