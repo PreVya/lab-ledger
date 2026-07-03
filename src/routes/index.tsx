@@ -249,13 +249,11 @@ function CashHandoverPanel({ date, handovers, total }: { date: string; handovers
         <div className="flex items-center gap-2 text-sm font-medium"><HandCoins className="h-4 w-4" /> Cash Taken Away</div>
         <div className="text-sm font-semibold tabular-nums">{money(total)}</div>
       </div>
-      {!readOnly && (
-        <form onSubmit={add} className="space-y-2 border-b p-3">
-          <Input placeholder="Amount" value={amt} onChange={e => setAmt(e.target.value)} inputMode="decimal" className="h-8" />
-          <Input placeholder="Notes (e.g. handed to Dr. Mam)" value={notes} onChange={e => setNotes(e.target.value)} className="h-8" />
-          <Button type="submit" size="sm" className="w-full">Add Cash Taken Away</Button>
-        </form>
-      )}
+      <form onSubmit={add} className="space-y-2 border-b p-3">
+        <Input placeholder="Amount" value={amt} onChange={e => setAmt(e.target.value)} inputMode="decimal" className="h-8" />
+        <Input placeholder="Notes (e.g. handed to Dr. Mam)" value={notes} onChange={e => setNotes(e.target.value)} className="h-8" />
+        <Button type="submit" size="sm" className="w-full">Add Cash Taken Away</Button>
+      </form>
       <div>
         {handovers.map(h => (
           <div key={h.id} className="flex items-center justify-between border-b px-3 py-2 text-sm">
