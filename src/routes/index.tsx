@@ -163,7 +163,7 @@ function PatientTable({ patients, onEdit }: { patients: Patient[]; onEdit: (p: P
         <tbody>
           {patients.length === 0 && (
             <tr><td colSpan={9} className="p-6 text-center text-muted-foreground">
-              {readOnly ? "No entries for this date." : <>No entries yet. Press <kbd className="rounded border px-1">N</kbd> to add the first one.</>}
+              No entries yet. Click <span className="font-medium">Add Patient</span> to add the first one.
             </td></tr>
           )}
           {patients.map(p => {
