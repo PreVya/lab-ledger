@@ -100,10 +100,10 @@ export class PatientsService {
     const pay = this.computePayment(tests.map((t) => Number(t.rate)), input);
     const { ageValue, ageUnit, legacyAge } = normalizeAge(input);
 
-    const advanceDate = this.resolveDate(input.advancePaidOn, today);
-    const balanceDate = this.resolveDate(input.balancePaidOn, today);
+    const advanceDate = this.resolveDate(input.advancePaidOn, entryDay);
+    const balanceDate = this.resolveDate(input.balancePaidOn, entryDay);
 
-    const patient = await this.assignNumbersAndCreate(today, {
+    const patient = await this.assignNumbersAndCreate(entryDay, {
       name: input.name,
       mobile: input.mobile,
       age: legacyAge,
@@ -118,11 +118,11 @@ export class PatientsService {
       net: new Prisma.Decimal(pay.net),
       advanceCash: new Prisma.Decimal(pay.advanceCash),
       advanceUpi: new Prisma.Decimal(pay.advanceUpi),
-      advancePaidOn: input.advancePaidOn ? new Date(input.advancePaidOn) : (pay.advanceCash + pay.advanceUpi > 0 ? today : null),
+      advancePaidOn: input.advancePaidOn ? new Date(input.advancePaidOn) : (pay.advanceCash + pay.advanceUpi > 0 ? entryDay : null),
       balance: new Prisma.Decimal(pay.balance),
       balanceCash: new Prisma.Decimal(pay.balanceCash),
       balanceUpi: new Prisma.Decimal(pay.balanceUpi),
-      balancePaidOn: input.balancePaidOn ? new Date(input.balancePaidOn) : (pay.balanceCash + pay.balanceUpi > 0 ? today : null),
+      balancePaidOn: input.balancePaidOn ? new Date(input.balancePaidOn) : (pay.balanceCash + pay.balanceUpi > 0 ? entryDay : null),
       tests: { create: tests.map((t) => ({ testId: t.id, rateAtEntry: t.rate })) },
     } as any);
 
@@ -142,7 +142,7 @@ export class PatientsService {
     }
     if (paymentRows.length) await this.prisma.payment.createMany({ data: paymentRows });
 
-    const distinctDates = new Set<string>([today.toISOString().slice(0, 10)]);
+    const distinctDates = new Set<string>([entryDay.toISOString().slice(0, 10)]);
     paymentRows.forEach((r) => distinctDates.add((r.date as Date).toISOString().slice(0, 10)));
     for (const iso of distinctDates) {
       void this.ledger.recompute(new Date(iso)).catch((err) => console.error('[patients.create] bg recompute failed', err));
