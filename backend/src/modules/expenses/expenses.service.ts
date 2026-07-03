@@ -22,7 +22,7 @@ export class ExpensesService {
     // Fire-and-forget: do not block the response on full ledger recompute.
     // GET /ledger/today computes closing balance inline from fresh data.
     void this.ledger
-      .recompute(today)
+      .recompute(day)
       .catch((err) => console.error('[expenses.create] background recompute failed', err));
     return e;
   }
