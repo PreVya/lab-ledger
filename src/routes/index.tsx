@@ -140,7 +140,7 @@ function Stat({ label, value, accent }: { label: string; value: string; accent?:
   );
 }
 
-function PatientTable({ patients, onEdit, readOnly }: { patients: Patient[]; onEdit: (p: Patient) => void; readOnly?: boolean }) {
+function PatientTable({ patients, onEdit }: { patients: Patient[]; onEdit: (p: Patient) => void }) {
   return (
     <div className="overflow-auto">
       <div className="sticky top-0 z-10 border-b bg-secondary px-3 py-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
