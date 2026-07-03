@@ -83,14 +83,17 @@ export function useSearch(q: string, fy?: string) {
   });
 }
 
-export function useCreateExpense() {
+export function useCreateExpense(date?: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: { description: string; amount: number; mode: PaymentMode }) =>
-      api<Expense>("/expenses", { method: "POST", body: JSON.stringify(input) }),
+      api<Expense>("/expenses", {
+        method: "POST",
+        body: JSON.stringify(date ? { ...input, date } : input),
+      }),
     onSuccess: (expense) => {
-      const date = expense.date.slice(0, 10);
-      qc.invalidateQueries({ queryKey: qk.ledger(date) });
+      const d = expense.date.slice(0, 10);
+      qc.invalidateQueries({ queryKey: qk.ledger(d) });
     },
   });
 }
@@ -116,7 +119,10 @@ export function useCreateCashHandover(date: string = todayKey()) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: { amount: number; notes?: string }) =>
-      api<CashHandover>("/cash-handover", { method: "POST", body: JSON.stringify(input) }),
+      api<CashHandover>("/cash-handover", {
+        method: "POST",
+        body: JSON.stringify({ ...input, date }),
+      }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: qk.ledger(date) });
     },
