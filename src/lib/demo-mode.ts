@@ -48,6 +48,7 @@ const store = {
   expenses: [] as DemoExpense[],
   payments: [] as PaymentRow[],
   handovers: [] as CashHandover[],
+  cashAdded: [] as CashAdded[],
   ledgers: {} as Record<string, { openingBalance: string; closingBalance: string }>,
   users: DEMO_USERS.map(d => ({ id: d.user.id, username: d.user.username, fullName: d.user.fullName, role: d.user.role, active: true })),
   serial: 0,
