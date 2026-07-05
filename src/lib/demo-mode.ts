@@ -1,5 +1,5 @@
 import type { AuthState, AuthUser } from "./api";
-import type { AgeUnit, CashHandover, PaymentMode, PaymentRow, Sex } from "./types";
+import type { AgeUnit, CashAdded, CashHandover, PaymentMode, PaymentRow, Sex } from "./types";
 
 const DEMO_USERS: Array<{ username: string; password: string; user: AuthUser }> = [
   { username: "admin", password: "admin", user: { id: "demo-admin", username: "admin", fullName: "System Admin", role: "admin" } },
