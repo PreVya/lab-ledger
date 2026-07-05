@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { api } from "./api";
-import type { CashHandover, Expense, Patient, PaymentMode, TestCatalog, TodayResponse, UpsertPatientInput } from "./types";
+import type { CashAdded, CashHandover, Expense, Patient, PaymentMode, TestCatalog, TodayResponse, UpsertPatientInput } from "./types";
 
 /** Today's IST (Asia/Kolkata) business date as YYYY-MM-DD. */
 export function todayKey(): string {
