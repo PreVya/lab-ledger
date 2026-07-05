@@ -9,6 +9,7 @@ import { LedgerModule } from './modules/ledger/ledger.module';
 import { ExpensesModule } from './modules/expenses/expenses.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { CashHandoverModule } from './modules/cash-handover/cash-handover.module';
+import { CashAddedModule } from './modules/cash-added/cash-added.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { CashHandoverModule } from './modules/cash-handover/cash-handover.module
     ExpensesModule,
     PaymentsModule,
     CashHandoverModule,
+    CashAddedModule,
   ],
 })
 export class AppModule {}
