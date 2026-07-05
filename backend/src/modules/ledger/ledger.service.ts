@@ -54,11 +54,12 @@ export class LedgerService {
   /** Recompute & persist closing CASH balance for the given date. */
   async recompute(date: Date = dateOnly()) {
     const __t0 = Date.now();
-    const [ledger, payments, expenses, handovers] = await Promise.all([
+    const [ledger, payments, expenses, handovers, added] = await Promise.all([
       this.ensureDay(date),
       this.prisma.payment.findMany({ where: { date }, select: { amount: true, mode: true } }),
       this.prisma.expense.findMany({ where: { date }, select: { amount: true, mode: true } }),
       this.prisma.cashHandover.aggregate({ where: { date }, _sum: { amount: true } }),
+      this.prisma.cashAdded.aggregate({ where: { date }, _sum: { amount: true } }),
     ]);
 
     const cashCollected = payments
@@ -68,11 +69,21 @@ export class LedgerService {
       .filter((e) => e.mode === 'cash')
       .reduce((s, e) => s.plus(e.amount), ZERO());
     const takenAway = handovers._sum.amount ?? ZERO();
+    const addedCash = added._sum.amount ?? ZERO();
 
     const closingCash = new Prisma.Decimal(ledger.openingBalance)
       .plus(cashCollected)
       .minus(cashExpenses)
-      .minus(takenAway);
+      .minus(takenAway)
+      .plus(addedCash);
+
+    const updated = await this.prisma.dailyLedger.update({
+      where: { id: ledger.id },
+      data: { closingBalance: closingCash },
+    });
+    console.log(`[perf] ledger.recompute(${formatDateOnly(date)}) ${Date.now() - __t0}ms`);
+    return updated;
+  }
 
     const updated = await this.prisma.dailyLedger.update({
       where: { id: ledger.id },
