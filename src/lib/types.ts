@@ -121,6 +121,7 @@ export interface TodayResponse {
     expenses: string;
     cashExpenses: string;
     cashTakenAway: string;
+    addedCash: string;
     openingCashBalance: string;
     closingCashBalance: string;
     count: number;
@@ -128,6 +129,7 @@ export interface TodayResponse {
   expenses: Expense[];
   payments: PaymentRow[];
   cashHandovers: CashHandover[];
+  cashAdded: CashAdded[];
 }
 
 export interface UpsertPatientInput {
