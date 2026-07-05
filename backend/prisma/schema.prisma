@@ -142,6 +142,22 @@ enum PaymentKind {
   balance
 }
 
+/// Manual "added cash" — extra cash physically added to the drawer to keep
+/// enough change money on hand. Increases closing cash balance only; does
+/// NOT count as patient collection or billing.
+model CashAdded {
+  id          String   @id @default(uuid())
+  date        DateTime @db.Date
+  amount      Decimal  @db.Decimal(10, 2)
+  notes       String?
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([date])
+  @@index([createdById])
+}
+
 model Payment {
   id         String      @id @default(uuid())
   patientId  String
