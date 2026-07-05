@@ -142,6 +142,7 @@ export class LedgerService {
     const expenseTotal = cashExpenses.plus(otherExpenses);
 
     const cashTakenAway = handovers.reduce((s, h) => s.plus(h.amount), ZERO());
+    const addedCash = cashAddedEntries.reduce((s, a) => s.plus(a.amount), ZERO());
 
     // Billing-side totals from today's register (entryDate==day).
     const billing = patients.reduce(
@@ -159,7 +160,8 @@ export class LedgerService {
     const closingCashBalance = openingCashBalance
       .plus(cashCollected)
       .minus(cashExpenses)
-      .minus(cashTakenAway);
+      .minus(cashTakenAway)
+      .plus(addedCash);
 
     if (!new Prisma.Decimal(ledger.closingBalance).equals(closingCashBalance)) {
       this.prisma.dailyLedger
@@ -183,6 +185,7 @@ export class LedgerService {
         expenses: expenseTotal,
         cashExpenses,
         cashTakenAway,
+        addedCash,
         openingCashBalance,
         closingCashBalance,
         count: patients.length,
@@ -190,6 +193,7 @@ export class LedgerService {
       expenses,
       payments: paymentsToday,
       cashHandovers: handovers,
+      cashAdded: cashAddedEntries,
     };
   }
 
