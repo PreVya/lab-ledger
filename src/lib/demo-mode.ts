@@ -285,6 +285,25 @@ export function demoHandle(path: string, init: RequestInit = {}): unknown {
     return { ok: true };
   }
 
+  // Cash added
+  if (path === "/cash-added" && method === "POST") {
+    const c: CashAdded = {
+      id: uid(), date: (body.date || todayIST()).slice(0, 10), amount: String(Number(body.amount) || 0),
+      notes: body.notes ?? null, createdById: store.currentUserId, createdAt: new Date().toISOString(),
+    };
+    store.cashAdded.push(c); return c;
+  }
+  if (path.startsWith("/cash-added") && method === "GET") {
+    const url = new URL("http://x" + path);
+    const date = url.searchParams.get("date") || todayIST();
+    return store.cashAdded.filter(c => c.date === date);
+  }
+  const cashAddedIdMatch = path.match(/^\/cash-added\/([^/?]+)$/);
+  if (cashAddedIdMatch && method === "DELETE") {
+    store.cashAdded = store.cashAdded.filter(c => c.id !== cashAddedIdMatch[1]);
+    return { ok: true };
+  }
+
   // Payments record (kept minimal for demo)
   if (path === "/payments" && method === "POST") {
     const patient = store.patients.find(p => p.id === body.patientId);
