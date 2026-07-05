@@ -97,7 +97,7 @@ export class LedgerService {
   async summary(day: Date = dateOnly()) {
     const __tAll = Date.now();
 
-    const [ledger, patients, expenses, paymentsToday, handovers] = await Promise.all([
+    const [ledger, patients, expenses, paymentsToday, handovers, cashAddedEntries] = await Promise.all([
       this.ensureDay(day),
       this.prisma.patient.findMany({
         where: { entryDate: day },
@@ -118,6 +118,7 @@ export class LedgerService {
         },
       }),
       this.prisma.cashHandover.findMany({ where: { date: day }, orderBy: { createdAt: 'asc' } }),
+      this.prisma.cashAdded.findMany({ where: { date: day }, orderBy: { createdAt: 'asc' } }),
     ]);
 
     // Collection split by mode (from Payment audit log, by payment date).
