@@ -136,3 +136,25 @@ export function useDeleteCashHandover(date: string = todayKey()) {
     onSuccess: () => { qc.invalidateQueries({ queryKey: qk.ledger(date) }); },
   });
 }
+
+// --- Cash added ---------------------------------------------------------
+
+export function useCreateCashAdded(date: string = todayKey()) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { amount: number; notes?: string }) =>
+      api<CashAdded>("/cash-added", {
+        method: "POST",
+        body: JSON.stringify({ ...input, date }),
+      }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: qk.ledger(date) }); },
+  });
+}
+
+export function useDeleteCashAdded(date: string = todayKey()) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api(`/cash-added/${id}`, { method: "DELETE" }).then(() => id),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: qk.ledger(date) }); },
+  });
+}
