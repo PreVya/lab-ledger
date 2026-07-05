@@ -85,14 +85,6 @@ export class LedgerService {
     return updated;
   }
 
-    const updated = await this.prisma.dailyLedger.update({
-      where: { id: ledger.id },
-      data: { closingBalance: closingCash },
-    });
-    console.log(`[perf] ledger.recompute(${formatDateOnly(date)}) ${Date.now() - __t0}ms`);
-    return updated;
-  }
-
   /** Ledger summary for any date — drives Today Register UI. */
   async summary(day: Date = dateOnly()) {
     const __tAll = Date.now();
