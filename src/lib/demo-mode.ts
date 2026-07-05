@@ -269,7 +269,7 @@ export function demoHandle(path: string, init: RequestInit = {}): unknown {
   // Cash handover
   if (path === "/cash-handover" && method === "POST") {
     const h: CashHandover = {
-      id: uid(), date: todayIST(), amount: String(Number(body.amount) || 0),
+      id: uid(), date: (body.date || todayIST()).slice(0, 10), amount: String(Number(body.amount) || 0),
       notes: body.notes ?? null, createdById: store.currentUserId, createdAt: new Date().toISOString(),
     };
     store.handovers.push(h); return h;
