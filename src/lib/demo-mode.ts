@@ -1,5 +1,5 @@
 import type { AuthState, AuthUser } from "./api";
-import type { AgeUnit, CashHandover, PaymentMode, PaymentRow, Sex } from "./types";
+import type { AgeUnit, CashAdded, CashHandover, PaymentMode, PaymentRow, Sex } from "./types";
 
 const DEMO_USERS: Array<{ username: string; password: string; user: AuthUser }> = [
   { username: "admin", password: "admin", user: { id: "demo-admin", username: "admin", fullName: "System Admin", role: "admin" } },
@@ -48,6 +48,7 @@ const store = {
   expenses: [] as DemoExpense[],
   payments: [] as PaymentRow[],
   handovers: [] as CashHandover[],
+  cashAdded: [] as CashAdded[],
   ledgers: {} as Record<string, { openingBalance: string; closingBalance: string }>,
   users: DEMO_USERS.map(d => ({ id: d.user.id, username: d.user.username, fullName: d.user.fullName, role: d.user.role, active: true })),
   serial: 0,
@@ -78,6 +79,7 @@ function summary(date: string) {
   const expenses = store.expenses.filter(e => e.date === date);
   const payments = store.payments.filter(p => p.date === date);
   const handovers = store.handovers.filter(h => h.date === date);
+  const cashAddedEntries = store.cashAdded.filter(c => c.date === date);
 
   let cash = 0, upi = 0, card = 0, other = 0;
   for (const p of payments) {
@@ -91,8 +93,9 @@ function summary(date: string) {
   const cashExpenses = expenses.filter(e => e.mode === "cash").reduce((s, e) => s + Number(e.amount), 0);
   const expenseTotal = expenses.reduce((s, e) => s + Number(e.amount), 0);
   const cashTakenAway = handovers.reduce((s, h) => s + Number(h.amount), 0);
+  const addedCash = cashAddedEntries.reduce((s, c) => s + Number(c.amount), 0);
   const opening = Number(ledger.openingBalance);
-  const closing = opening + cash - cashExpenses - cashTakenAway;
+  const closing = opening + cash - cashExpenses - cashTakenAway + addedCash;
   ledger.closingBalance = String(closing);
 
   return {
@@ -112,6 +115,7 @@ function summary(date: string) {
       expenses: String(expenseTotal),
       cashExpenses: String(cashExpenses),
       cashTakenAway: String(cashTakenAway),
+      addedCash: String(addedCash),
       openingCashBalance: String(opening),
       closingCashBalance: String(closing),
       count: patients.length,
@@ -119,6 +123,7 @@ function summary(date: string) {
     expenses,
     payments,
     cashHandovers: handovers,
+    cashAdded: cashAddedEntries,
   };
 }
 
@@ -264,7 +269,7 @@ export function demoHandle(path: string, init: RequestInit = {}): unknown {
   // Cash handover
   if (path === "/cash-handover" && method === "POST") {
     const h: CashHandover = {
-      id: uid(), date: todayIST(), amount: String(Number(body.amount) || 0),
+      id: uid(), date: (body.date || todayIST()).slice(0, 10), amount: String(Number(body.amount) || 0),
       notes: body.notes ?? null, createdById: store.currentUserId, createdAt: new Date().toISOString(),
     };
     store.handovers.push(h); return h;
@@ -277,6 +282,25 @@ export function demoHandle(path: string, init: RequestInit = {}): unknown {
   const handoverIdMatch = path.match(/^\/cash-handover\/([^/?]+)$/);
   if (handoverIdMatch && method === "DELETE") {
     store.handovers = store.handovers.filter(h => h.id !== handoverIdMatch[1]);
+    return { ok: true };
+  }
+
+  // Cash added
+  if (path === "/cash-added" && method === "POST") {
+    const c: CashAdded = {
+      id: uid(), date: (body.date || todayIST()).slice(0, 10), amount: String(Number(body.amount) || 0),
+      notes: body.notes ?? null, createdById: store.currentUserId, createdAt: new Date().toISOString(),
+    };
+    store.cashAdded.push(c); return c;
+  }
+  if (path.startsWith("/cash-added") && method === "GET") {
+    const url = new URL("http://x" + path);
+    const date = url.searchParams.get("date") || todayIST();
+    return store.cashAdded.filter(c => c.date === date);
+  }
+  const cashAddedIdMatch = path.match(/^\/cash-added\/([^/?]+)$/);
+  if (cashAddedIdMatch && method === "DELETE") {
+    store.cashAdded = store.cashAdded.filter(c => c.id !== cashAddedIdMatch[1]);
     return { ok: true };
   }
 

@@ -54,11 +54,12 @@ export class LedgerService {
   /** Recompute & persist closing CASH balance for the given date. */
   async recompute(date: Date = dateOnly()) {
     const __t0 = Date.now();
-    const [ledger, payments, expenses, handovers] = await Promise.all([
+    const [ledger, payments, expenses, handovers, added] = await Promise.all([
       this.ensureDay(date),
       this.prisma.payment.findMany({ where: { date }, select: { amount: true, mode: true } }),
       this.prisma.expense.findMany({ where: { date }, select: { amount: true, mode: true } }),
       this.prisma.cashHandover.aggregate({ where: { date }, _sum: { amount: true } }),
+      this.prisma.cashAdded.aggregate({ where: { date }, _sum: { amount: true } }),
     ]);
 
     const cashCollected = payments
@@ -68,11 +69,13 @@ export class LedgerService {
       .filter((e) => e.mode === 'cash')
       .reduce((s, e) => s.plus(e.amount), ZERO());
     const takenAway = handovers._sum.amount ?? ZERO();
+    const addedCash = added._sum.amount ?? ZERO();
 
     const closingCash = new Prisma.Decimal(ledger.openingBalance)
       .plus(cashCollected)
       .minus(cashExpenses)
-      .minus(takenAway);
+      .minus(takenAway)
+      .plus(addedCash);
 
     const updated = await this.prisma.dailyLedger.update({
       where: { id: ledger.id },
@@ -86,7 +89,7 @@ export class LedgerService {
   async summary(day: Date = dateOnly()) {
     const __tAll = Date.now();
 
-    const [ledger, patients, expenses, paymentsToday, handovers] = await Promise.all([
+    const [ledger, patients, expenses, paymentsToday, handovers, cashAddedEntries] = await Promise.all([
       this.ensureDay(day),
       this.prisma.patient.findMany({
         where: { entryDate: day },
@@ -107,6 +110,7 @@ export class LedgerService {
         },
       }),
       this.prisma.cashHandover.findMany({ where: { date: day }, orderBy: { createdAt: 'asc' } }),
+      this.prisma.cashAdded.findMany({ where: { date: day }, orderBy: { createdAt: 'asc' } }),
     ]);
 
     // Collection split by mode (from Payment audit log, by payment date).
@@ -130,6 +134,7 @@ export class LedgerService {
     const expenseTotal = cashExpenses.plus(otherExpenses);
 
     const cashTakenAway = handovers.reduce((s, h) => s.plus(h.amount), ZERO());
+    const addedCash = cashAddedEntries.reduce((s, a) => s.plus(a.amount), ZERO());
 
     // Billing-side totals from today's register (entryDate==day).
     const billing = patients.reduce(
@@ -147,7 +152,8 @@ export class LedgerService {
     const closingCashBalance = openingCashBalance
       .plus(cashCollected)
       .minus(cashExpenses)
-      .minus(cashTakenAway);
+      .minus(cashTakenAway)
+      .plus(addedCash);
 
     if (!new Prisma.Decimal(ledger.closingBalance).equals(closingCashBalance)) {
       this.prisma.dailyLedger
@@ -171,6 +177,7 @@ export class LedgerService {
         expenses: expenseTotal,
         cashExpenses,
         cashTakenAway,
+        addedCash,
         openingCashBalance,
         closingCashBalance,
         count: patients.length,
@@ -178,6 +185,7 @@ export class LedgerService {
       expenses,
       payments: paymentsToday,
       cashHandovers: handovers,
+      cashAdded: cashAddedEntries,
     };
   }
 

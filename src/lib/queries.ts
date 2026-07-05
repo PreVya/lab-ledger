@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { api } from "./api";
-import type { CashHandover, Expense, Patient, PaymentMode, TestCatalog, TodayResponse, UpsertPatientInput } from "./types";
+import type { CashAdded, CashHandover, Expense, Patient, PaymentMode, TestCatalog, TodayResponse, UpsertPatientInput } from "./types";
 
 /** Today's IST (Asia/Kolkata) business date as YYYY-MM-DD. */
 export function todayKey(): string {
@@ -133,6 +133,28 @@ export function useDeleteCashHandover(date: string = todayKey()) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => api(`/cash-handover/${id}`, { method: "DELETE" }).then(() => id),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: qk.ledger(date) }); },
+  });
+}
+
+// --- Cash added ---------------------------------------------------------
+
+export function useCreateCashAdded(date: string = todayKey()) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { amount: number; notes?: string }) =>
+      api<CashAdded>("/cash-added", {
+        method: "POST",
+        body: JSON.stringify({ ...input, date }),
+      }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: qk.ledger(date) }); },
+  });
+}
+
+export function useDeleteCashAdded(date: string = todayKey()) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api(`/cash-added/${id}`, { method: "DELETE" }).then(() => id),
     onSuccess: () => { qc.invalidateQueries({ queryKey: qk.ledger(date) }); },
   });
 }

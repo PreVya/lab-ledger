@@ -75,6 +75,15 @@ export interface CashHandover {
   createdAt: string;
 }
 
+export interface CashAdded {
+  id: string;
+  date: string;
+  amount: string;
+  notes?: string | null;
+  createdById?: string | null;
+  createdAt: string;
+}
+
 export interface PaymentRow {
   id: string;
   patientId: string;
@@ -112,6 +121,7 @@ export interface TodayResponse {
     expenses: string;
     cashExpenses: string;
     cashTakenAway: string;
+    addedCash: string;
     openingCashBalance: string;
     closingCashBalance: string;
     count: number;
@@ -119,6 +129,7 @@ export interface TodayResponse {
   expenses: Expense[];
   payments: PaymentRow[];
   cashHandovers: CashHandover[];
+  cashAdded: CashAdded[];
 }
 
 export interface UpsertPatientInput {

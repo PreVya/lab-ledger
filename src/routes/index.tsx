@@ -1,15 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import {
   useLedger, useCreateExpense, useDeleteExpense, todayKey,
   useCreateCashHandover, useDeleteCashHandover,
+  useCreateCashAdded, useDeleteCashAdded,
 } from "@/lib/queries";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Trash2, AlertCircle, CalendarDays, HandCoins, ArrowRightCircle } from "lucide-react";
+import { Plus, Trash2, AlertCircle, CalendarDays, HandCoins, ArrowRightCircle, PlusCircle } from "lucide-react";
 import { PatientFormDialog } from "@/components/patient-form-dialog";
-import type { CashHandover, Expense, Patient, PaymentMode, PaymentRow } from "@/lib/types";
+import type { CashAdded, CashHandover, Expense, Patient, PaymentMode, PaymentRow } from "@/lib/types";
 import { formatAge } from "@/lib/types";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
@@ -81,7 +82,7 @@ function Register() {
       {!isLoading && data && (
         <>
           {/* Cash + collection split summary */}
-          <div className="grid grid-cols-5 gap-3 border-b bg-secondary/30 px-6 py-3 text-sm">
+          <div className="grid grid-cols-6 gap-3 border-b bg-secondary/30 px-6 py-3 text-sm">
             <Stat label="Opening Cash" value={money(data.totals.openingCashBalance)} />
             <Stat label="Cash Collected" value={money(data.totals.cashCollected)} accent />
             <Stat label="UPI Collected" value={money(data.totals.upiCollected)} />
@@ -89,6 +90,7 @@ function Register() {
             <Stat label="Total Collected" value={money(data.totals.collected)} accent />
             <Stat label="Cash Expenses" value={money(data.totals.cashExpenses)} />
             <Stat label="Cash Taken Away" value={money(data.totals.cashTakenAway)} />
+            <Stat label="Added Cash" value={money(data.totals.addedCash ?? "0")} />
             <Stat label="Net Billing" value={money(data.totals.net)} />
             <Stat label="Pending Balance" value={money(data.totals.balance)} />
             <Stat label="Closing Cash" value={money(data.totals.closingCashBalance)} accent />
@@ -108,6 +110,11 @@ function Register() {
                 handovers={data.cashHandovers}
                 total={data.totals.cashTakenAway}
               />
+              <CashAddedPanel
+                date={selectedDate}
+                entries={data.cashAdded ?? []}
+                total={data.totals.addedCash ?? "0"}
+              />
               <ExpensesPanel
                 date={selectedDate}
                 expenses={data.expenses}
@@ -122,9 +129,9 @@ function Register() {
         open={open}
         onOpenChange={setOpen}
         patient={editing}
-        entryDate={!editing && !isToday ? selectedDate : undefined}
+        entryDate={!editing ? selectedDate : undefined}
       />
-      {isToday && <Hotkeys onNew={() => { setEditing(null); setOpen(true); }} />}
+      <Hotkeys onNew={() => { setEditing(null); setOpen(true); }} dialogOpen={open} />
     </div>
   );
 }
@@ -329,15 +336,64 @@ function ExpensesPanel({ date, expenses, totalExpenses }: { date: string; expens
   );
 }
 
-function Hotkeys({ onNew }: { onNew: () => void }) {
-  useState(() => {
+function CashAddedPanel({ date, entries, total }: { date: string; entries: CashAdded[]; total: string }) {
+  const create = useCreateCashAdded(date);
+  const del = useDeleteCashAdded(date);
+  const [amt, setAmt] = useState("");
+  const [notes, setNotes] = useState("");
+
+  async function add(e: React.FormEvent) {
+    e.preventDefault();
+    if (!amt) return;
+    await create.mutateAsync({ amount: Number(amt), notes: notes.trim() || undefined });
+    setAmt(""); setNotes("");
+  }
+
+  return (
+    <div className="border-b">
+      <div className="flex items-center justify-between border-b bg-secondary/40 px-3 py-2">
+        <div className="flex items-center gap-2 text-sm font-medium"><PlusCircle className="h-4 w-4" /> Added Cash</div>
+        <div className="text-sm font-semibold tabular-nums">{money(total)}</div>
+      </div>
+      <form onSubmit={add} className="space-y-2 border-b p-3">
+        <Input placeholder="Amount" value={amt} onChange={e => setAmt(e.target.value)} inputMode="decimal" className="h-8" />
+        <Input placeholder="Notes (e.g. change money top-up)" value={notes} onChange={e => setNotes(e.target.value)} className="h-8" />
+        <Button type="submit" size="sm" className="w-full">Add Cash</Button>
+      </form>
+      <div>
+        {entries.map(c => (
+          <div key={c.id} className="flex items-center justify-between border-b px-3 py-2 text-sm">
+            <div>
+              <div className="tabular-nums font-medium">{money(c.amount)}</div>
+              {c.notes && <div className="text-xs text-muted-foreground">{c.notes}</div>}
+              <div className="text-[10px] text-muted-foreground">{new Date(c.createdAt).toLocaleTimeString()}</div>
+            </div>
+            <button onClick={() => del.mutate(c.id)} className="text-muted-foreground hover:text-destructive">
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        ))}
+        {entries.length === 0 && <div className="p-3 text-xs text-muted-foreground">No added cash.</div>}
+      </div>
+    </div>
+  );
+}
+
+function Hotkeys({ onNew, dialogOpen }: { onNew: () => void; dialogOpen: boolean }) {
+  useEffect(() => {
     const h = (e: KeyboardEvent) => {
-      if (e.key === "n" && !["INPUT", "TEXTAREA"].includes((e.target as HTMLElement)?.tagName)) {
-        e.preventDefault(); onNew();
-      }
+      if (dialogOpen) return;
+      if (e.key.toLowerCase() !== "n") return;
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      const t = e.target as HTMLElement | null;
+      const tag = t?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      if (t?.isContentEditable) return;
+      e.preventDefault();
+      onNew();
     };
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
-  });
+  }, [onNew, dialogOpen]);
   return null;
 }
