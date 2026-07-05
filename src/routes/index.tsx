@@ -1,15 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import {
   useLedger, useCreateExpense, useDeleteExpense, todayKey,
   useCreateCashHandover, useDeleteCashHandover,
+  useCreateCashAdded, useDeleteCashAdded,
 } from "@/lib/queries";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Trash2, AlertCircle, CalendarDays, HandCoins, ArrowRightCircle } from "lucide-react";
+import { Plus, Trash2, AlertCircle, CalendarDays, HandCoins, ArrowRightCircle, PlusCircle } from "lucide-react";
 import { PatientFormDialog } from "@/components/patient-form-dialog";
-import type { CashHandover, Expense, Patient, PaymentMode, PaymentRow } from "@/lib/types";
+import type { CashAdded, CashHandover, Expense, Patient, PaymentMode, PaymentRow } from "@/lib/types";
 import { formatAge } from "@/lib/types";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
