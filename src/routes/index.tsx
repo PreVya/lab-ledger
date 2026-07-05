@@ -82,7 +82,7 @@ function Register() {
       {!isLoading && data && (
         <>
           {/* Cash + collection split summary */}
-          <div className="grid grid-cols-5 gap-3 border-b bg-secondary/30 px-6 py-3 text-sm">
+          <div className="grid grid-cols-6 gap-3 border-b bg-secondary/30 px-6 py-3 text-sm">
             <Stat label="Opening Cash" value={money(data.totals.openingCashBalance)} />
             <Stat label="Cash Collected" value={money(data.totals.cashCollected)} accent />
             <Stat label="UPI Collected" value={money(data.totals.upiCollected)} />
@@ -90,6 +90,7 @@ function Register() {
             <Stat label="Total Collected" value={money(data.totals.collected)} accent />
             <Stat label="Cash Expenses" value={money(data.totals.cashExpenses)} />
             <Stat label="Cash Taken Away" value={money(data.totals.cashTakenAway)} />
+            <Stat label="Added Cash" value={money(data.totals.addedCash ?? "0")} />
             <Stat label="Net Billing" value={money(data.totals.net)} />
             <Stat label="Pending Balance" value={money(data.totals.balance)} />
             <Stat label="Closing Cash" value={money(data.totals.closingCashBalance)} accent />
@@ -109,6 +110,11 @@ function Register() {
                 handovers={data.cashHandovers}
                 total={data.totals.cashTakenAway}
               />
+              <CashAddedPanel
+                date={selectedDate}
+                entries={data.cashAdded ?? []}
+                total={data.totals.addedCash ?? "0"}
+              />
               <ExpensesPanel
                 date={selectedDate}
                 expenses={data.expenses}
@@ -123,9 +129,9 @@ function Register() {
         open={open}
         onOpenChange={setOpen}
         patient={editing}
-        entryDate={!editing && !isToday ? selectedDate : undefined}
+        entryDate={!editing ? selectedDate : undefined}
       />
-      {isToday && <Hotkeys onNew={() => { setEditing(null); setOpen(true); }} />}
+      <Hotkeys onNew={() => { setEditing(null); setOpen(true); }} dialogOpen={open} />
     </div>
   );
 }
