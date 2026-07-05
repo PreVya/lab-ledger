@@ -79,6 +79,7 @@ function summary(date: string) {
   const expenses = store.expenses.filter(e => e.date === date);
   const payments = store.payments.filter(p => p.date === date);
   const handovers = store.handovers.filter(h => h.date === date);
+  const cashAddedEntries = store.cashAdded.filter(c => c.date === date);
 
   let cash = 0, upi = 0, card = 0, other = 0;
   for (const p of payments) {
@@ -92,8 +93,9 @@ function summary(date: string) {
   const cashExpenses = expenses.filter(e => e.mode === "cash").reduce((s, e) => s + Number(e.amount), 0);
   const expenseTotal = expenses.reduce((s, e) => s + Number(e.amount), 0);
   const cashTakenAway = handovers.reduce((s, h) => s + Number(h.amount), 0);
+  const addedCash = cashAddedEntries.reduce((s, c) => s + Number(c.amount), 0);
   const opening = Number(ledger.openingBalance);
-  const closing = opening + cash - cashExpenses - cashTakenAway;
+  const closing = opening + cash - cashExpenses - cashTakenAway + addedCash;
   ledger.closingBalance = String(closing);
 
   return {
@@ -113,6 +115,7 @@ function summary(date: string) {
       expenses: String(expenseTotal),
       cashExpenses: String(cashExpenses),
       cashTakenAway: String(cashTakenAway),
+      addedCash: String(addedCash),
       openingCashBalance: String(opening),
       closingCashBalance: String(closing),
       count: patients.length,
@@ -120,6 +123,7 @@ function summary(date: string) {
     expenses,
     payments,
     cashHandovers: handovers,
+    cashAdded: cashAddedEntries,
   };
 }
 
