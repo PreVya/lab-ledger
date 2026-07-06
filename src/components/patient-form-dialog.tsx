@@ -119,8 +119,12 @@ export function PatientFormDialog({ open, onOpenChange, patient, entryDate, pref
       entryDate: !patient && entryDate ? entryDate : undefined,
     };
     try {
-      if (patient) await update.mutateAsync(input);
-      else await create.mutateAsync(input);
+      if (patient) {
+        await update.mutateAsync(input);
+      } else {
+        const created = await create.mutateAsync(input);
+        if (onCreated) await onCreated(created);
+      }
       toast.success(patient ? "Patient updated" : "Patient saved");
       onOpenChange(false);
     } catch (e: any) {
