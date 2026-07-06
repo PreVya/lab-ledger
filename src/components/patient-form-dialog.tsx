@@ -65,8 +65,11 @@ export function PatientFormDialog({ open, onOpenChange, patient, entryDate, pref
       setBalancePaidOn(patient.balancePaidOn?.slice(0, 10) ?? "");
     } else {
       const d = entryDate ?? "";
-      setName(""); setMobile(""); setAgeValue(""); setAgeUnit("years");
-      setSex("M"); setReferredDoctor(""); setNotes("");
+      setName(prefill?.name ?? ""); setMobile(prefill?.mobile ?? "");
+      setAgeValue(prefill?.ageValue != null ? String(prefill.ageValue) : "");
+      setAgeUnit((prefill?.ageUnit ?? "years") as AgeUnit);
+      setSex((prefill?.sex ?? "M") as Sex); setReferredDoctor(prefill?.referredDoctor ?? "");
+      setNotes(prefill?.notes ?? "");
       setSelectedTests([]); setDiscount(""); setAdvanceCash(""); setAdvanceUpi("");
       setAdvancePaidOn(d); setBalanceCash(""); setBalanceUpi(""); setBalancePaidOn(d);
     }
