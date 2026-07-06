@@ -1,102 +1,233 @@
-# Phase 1.75 — Reception Book Alignment
+# Phase 2 — Appointments + Attendance + Salary + Aadhaar Storage
 
-Scope is large and touches schema + backend + frontend. Plan first, then execute as one batch of migrations + code changes. No destructive resets; everything ships as a single idempotent SQL file plus matching Prisma schema + service/UI updates.
+Two new modules, both accessible to every logged-in user. Only User Management stays admin-only. No changes to existing ledger / patient / payment / FY / cash handover / added cash / historical entry logic.
 
-Constraints (locked in):
-- Keep Patient/Test/Payment UUID PKs.
-- Keep FY + registerNumber logic untouched.
-- Keep Patient bucket fields (advance/balance × cash/upi + paidOn).
-- `Patient.entryDate` = registration day; `Payment.date` = money-received day.
-- Ledger patient list filters by `entryDate`; ledger collection totals come from `Payment`.
-- All schema changes ship as a single SQL file runnable in Supabase SQL Editor (idempotent).
+## Env vars you will need to set (backend/.env)
+
+```
+SUPABASE_URL=...
+SUPABASE_SERVICE_ROLE_KEY=...
+SUPABASE_STORAGE_EMPLOYEE_BUCKET=employee-documents
+```
+
+Service role key stays server-side only. Frontend never sees it.
+
+You will need to manually create the private bucket `employee-documents` in Supabase Storage (Storage → New bucket → Private).
 
 ---
 
-## 1. Schema changes (Prisma + SQL migration)
+## Part A — Appointments
 
-File: `backend/prisma/migrations/phase_1_75_reception_book_alignment/migration.sql`
+### Data model (new tables)
 
-- `TestCatalog`
-  - Drop `UNIQUE(name)`.
-  - Add functional unique index on `(lower(trim(name)), coalesce(lower(trim("outsourcedLab")), 'INHOUSE'))`.
-- `Patient`
-  - Add `ageValue INT NULL`, `ageUnit` text/enum (`days|months|years`) default `years`.
-  - Backfill `ageValue := age`, `ageUnit := 'years'`.
-  - Keep legacy `age` column (Prisma still maps it; new writes also set it = `ageValue` when unit=years, else 0, for back-compat).
-  - Backfill `createdById` for NULL rows → seeded `admin` user id (lookup by username). Then `SET NOT NULL` only if no NULL remains.
-- `Expense`
-  - `mode` already exists (cash|upi). Extend enum to add `card` and `other`. Done via `ALTER TYPE PaymentMode ADD VALUE IF NOT EXISTS ...`.
-- `PaymentMode` enum → add `card`.
-- `CashHandover` (new table)
-  - `id uuid pk`, `date date`, `amount numeric(10,2)`, `notes text null`, `createdById uuid null`, `createdAt`, `updatedAt`.
-  - Indexes: `(date)`.
-  - GRANTs to `authenticated`, `service_role` (note: backend uses Prisma w/ service creds, but keep grants for consistency).
-- Indexes (idempotent `CREATE INDEX IF NOT EXISTS`):
-  - `Payment(date)`, `Payment(patientId)`, `Payment(kind, date)`
-  - `Patient(entryDate)` (already exists, guard)
-  - `Expense(date)` (already exists, guard)
-  - `CashHandover(date)`
-- DailyLedger: do NOT add cash-specific columns yet. Compute cash opening/closing on-the-fly from prior days' Payment+Expense+CashHandover. Persist computed `closingBalance` (now cash-only semantics) for fast "previous day" lookup. Document in code that `openingBalance/closingBalance` now mean CASH.
+- `Appointment`
+  - `id` (uuid), `name`, `mobile`, `ageValue`, `ageUnit`, `sex`
+  - `referredDoctor?`, `procedure` (free text — e.g. FNAC, Pap smear)
+  - `appointmentDate` (date), `appointmentTime` (string HH:mm)
+  - `status` enum: `scheduled | sample_collected | cancelled | rescheduled | no_show`
+  - `notes?`, `linkedPatientId?` (FK Patient, nullable)
+  - `createdById?`, timestamps
+  - Indexes on `appointmentDate`, `status`, `linkedPatientId`
 
-## 2. Prisma schema
+No automatic patient creation, no register number assignment, no ledger impact — ever. Status changes never fabricate rows.
 
-Update `backend/prisma/schema.prisma` to mirror SQL: `Patient.ageValue`, `ageUnit`, `CashHandover` model, `PaymentMode` + `Expense.mode` extended, remove `@unique` from `TestCatalog.name`. Add `@@index` matching SQL.
+### Backend
 
-## 3. Backend services
+New `appointments` module (controller + service):
 
-- `tests.service.ts`: accept duplicate names with different providers; rely on DB unique for exact-dup prevention; return friendly error on `P2002`.
-- `patients.service.ts`:
-  - Accept `ageValue`, `ageUnit` (default `years`). Mirror to legacy `age` (years value or 0).
-  - Use `CurrentUser` from controller → set `createdById` on create; ignore any client-supplied value.
-  - On update, do NOT overwrite `createdById`.
-- `patients.controller.ts`: inject `@CurrentUser()`, pass `user.sub` into service.
-- New `cash-handover` module: controller + service.
-  - `POST /cash-handover` (auth required, sets `createdById`).
-  - `GET /cash-handover?date=YYYY-MM-DD`.
-  - `DELETE /cash-handover/:id` (admin only — reuse `RolesGuard`).
-- `ledger.service.ts` `summary(date)`:
-  - Add parallel fetches for `cashHandover` rows + payments grouped by mode.
-  - Compute split totals: `cashCollected`, `upiCollected`, `cardCollected`, `totalCollected`.
-  - Compute `cashExpenses` (Expense.mode='cash') vs total expenses.
-  - `cashTakenAway = sum(CashHandover.amount where date=day)`.
-  - `openingCashBalance` = previous day's persisted `closingBalance` (cash-only) or 0.
-  - `closingCashBalance = opening + cashCollected - cashExpenses - cashTakenAway`.
-  - Persist closing in background as before.
-  - Return new fields plus existing structure (back-compat). Include `balancePaymentsToday` = `payments` filtered to `kind='balance'` (already returned in `payments` array; UI will filter).
-- `payments.service.ts`: keep mirroring to buckets; allow `mode='card'` (extend validator).
-- `expenses.service.ts`: pass-through for new modes; ensure DTO validation includes `card|other`.
+- `POST /appointments` create
+- `GET /appointments?date=YYYY-MM-DD&status=&q=` list/filter
+- `GET /appointments/:id`
+- `PATCH /appointments/:id` update / reschedule / status change
+- `DELETE /appointments/:id`
+- `POST /appointments/:id/link-patient` body `{ patientId }` — sets `linkedPatientId` + status `sample_collected`. Rejects if already linked.
 
-Recompute helper (`ledger.recompute`) updated for same cash math.
+All authenticated users (no admin-only guard).
 
-## 4. Frontend
+### Frontend
 
-- `src/lib/types.ts`: add `ageValue`, `ageUnit`, `CashHandover`, new ledger summary fields (`cashCollected`, `upiCollected`, `cardCollected`, `cashTakenAway`, `openingCashBalance`, `closingCashBalance`).
-- `src/lib/queries.ts`: add `useCashHandovers(date)`, `useCreateCashHandover`, optimistic patches.
-- `src/components/patient-form-dialog.tsx`:
-  - Replace single age input with `ageValue` + `ageUnit` select.
-  - Test selector rows show `Name — Provider/In-house — ₹rate`.
-- `src/routes/tests.tsx`: form supports duplicate name + provider distinction; list shows provider + rate columns.
-- `src/routes/index.tsx` ledger:
-  - Replace 6-stat row with split cards: Opening Cash, Cash Coll, UPI Coll, Card Coll, Total Coll, Cash Expenses, Cash Taken Away, Closing Cash, Pending Balance, Patients count.
-  - New right-rail / lower section: "Balance Received Today" list (from `payments` where `kind=balance`, join patient summary). Shows patient name, reg#, FY, original entryDate, amount, mode.
-  - New "Cash Taken Away" panel with quick-add form + list (amount, notes, by, time, delete if admin).
-  - Patient table: age column renders `{ageValue} {ageUnit}`.
+- New top-nav item **Appointments** (route `/appointments`).
+- Date picker + status filter + text search (name/mobile/procedure/doctor).
+- List/table of appointments for selected date with status pill and action buttons: Edit, Reschedule, Cancel, Mark No-Show, **Create Patient Entry**.
+- Create/Edit dialog form.
+- **Create Patient Entry** button:
+  - Hidden if `linkedPatientId` already set.
+  - Opens existing `PatientFormDialog` prefilled with appointment fields (`entryDate` defaults to today or selected collection date).
+  - On successful patient create → calls `link-patient`, updates appointment status to `sample_collected`.
 
-## 5. Acceptance smoke
+---
 
-After build, manually verify in preview using demo mode shims (extend `src/lib/demo-mode.ts` minimally to cover new endpoints so the in-browser preview keeps working without the NestJS backend):
-- duplicate test name w/ different lab allowed; exact dup blocked.
-- newborn 2 days renders as "2 days".
-- cash handover reduces closing cash; UPI does not.
-- balance paid today shows in Balance Received section and lifts today's cash total but not yesterday's.
+## Part B — Employees + Attendance + Salary + Aadhaar
 
-## 6. Out of scope (explicit)
+### Data model (new tables)
 
-- No invoice/print changes.
-- No reports/export endpoints (foundation only).
-- No role-gated edit/delete UI for CashHandover beyond a basic delete button (admin role check on backend).
-- No Phase 2 appointment work.
+- `StoredFile` (generic file registry — future-proof)
+  - `id`, `bucket`, `path`, `originalName`, `mimeType`, `size` (int)
+  - `documentType` (e.g. `aadhaar`), `entityType` (e.g. `employee`), `entityId`
+  - `uploadedById?`, `createdAt`
+  - Indexes on `(entityType, entityId)`
+- `Employee`
+  - `id`, `name`, `mobile?`, `designation?`
+  - `monthlySalary` (Decimal 10,2)
+  - `active` (bool default true)
+  - `linkedUserId?` (FK User, nullable)
+  - `aadhaarDocumentId?` (FK StoredFile, nullable)
+  - timestamps
+  - Index on `active`
+- `Attendance`
+  - `id`, `employeeId` (FK), `date` (date)
+  - `status` enum: `present | absent | half_day | leave`
+  - `notes?`, `markedById?`, timestamps
+  - Unique `(employeeId, date)`
+- `SalaryAdvance`
+  - `id`, `employeeId`, `date`, `amount` (Decimal), `notes?`, `createdById?`, timestamps
+  - Index on `(employeeId, date)`
 
-## Open question
+### Aadhaar file storage (private bucket, backend proxy)
 
-None — every ambiguous point in the spec has a chosen default above. If you want different defaults (e.g., add cash-specific `openingCashBalance` columns rather than reusing `openingBalance`), say so before I start; otherwise I'll proceed exactly as planned.
+- Actual image/PDF stored in Supabase Storage bucket `employee-documents` at path `employees/{employeeId}/aadhaar/{uuid}-{originalName}`.
+- Only file metadata in Postgres (`StoredFile` row + FK from `Employee`).
+- Uploads/downloads go through NestJS using service role key. Frontend never touches Supabase Storage directly.
+
+New backend `storage` helper:
+
+- `uploadEmployeeDocument(employeeId, file, documentType)` → uploads to bucket, creates `StoredFile`, returns row.
+- `getSignedUrl(storedFileId)` → creates short-lived signed URL (or streams file) after auth check.
+- `deleteStoredFile(storedFileId)` → removes from bucket + DB.
+
+Accepted mime types: `image/jpeg`, `image/png`, `image/webp`, `application/pdf`. Size cap ~5 MB.
+
+### Backend modules
+
+- `employees`
+  - `POST /employees` (multipart/form-data: fields + `aadhaar` file) — creates employee, uploads file, links `aadhaarDocumentId`.
+  - `GET /employees?active=`
+  - `GET /employees/:id`
+  - `PATCH /employees/:id` (multipart optional — replace Aadhaar → delete old StoredFile + upload new)
+  - `PATCH /employees/:id/deactivate` (soft delete)
+  - `GET /employees/:id/aadhaar` — returns `{ signedUrl }` after auth check (protected).
+- `attendance`
+  - `GET /attendance?date=YYYY-MM-DD` — list all active employees with today's mark (or unmarked).
+  - `POST /attendance/bulk` — upsert `[{employeeId, status, notes}]` for a date.
+  - `GET /attendance/month?employeeId=&year=&month=` — matrix for month view.
+- `salary`
+  - `GET /salary/summary?year=&month=` — per employee summary (present/half/absent/leave/unmarked counts, attendedDays, gross, advances, net payable).
+  - `POST /salary-advances` `{employeeId, date, amount, notes}`
+  - `GET /salary-advances?employeeId=&year=&month=`
+  - `DELETE /salary-advances/:id`
+
+### Salary formula (server-side)
+
+```
+attendedDays = present*1 + half_day*0.5 + absent*0 + leave*0
+daysInMonth = actual days in that calendar month
+grossRaw    = (monthlySalary / daysInMonth) * attendedDays
+gross       = roundToNearest10(grossRaw)     // .5 stays as-is
+advances    = SUM(SalaryAdvance.amount) within month
+netPayable  = gross - advances
+```
+
+`roundToNearest10`: `Math.round(x/10)*10` (7265 → 7270 by JS default; adjust to banker-style so .5 stays 7265 as spec: implement via `if (frac == 5) keep; else Math.round(x/10)*10`).
+
+Unmarked days: `daysInMonth - (present+half+absent+leave)` — shown separately, never counted as present.
+
+### Frontend
+
+- New top-nav item **Attendance** (route `/attendance`) with tabs: **Employees**, **Attendance**, **Salary**, **Salary Advances**.
+- **Employees** tab: list, create/edit dialog with file input for Aadhaar (shows selected filename), "View Aadhaar" button that fetches signed URL and opens new tab, deactivate button.
+- **Attendance** tab: date picker, table of active employees with status radio (present / half_day / absent / leave) + notes, Save button (bulk upsert). Month view calendar/matrix per employee.
+- **Salary** tab: month/year picker, per-employee row showing counts, gross, advances, net payable. Inline "Add advance" opens dialog.
+- **Salary Advances** tab: filter by employee/month, add/delete.
+
+### Access control
+
+Only `/users` remains admin-only. Appointments and Attendance nav items visible to all authenticated users; backend routes use `JwtAuthGuard` only.
+
+---
+
+## Migration
+
+File: `backend/prisma/migrations/phase_2_appointments_attendance_salary/migration.sql`
+
+Idempotent (`CREATE TABLE IF NOT EXISTS`, `DO $$ ... EXCEPTION WHEN duplicate_object`), matches existing UUID `id` style with `gen_random_uuid()`. Includes:
+
+- enums: `AppointmentStatus`, `AttendanceStatus`
+- tables: `Appointment`, `StoredFile`, `Employee`, `Attendance`, `SalaryAdvance`
+- FKs: `Appointment.linkedPatientId → Patient`, `Employee.aadhaarDocumentId → StoredFile`, `Attendance.employeeId → Employee`, `SalaryAdvance.employeeId → Employee`
+- Indexes and unique constraints as listed above.
+- Header comment with Supabase SQL Editor + Prisma CLI instructions.
+
+Prisma schema updated to match; run `prisma generate` (no `prisma migrate` — the SQL file is the source of truth like previous phases).
+
+---
+
+## Files to create / edit
+
+**Backend new:**
+
+- `backend/prisma/migrations/phase_2_appointments_attendance_salary/migration.sql`
+- `backend/src/modules/appointments/{controller,service,module}.ts`
+- `backend/src/modules/employees/{controller,service,module}.ts`
+- `backend/src/modules/attendance/{controller,service,module}.ts`
+- `backend/src/modules/salary/{controller,service,module}.ts`
+- `backend/src/modules/storage/{storage.service,storage.module}.ts` (Supabase client + upload/signed-url helpers)
+
+**Backend edit:**
+
+- `backend/prisma/schema.prisma` (new models + enums)
+- `backend/src/app.module.ts` (register new modules)
+- `backend/src/config/env.validation.ts` (add optional Supabase storage vars)
+- `backend/package.json` add `@supabase/supabase-js`, `multer`, `@nestjs/platform-express` types
+
+**Frontend new:**
+
+- `src/routes/appointments.tsx`
+- `src/routes/attendance.tsx` (with tabbed sub-sections)
+- `src/components/appointment-form-dialog.tsx`
+- `src/components/employee-form-dialog.tsx`
+- Demo-mode mocks for all new endpoints in `src/lib/demo-mode.ts`
+
+**Frontend edit:**
+
+- `src/components/app-shell.tsx` (add Appointments + Attendance nav)
+- `src/lib/queries.ts` (hooks for all new endpoints)
+- `src/lib/types.ts` (Appointment / Employee / Attendance / SalaryAdvance / SalarySummary types)
+- `src/components/patient-form-dialog.tsx` (accept optional `prefill` + `onSuccess(patient)` for appointment conversion — no behavior change when props absent)
+
+---
+
+## Non-goals (explicitly out)
+
+- No auto-conversion of appointment → patient.
+- No salary payments in ledger.
+- No storage of Aadhaar number text.
+- No public bucket / no service-role key in frontend.
+- No changes to FY, register numbers, cash flows, historical entry.  
+  
+  
+  
+
+  Before implementing, inspect existing Prisma schema and DB column types. If existing ids are String/Text/cuid style, use TEXT ids for Appointment, Employee, Attendance, StoredFile, SalaryAdvance and generate ids consistently. Do not force uuid/gen_random_uuid unless existing project actually uses uuid columns.  
+    
+  This plan says file path:
+  employees/{employeeId}/aadhaar/{uuid}-{originalName}
+  That means employee ID is needed before upload. So backend should do:
+  1. Create Employee first with aadhaarDocumentId = null
+  2. Upload Aadhaar file using created employeeId in path
+  3. Create StoredFile row
+  4. Update Employee.aadhaarDocumentId
+  If upload fails, either delete the employee or return a clear error. Ask Lovable to handle this cleanly.  
+
+  Avoid hard-deleting appointment records unless absolutely needed. Prefer status=cancelled or soft delete for audit.  
+    
+  The rounding rule is okay because you gave that requirement:
+  7263 → 7260
+  7266 → 7270
+  7265 → 7265
+  Just ensure Lovable applies it to gross salary before advance deduction, like:
+  grossRaw = monthlySalary / daysInMonth * attendedDays
+  gross = customRoundedGross
+  netPayable = gross - advances
+  Not after deducting advance.
+    
+  Before starting, please verify existing ID column style from Prisma schema and DB. Do not assume uuid/gen_random_uuid unless existing tables actually use uuid. New FK columns must match existing User.id and Patient.id types. Also handle employee Aadhaar creation as create employee → upload file → create StoredFile → update Employee.aadhaarDocumentId. Prefer soft cancel over hard delete for appointments unless delete is internal soft delete. Salary rounding should apply to gross salary before advance deduction.

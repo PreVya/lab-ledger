@@ -93,6 +93,7 @@ model Patient {
 
   tests           PatientTest[]
   payments        Payment[]
+  appointments    Appointment[]
 
   @@unique([entryDate, dailySerial])
   @@unique([financialYear, registerNumber])
@@ -188,4 +189,119 @@ model CashHandover {
   updatedAt   DateTime @updatedAt
 
   @@index([date])
+}
+
+// ============================================================================
+// PHASE 2 — Appointments + Employees + Attendance + Salary
+// ============================================================================
+
+enum AppointmentStatus {
+  scheduled
+  sample_collected
+  cancelled
+  rescheduled
+  no_show
+}
+
+enum AttendanceStatus {
+  present
+  absent
+  half_day
+  leave
+}
+
+/// Generic file registry. Actual bytes live in Supabase Storage; only metadata
+/// is stored here.
+model StoredFile {
+  id             String   @id @default(uuid())
+  bucket         String
+  path           String
+  originalName   String
+  mimeType       String
+  size           Int
+  documentType   String
+  entityType     String
+  entityId       String?
+  uploadedById   String?
+  createdAt      DateTime @default(now())
+
+  employees      Employee[] @relation("EmployeeAadhaar")
+
+  @@index([entityType, entityId])
+  @@index([documentType])
+}
+
+/// Scheduled procedures (FNAC, Pap smear, etc). NEVER auto-creates Patient
+/// rows. Manual conversion only, via link-patient endpoint after a Patient
+/// row has been created from the prefilled patient form.
+model Appointment {
+  id                String            @id @default(uuid())
+  name              String
+  mobile            String
+  ageValue          Int               @default(0)
+  ageUnit           String            @default("years")
+  sex               Sex
+  referredDoctor    String?
+  procedure         String
+  appointmentDate   DateTime          @db.Date
+  appointmentTime   String?
+  status            AppointmentStatus @default(scheduled)
+  notes             String?
+  linkedPatientId   String?
+  linkedPatient     Patient?          @relation(fields: [linkedPatientId], references: [id], onDelete: SetNull)
+  createdById       String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  @@index([appointmentDate])
+  @@index([status])
+  @@index([linkedPatientId])
+}
+
+model Employee {
+  id                 String        @id @default(uuid())
+  name               String
+  mobile             String?
+  designation        String?
+  monthlySalary      Decimal       @db.Decimal(10, 2) @default(0)
+  active             Boolean       @default(true)
+  linkedUserId       String?
+  aadhaarDocumentId  String?
+  aadhaarDocument    StoredFile?   @relation("EmployeeAadhaar", fields: [aadhaarDocumentId], references: [id], onDelete: SetNull)
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  attendance         Attendance[]
+  salaryAdvances     SalaryAdvance[]
+
+  @@index([active])
+}
+
+model Attendance {
+  id          String           @id @default(uuid())
+  employeeId  String
+  employee    Employee         @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  date        DateTime         @db.Date
+  status      AttendanceStatus
+  notes       String?
+  markedById  String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@unique([employeeId, date])
+  @@index([date])
+}
+
+model SalaryAdvance {
+  id          String   @id @default(uuid())
+  employeeId  String
+  employee    Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  date        DateTime @db.Date
+  amount      Decimal  @db.Decimal(10, 2)
+  notes       String?
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([employeeId, date])
 }
