@@ -62,7 +62,7 @@ function AppointmentsPage() {
           </tr></thead>
           <tbody>
             {data.length === 0 && <tr><td colSpan={7} className="p-4 text-center text-muted-foreground">No appointments</td></tr>}
-            {data.map((a) => (
+            {data.map((a: any) => (
               <tr key={a.id} className="border-t">
                 <td className="p-2">{a.appointmentTime ?? "—"}</td>
                 <td className="p-2">{a.name}</td>
@@ -99,7 +99,7 @@ function AppointmentsPage() {
             referredDoctor: convertFrom.referredDoctor ?? "",
             notes: convertFrom.procedure ? `From appointment: ${convertFrom.procedure}` : "",
           }}
-          onCreated={async (patient) => {
+          onCreated={async (patient: any) => {
             try {
               await link.mutateAsync({ appointmentId: convertFrom.id, patientId: patient.id });
               toast.success("Patient linked to appointment");

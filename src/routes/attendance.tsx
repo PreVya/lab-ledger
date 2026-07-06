@@ -46,7 +46,7 @@ function AttendanceTab() {
   const save = useSaveAttendanceBulk();
   const [draft, setDraft] = useState<Record<string, { status: AttendanceStatus; notes?: string }>>({});
 
-  const entries = data.map((r) => ({
+  const entries = data.map((r: any) => ({
     ...r,
     current: draft[r.employee.id] ?? (r.attendance ? { status: r.attendance.status, notes: r.attendance.notes ?? undefined } : undefined),
   }));
@@ -67,7 +67,7 @@ function AttendanceTab() {
           <thead className="bg-muted/50"><tr className="text-left"><th className="p-2">Employee</th><th className="p-2">Status</th><th className="p-2">Notes</th></tr></thead>
           <tbody>
             {entries.length === 0 && <tr><td colSpan={3} className="p-4 text-center text-muted-foreground">No active employees</td></tr>}
-            {entries.map((r) => (
+            {entries.map((r: any) => (
               <tr key={r.employee.id} className="border-t">
                 <td className="p-2">{r.employee.name}{r.employee.designation && <span className="ml-2 text-xs text-muted-foreground">{r.employee.designation}</span>}</td>
                 <td className="p-2">
@@ -106,7 +106,7 @@ function EmployeesTab() {
         <table className="w-full text-sm">
           <thead className="bg-muted/50"><tr className="text-left"><th className="p-2">Name</th><th className="p-2">Designation</th><th className="p-2">Mobile</th><th className="p-2">Monthly Salary</th><th className="p-2">Aadhaar</th><th className="p-2">Status</th><th className="p-2 text-right">Actions</th></tr></thead>
           <tbody>
-            {data.map((e) => (
+            {data.map((e: any) => (
               <tr key={e.id} className="border-t">
                 <td className="p-2">{e.name}</td>
                 <td className="p-2">{e.designation ?? "—"}</td>
@@ -212,7 +212,7 @@ function SalaryTab() {
             <th className="p-2">Employee</th><th className="p-2">Monthly</th><th className="p-2">Days</th><th className="p-2">P</th><th className="p-2">½</th><th className="p-2">A</th><th className="p-2">L</th><th className="p-2">Unmarked</th><th className="p-2">Attended</th><th className="p-2">Gross</th><th className="p-2">Advance</th><th className="p-2">Net</th><th className="p-2 text-right">Add advance</th>
           </tr></thead>
           <tbody>
-            {data.map((s) => (
+            {data.map((s: any) => (
               <tr key={s.employee.id} className="border-t">
                 <td className="p-2">{s.employee.name}</td>
                 <td className="p-2">₹{s.employee.monthlySalary}</td>
@@ -270,7 +270,7 @@ function AdvancesTab() {
         <table className="w-full text-sm">
           <thead className="bg-muted/50"><tr className="text-left"><th className="p-2">Date</th><th className="p-2">Employee</th><th className="p-2">Amount</th><th className="p-2">Notes</th><th className="p-2 text-right">Actions</th></tr></thead>
           <tbody>
-            {data.map((a) => (
+            {data.map((a: any) => (
               <tr key={a.id} className="border-t">
                 <td className="p-2">{a.date.slice(0, 10)}</td>
                 <td className="p-2">{a.employee?.name}</td>
