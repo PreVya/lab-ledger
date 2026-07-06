@@ -158,3 +158,146 @@ export function useDeleteCashAdded(date: string = todayKey()) {
     onSuccess: () => { qc.invalidateQueries({ queryKey: qk.ledger(date) }); },
   });
 }
+
+// ============= Phase 2: Appointments / Employees / Attendance / Salary =============
+import type { Appointment, AttendanceDateRow, Employee, SalaryAdvance, SalarySummaryRow } from "./types";
+import { API_BASE_URL, loadAuth } from "./api";
+
+const qk2 = {
+  appointments: (date?: string, status?: string, q?: string) => ["appointments", date ?? "", status ?? "", q ?? ""] as const,
+  employees: ["employees"] as const,
+  attendanceDate: (date: string) => ["attendance", date] as const,
+  salarySummary: (y: number, m: number) => ["salary-summary", y, m] as const,
+  salaryAdvances: (empId?: string, y?: number, m?: number) => ["salary-advances", empId ?? "", y ?? 0, m ?? 0] as const,
+};
+
+export function useAppointments(filters: { date?: string; status?: string; q?: string }) {
+  return useQuery({
+    queryKey: qk2.appointments(filters.date, filters.status, filters.q),
+    queryFn: () => {
+      const p = new URLSearchParams();
+      if (filters.date) p.set("date", filters.date);
+      if (filters.status) p.set("status", filters.status);
+      if (filters.q) p.set("q", filters.q);
+      return api<Appointment[]>(`/appointments?${p.toString()}`);
+    },
+  });
+}
+export function useCreateAppointment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: any) => api<Appointment>("/appointments", { method: "POST", body: JSON.stringify(input) }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["appointments"] }),
+  });
+}
+export function useUpdateAppointment(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: any) => api<Appointment>(`/appointments/${id}`, { method: "PATCH", body: JSON.stringify(input) }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["appointments"] }),
+  });
+}
+export function useLinkAppointmentPatient() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ appointmentId, patientId }: { appointmentId: string; patientId: string }) =>
+      api<Appointment>(`/appointments/${appointmentId}/link-patient`, { method: "POST", body: JSON.stringify({ patientId }) }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["appointments"] }),
+  });
+}
+
+// -------- Employees (multipart) --------
+async function apiForm<T>(path: string, method: string, form: FormData): Promise<T> {
+  const a = loadAuth();
+  const h = new Headers();
+  if (a) h.set("Authorization", `Bearer ${a.accessToken}`);
+  const res = await fetch(`${API_BASE_URL}/api${path}`, { method, headers: h, body: form });
+  const text = await res.text();
+  const body = text ? (() => { try { return JSON.parse(text); } catch { return text; } })() : null;
+  if (!res.ok) {
+    const msg = (body && typeof body === "object" && "message" in (body as any) && (body as any).message) || res.statusText;
+    throw new Error(Array.isArray(msg) ? msg.join(", ") : String(msg));
+  }
+  return body as T;
+}
+
+export function useEmployees() {
+  return useQuery({ queryKey: qk2.employees, queryFn: () => api<Employee[]>("/employees") });
+}
+export function useCreateEmployee() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (fd: FormData) => apiForm<Employee>("/employees", "POST", fd),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk2.employees }),
+  });
+}
+export function useUpdateEmployee(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (fd: FormData) => apiForm<Employee>(`/employees/${id}`, "PATCH", fd),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk2.employees }),
+  });
+}
+export function useDeactivateEmployee() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api(`/employees/${id}/deactivate`, { method: "PATCH" }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk2.employees }),
+  });
+}
+export function useEmployeeAadhaar() {
+  return useMutation({
+    mutationFn: (id: string) => api<{ signedUrl: string; file: { originalName: string; mimeType: string } }>(`/employees/${id}/aadhaar`),
+  });
+}
+
+// -------- Attendance --------
+export function useAttendanceByDate(date: string) {
+  return useQuery({
+    queryKey: qk2.attendanceDate(date),
+    queryFn: () => api<AttendanceDateRow[]>(`/attendance?date=${date}`),
+  });
+}
+export function useSaveAttendanceBulk() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { date: string; entries: Array<{ employeeId: string; status: string; notes?: string }> }) =>
+      api("/attendance/bulk", { method: "POST", body: JSON.stringify(input) }),
+    onSuccess: (_r, v) => qc.invalidateQueries({ queryKey: qk2.attendanceDate(v.date) }),
+  });
+}
+
+// -------- Salary --------
+export function useSalarySummary(year: number, month: number) {
+  return useQuery({
+    queryKey: qk2.salarySummary(year, month),
+    queryFn: () => api<SalarySummaryRow[]>(`/salary/summary?year=${year}&month=${month}`),
+  });
+}
+export function useSalaryAdvances(filters: { employeeId?: string; year?: number; month?: number }) {
+  return useQuery({
+    queryKey: qk2.salaryAdvances(filters.employeeId, filters.year, filters.month),
+    queryFn: () => {
+      const p = new URLSearchParams();
+      if (filters.employeeId) p.set("employeeId", filters.employeeId);
+      if (filters.year) p.set("year", String(filters.year));
+      if (filters.month) p.set("month", String(filters.month));
+      return api<SalaryAdvance[]>(`/salary-advances?${p.toString()}`);
+    },
+  });
+}
+export function useCreateSalaryAdvance() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { employeeId: string; date: string; amount: number; notes?: string }) =>
+      api<SalaryAdvance>("/salary-advances", { method: "POST", body: JSON.stringify(input) }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["salary-summary"] }); qc.invalidateQueries({ queryKey: ["salary-advances"] }); },
+  });
+}
+export function useDeleteSalaryAdvance() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api(`/salary-advances/${id}`, { method: "DELETE" }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["salary-summary"] }); qc.invalidateQueries({ queryKey: ["salary-advances"] }); },
+  });
+}

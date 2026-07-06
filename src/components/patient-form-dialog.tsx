@@ -19,9 +19,13 @@ interface Props {
   patient?: Patient | null;
   /** For new entries, the date to record patient/payments on. Defaults to today. */
   entryDate?: string;
+  /** Optional prefill for demographic fields (used by appointment conversion). */
+  prefill?: Partial<Pick<UpsertPatientInput, "name" | "mobile" | "ageValue" | "ageUnit" | "sex" | "referredDoctor" | "notes">>;
+  /** Called after a NEW patient is successfully created. */
+  onCreated?: (patient: Patient) => void | Promise<void>;
 }
 
-export function PatientFormDialog({ open, onOpenChange, patient, entryDate }: Props) {
+export function PatientFormDialog({ open, onOpenChange, patient, entryDate, prefill, onCreated }: Props) {
   const { data: tests = [] } = useTests();
   const create = useCreatePatient();
   const update = useUpdatePatient(patient?.id ?? "");
@@ -61,8 +65,11 @@ export function PatientFormDialog({ open, onOpenChange, patient, entryDate }: Pr
       setBalancePaidOn(patient.balancePaidOn?.slice(0, 10) ?? "");
     } else {
       const d = entryDate ?? "";
-      setName(""); setMobile(""); setAgeValue(""); setAgeUnit("years");
-      setSex("M"); setReferredDoctor(""); setNotes("");
+      setName(prefill?.name ?? ""); setMobile(prefill?.mobile ?? "");
+      setAgeValue(prefill?.ageValue != null ? String(prefill.ageValue) : "");
+      setAgeUnit((prefill?.ageUnit ?? "years") as AgeUnit);
+      setSex((prefill?.sex ?? "M") as Sex); setReferredDoctor(prefill?.referredDoctor ?? "");
+      setNotes(prefill?.notes ?? "");
       setSelectedTests([]); setDiscount(""); setAdvanceCash(""); setAdvanceUpi("");
       setAdvancePaidOn(d); setBalanceCash(""); setBalanceUpi(""); setBalancePaidOn(d);
     }
@@ -112,8 +119,12 @@ export function PatientFormDialog({ open, onOpenChange, patient, entryDate }: Pr
       entryDate: !patient && entryDate ? entryDate : undefined,
     };
     try {
-      if (patient) await update.mutateAsync(input);
-      else await create.mutateAsync(input);
+      if (patient) {
+        await update.mutateAsync(input);
+      } else {
+        const created = await create.mutateAsync(input);
+        if (onCreated) await onCreated(created);
+      }
       toast.success(patient ? "Patient updated" : "Patient saved");
       onOpenChange(false);
     } catch (e: any) {

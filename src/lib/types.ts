@@ -157,3 +157,85 @@ export function formatAge(p: Pick<Patient, "age" | "ageValue" | "ageUnit">): str
   const unit = p.ageUnit ?? "years";
   return `${val} ${unit}`;
 }
+
+// -------- Phase 2 --------
+export type AppointmentStatus = "scheduled" | "sample_collected" | "cancelled" | "rescheduled" | "no_show";
+export type AttendanceStatus = "present" | "absent" | "half_day" | "leave";
+
+export interface Appointment {
+  id: string;
+  name: string;
+  mobile: string;
+  ageValue: number;
+  ageUnit: string;
+  sex: Sex;
+  referredDoctor: string | null;
+  procedure: string;
+  appointmentDate: string;
+  appointmentTime: string | null;
+  status: AppointmentStatus;
+  notes: string | null;
+  linkedPatientId: string | null;
+  linkedPatient?: { id: string; name: string; registerNumber: number; financialYear: string; dailySerial: number; entryDate: string } | null;
+  createdById: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface StoredFileMeta {
+  id: string;
+  originalName: string;
+  mimeType: string;
+  size: number;
+  createdAt: string;
+}
+
+export interface Employee {
+  id: string;
+  name: string;
+  mobile: string | null;
+  designation: string | null;
+  monthlySalary: string;
+  active: boolean;
+  linkedUserId: string | null;
+  aadhaarDocumentId: string | null;
+  aadhaarDocument: StoredFileMeta | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AttendanceRow {
+  id: string;
+  employeeId: string;
+  date: string;
+  status: AttendanceStatus;
+  notes: string | null;
+  markedById: string | null;
+}
+
+export interface AttendanceDateRow {
+  employee: { id: string; name: string; designation: string | null; monthlySalary: string };
+  attendance: AttendanceRow | null;
+}
+
+export interface SalarySummaryRow {
+  employee: { id: string; name: string; designation: string | null; monthlySalary: string };
+  daysInMonth: number;
+  counts: { present: number; half_day: number; absent: number; leave: number };
+  unmarked: number;
+  attendedDays: number;
+  grossRaw: number;
+  gross: number;
+  advances: number;
+  netPayable: number;
+}
+
+export interface SalaryAdvance {
+  id: string;
+  employeeId: string;
+  date: string;
+  amount: string;
+  notes: string | null;
+  createdAt: string;
+  employee?: { id: string; name: string };
+}

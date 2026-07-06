@@ -10,6 +10,11 @@ import { ExpensesModule } from './modules/expenses/expenses.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { CashHandoverModule } from './modules/cash-handover/cash-handover.module';
 import { CashAddedModule } from './modules/cash-added/cash-added.module';
+import { AppointmentsModule } from './modules/appointments/appointments.module';
+import { EmployeesModule } from './modules/employees/employees.module';
+import { AttendanceModule } from './modules/attendance/attendance.module';
+import { SalaryModule } from './modules/salary/salary.module';
+import { StorageModule } from './modules/storage/storage.module';
 
 @Module({
   imports: [
@@ -24,6 +29,11 @@ import { CashAddedModule } from './modules/cash-added/cash-added.module';
     PaymentsModule,
     CashHandoverModule,
     CashAddedModule,
+    AppointmentsModule,
+    EmployeesModule,
+    AttendanceModule,
+    SalaryModule,
+    StorageModule,
   ],
 })
 export class AppModule {}
