@@ -19,9 +19,13 @@ interface Props {
   patient?: Patient | null;
   /** For new entries, the date to record patient/payments on. Defaults to today. */
   entryDate?: string;
+  /** Optional prefill for demographic fields (used by appointment conversion). */
+  prefill?: Partial<Pick<UpsertPatientInput, "name" | "mobile" | "ageValue" | "ageUnit" | "sex" | "referredDoctor" | "notes">>;
+  /** Called after a NEW patient is successfully created. */
+  onCreated?: (patient: Patient) => void | Promise<void>;
 }
 
-export function PatientFormDialog({ open, onOpenChange, patient, entryDate }: Props) {
+export function PatientFormDialog({ open, onOpenChange, patient, entryDate, prefill, onCreated }: Props) {
   const { data: tests = [] } = useTests();
   const create = useCreatePatient();
   const update = useUpdatePatient(patient?.id ?? "");
