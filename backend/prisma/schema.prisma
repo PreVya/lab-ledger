@@ -265,6 +265,10 @@ model Employee {
   designation        String?
   monthlySalary      Decimal       @db.Decimal(10, 2) @default(0)
   active             Boolean       @default(true)
+  /// When true, employee is auto-credited "present" for every working day
+  /// without manual attendance entry (e.g. permanent staff Prerana, Gayatri).
+  /// Holidays/Sundays do not reduce their salary either.
+  alwaysPresent      Boolean       @default(false)
   linkedUserId       String?
   aadhaarDocumentId  String?
   aadhaarDocument    StoredFile?   @relation("EmployeeAadhaar", fields: [aadhaarDocumentId], references: [id], onDelete: SetNull)
@@ -275,6 +279,22 @@ model Employee {
   salaryAdvances     SalaryAdvance[]
 
   @@index([active])
+}
+
+/// Working-day holidays. Sundays are treated implicitly as holidays and do
+/// not require a row; entries here are for custom holidays (public/private).
+/// Salary logic does not deduct pay for holidays.
+model Holiday {
+  id          String   @id @default(uuid())
+  date        DateTime @unique @db.Date
+  name        String
+  type        String   @default("custom") // "custom" | "sunday" (rare — usually implicit)
+  notes       String?
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([type])
 }
 
 model Attendance {

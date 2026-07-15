@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -85,7 +85,20 @@ function AppointmentsPage() {
         </table>
       </div>
 
-      <AppointmentFormDialog open={openForm} onOpenChange={setOpenForm} appointment={editing} defaultDate={date} />
+      <AppointmentFormDialog
+        open={openForm}
+        onOpenChange={setOpenForm}
+        appointment={editing}
+        defaultDate={date}
+        onSaved={(saved) => {
+          const savedDate = saved.appointmentDate.slice(0, 10);
+          // Ensure user immediately sees the appointment they just saved.
+          if (savedDate !== date) setDate(savedDate);
+          if (status !== "all" && saved.status !== status) setStatus("all");
+          toast.success(`Saved for ${savedDate}`);
+          setOpenForm(false);
+        }}
+      />
 
       {convertFrom && (
         <PatientFormDialog
@@ -113,7 +126,7 @@ function AppointmentsPage() {
   );
 }
 
-function AppointmentFormDialog({ open, onOpenChange, appointment, defaultDate }: { open: boolean; onOpenChange: (o: boolean) => void; appointment: Appointment | null; defaultDate: string }) {
+function AppointmentFormDialog({ open, onOpenChange, appointment, defaultDate, onSaved }: { open: boolean; onOpenChange: (o: boolean) => void; appointment: Appointment | null; defaultDate: string; onSaved: (a: Appointment) => void }) {
   const create = useCreateAppointment();
   const update = useUpdateAppointment(appointment?.id ?? "");
   const [name, setName] = useState(""); const [mobile, setMobile] = useState("");
@@ -123,15 +136,24 @@ function AppointmentFormDialog({ open, onOpenChange, appointment, defaultDate }:
   const [appointmentTime, setAppointmentTime] = useState(""); const [notes, setNotes] = useState("");
   const [status, setStatus] = useState<AppointmentStatus>("scheduled");
 
-  useState(() => { /* noop */ });
-  if (open && !name && appointment) {
-    setName(appointment.name); setMobile(appointment.mobile);
-    setAgeValue(String(appointment.ageValue)); setAgeUnit(appointment.ageUnit as AgeUnit);
-    setSex(appointment.sex as Sex); setReferredDoctor(appointment.referredDoctor ?? "");
-    setProcedure(appointment.procedure); setAppointmentDate(appointment.appointmentDate.slice(0, 10));
-    setAppointmentTime(appointment.appointmentTime ?? ""); setNotes(appointment.notes ?? "");
-    setStatus(appointment.status);
-  }
+  // Sync form fields whenever the dialog opens (either for edit or new).
+  useEffect(() => {
+    if (!open) return;
+    if (appointment) {
+      setName(appointment.name); setMobile(appointment.mobile);
+      setAgeValue(String(appointment.ageValue)); setAgeUnit(appointment.ageUnit as AgeUnit);
+      setSex(appointment.sex as Sex); setReferredDoctor(appointment.referredDoctor ?? "");
+      setProcedure(appointment.procedure);
+      setAppointmentDate(appointment.appointmentDate.slice(0, 10));
+      setAppointmentTime(appointment.appointmentTime ?? ""); setNotes(appointment.notes ?? "");
+      setStatus(appointment.status);
+    } else {
+      setName(""); setMobile(""); setAgeValue(""); setAgeUnit("years");
+      setSex("M"); setReferredDoctor(""); setProcedure("");
+      setAppointmentDate(defaultDate);
+      setAppointmentTime(""); setNotes(""); setStatus("scheduled");
+    }
+  }, [open, appointment, defaultDate]);
 
   async function save() {
     if (!name || !mobile || !procedure || !appointmentDate) { toast.error("Name, mobile, procedure, date required"); return; }
@@ -141,15 +163,15 @@ function AppointmentFormDialog({ open, onOpenChange, appointment, defaultDate }:
       appointmentTime: appointmentTime || undefined, notes: notes || undefined, status,
     };
     try {
-      if (appointment) await update.mutateAsync(payload); else await create.mutateAsync(payload);
-      toast.success("Saved");
-      onOpenChange(false);
-      setName(""); setMobile(""); setAgeValue(""); setProcedure(""); setNotes(""); setAppointmentTime("");
+      const saved = appointment
+        ? await update.mutateAsync(payload)
+        : await create.mutateAsync(payload);
+      onSaved(saved);
     } catch (e: any) { toast.error(e?.message ?? "Failed"); }
   }
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { onOpenChange(o); if (!o) { setName(""); } }}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader><DialogTitle>{appointment ? "Edit Appointment" : "New Appointment"}</DialogTitle></DialogHeader>
         <div className="grid grid-cols-2 gap-3">

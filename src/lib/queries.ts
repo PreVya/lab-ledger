@@ -160,7 +160,7 @@ export function useDeleteCashAdded(date: string = todayKey()) {
 }
 
 // ============= Phase 2: Appointments / Employees / Attendance / Salary =============
-import type { Appointment, AttendanceDateRow, Employee, SalaryAdvance, SalarySummaryRow } from "./types";
+import type { Appointment, AttendanceDayResponse, Employee, Holiday, SalaryAdvance, SalarySummaryRow } from "./types";
 import { API_BASE_URL, loadAuth } from "./api";
 
 const qk2 = {
@@ -255,7 +255,7 @@ export function useEmployeeAadhaar() {
 export function useAttendanceByDate(date: string) {
   return useQuery({
     queryKey: qk2.attendanceDate(date),
-    queryFn: () => api<AttendanceDateRow[]>(`/attendance?date=${date}`),
+    queryFn: () => api<AttendanceDayResponse>(`/attendance?date=${date}`),
   });
 }
 export function useSaveAttendanceBulk() {
@@ -264,6 +264,42 @@ export function useSaveAttendanceBulk() {
     mutationFn: (input: { date: string; entries: Array<{ employeeId: string; status: string; notes?: string }> }) =>
       api("/attendance/bulk", { method: "POST", body: JSON.stringify(input) }),
     onSuccess: (_r, v) => qc.invalidateQueries({ queryKey: qk2.attendanceDate(v.date) }),
+  });
+}
+
+// -------- Holidays --------
+export function useHolidays(year?: number, month?: number) {
+  return useQuery({
+    queryKey: ["holidays", year ?? 0, month ?? 0],
+    queryFn: () => {
+      const p = new URLSearchParams();
+      if (year) p.set("year", String(year));
+      if (month) p.set("month", String(month));
+      return api<Holiday[]>(`/holidays?${p.toString()}`);
+    },
+  });
+}
+export function useCreateHoliday() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { date: string; name: string; notes?: string }) =>
+      api<Holiday>("/holidays", { method: "POST", body: JSON.stringify(input) }),
+    onSuccess: (_r, v) => {
+      qc.invalidateQueries({ queryKey: ["holidays"] });
+      qc.invalidateQueries({ queryKey: qk2.attendanceDate(v.date) });
+      qc.invalidateQueries({ queryKey: ["salary-summary"] });
+    },
+  });
+}
+export function useDeleteHoliday() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api(`/holidays/${id}`, { method: "DELETE" }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["holidays"] });
+      qc.invalidateQueries({ queryKey: ["attendance"] });
+      qc.invalidateQueries({ queryKey: ["salary-summary"] });
+    },
   });
 }
 

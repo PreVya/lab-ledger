@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { AttendanceStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { parseDateOnly } from '../ledger/ledger.service';
+import { HolidaysService } from '../holidays/holidays.service';
 
 export interface BulkAttendanceEntry {
   employeeId: string;
@@ -11,19 +12,36 @@ export interface BulkAttendanceEntry {
 
 @Injectable()
 export class AttendanceService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService, private holidays: HolidaysService) {}
 
   async listForDate(date: string) {
     const day = parseDateOnly(date);
+    const isSunday = day.getUTCDay() === 0;
+    const custom = await this.prisma.holiday.findUnique({ where: { date: day } });
+    const isHoliday = isSunday || !!custom;
+
     const [employees, records] = await Promise.all([
       this.prisma.employee.findMany({ where: { active: true }, orderBy: { name: 'asc' } }),
       this.prisma.attendance.findMany({ where: { date: day } }),
     ]);
     const byEmp = new Map(records.map((r) => [r.employeeId, r]));
-    return employees.map((e) => ({
-      employee: { id: e.id, name: e.name, designation: e.designation, monthlySalary: e.monthlySalary.toString() },
-      attendance: byEmp.get(e.id) ?? null,
-    }));
+    return {
+      date: day.toISOString().slice(0, 10),
+      isSunday,
+      isHoliday,
+      holiday: custom ? { id: custom.id, name: custom.name, type: custom.type } : (isSunday ? { id: null, name: 'Sunday', type: 'sunday' } : null),
+      rows: employees.map((e) => ({
+        employee: {
+          id: e.id, name: e.name, designation: e.designation,
+          monthlySalary: e.monthlySalary.toString(), alwaysPresent: e.alwaysPresent,
+        },
+        attendance: byEmp.get(e.id) ?? null,
+        // Effective status for display (not persisted): alwaysPresent employees
+        // default to "present" on any working day; everyone defaults to "present"
+        // on holidays for salary purposes (visualized in UI).
+        effectiveStatus: byEmp.get(e.id)?.status ?? (e.alwaysPresent || isHoliday ? 'present' : null),
+      })),
+    };
   }
 
   async bulkUpsert(date: string, entries: BulkAttendanceEntry[], markedById?: string | null) {

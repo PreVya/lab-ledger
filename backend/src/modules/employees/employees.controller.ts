@@ -20,6 +20,7 @@ function parseForm(body: Record<string, unknown>) {
     designation: (body.designation as string) || null,
     monthlySalary: num(body.monthlySalary),
     active: bool(body.active),
+    alwaysPresent: bool(body.alwaysPresent),
     linkedUserId: (body.linkedUserId as string) || null,
   };
 }
@@ -46,7 +47,7 @@ export class EmployeesController {
     const parsed = parseForm(body);
     if (!parsed.name) throw new BadRequestException('Name required');
     return this.svc.createWithAadhaar(
-      { name: parsed.name, mobile: parsed.mobile, designation: parsed.designation, monthlySalary: parsed.monthlySalary, active: parsed.active, linkedUserId: parsed.linkedUserId },
+      { name: parsed.name, mobile: parsed.mobile, designation: parsed.designation, monthlySalary: parsed.monthlySalary, active: parsed.active, alwaysPresent: parsed.alwaysPresent, linkedUserId: parsed.linkedUserId },
       file,
       user.sub,
     );

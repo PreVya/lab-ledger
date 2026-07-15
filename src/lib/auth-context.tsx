@@ -14,6 +14,21 @@ const AuthContext = createContext<Ctx | null>(null);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<AuthState | null>(() => loadAuth());
 
+  // Sync React state when auth is cleared elsewhere (401 responses, other tabs).
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const onCleared = () => setState(null);
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === null || e.key === "lab.auth") setState(loadAuth());
+    };
+    window.addEventListener("lab:auth-cleared", onCleared);
+    window.addEventListener("storage", onStorage);
+    return () => {
+      window.removeEventListener("lab:auth-cleared", onCleared);
+      window.removeEventListener("storage", onStorage);
+    };
+  }, []);
+
   const login = useCallback(async (username: string, password: string) => {
     try {
       const res = await api<AuthState>("/auth/login", {

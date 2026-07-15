@@ -9,6 +9,7 @@ export interface UpsertEmployeeInput {
   designation?: string | null;
   monthlySalary?: number;
   active?: boolean;
+  alwaysPresent?: boolean;
   linkedUserId?: string | null;
 }
 
@@ -47,6 +48,7 @@ export class EmployeesService {
         designation: input.designation ?? null,
         monthlySalary: new Prisma.Decimal(input.monthlySalary ?? 0),
         active: input.active ?? true,
+        alwaysPresent: input.alwaysPresent ?? false,
         linkedUserId: input.linkedUserId || null,
       },
     });
@@ -70,6 +72,7 @@ export class EmployeesService {
     if (input.designation !== undefined) data.designation = input.designation;
     if (input.monthlySalary !== undefined) data.monthlySalary = new Prisma.Decimal(input.monthlySalary);
     if (input.active !== undefined) data.active = input.active;
+    if (input.alwaysPresent !== undefined) data.alwaysPresent = input.alwaysPresent;
     if (input.linkedUserId !== undefined) data.linkedUserId = input.linkedUserId || null;
     await this.prisma.employee.update({ where: { id }, data });
     if (file) {
