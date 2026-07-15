@@ -197,6 +197,7 @@ export interface Employee {
   designation: string | null;
   monthlySalary: string;
   active: boolean;
+  alwaysPresent: boolean;
   linkedUserId: string | null;
   aadhaarDocumentId: string | null;
   aadhaarDocument: StoredFileMeta | null;
@@ -214,13 +215,33 @@ export interface AttendanceRow {
 }
 
 export interface AttendanceDateRow {
-  employee: { id: string; name: string; designation: string | null; monthlySalary: string };
+  employee: { id: string; name: string; designation: string | null; monthlySalary: string; alwaysPresent: boolean };
   attendance: AttendanceRow | null;
+  effectiveStatus: AttendanceStatus | null;
+}
+
+export interface AttendanceDayResponse {
+  date: string;
+  isSunday: boolean;
+  isHoliday: boolean;
+  holiday: { id: string | null; name: string; type: string } | null;
+  rows: AttendanceDateRow[];
+}
+
+export interface Holiday {
+  id: string;
+  date: string;
+  name: string;
+  type: string;
+  notes: string | null;
 }
 
 export interface SalarySummaryRow {
-  employee: { id: string; name: string; designation: string | null; monthlySalary: string };
+  employee: { id: string; name: string; designation: string | null; monthlySalary: string; alwaysPresent: boolean };
   daysInMonth: number;
+  holidays: number;
+  sundays: number;
+  customHolidays: number;
   counts: { present: number; half_day: number; absent: number; leave: number };
   unmarked: number;
   attendedDays: number;

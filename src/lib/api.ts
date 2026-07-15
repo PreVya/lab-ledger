@@ -82,7 +82,10 @@ export async function api<T = unknown>(
   console.log(`${label} -> ${res.status} fetch=${tFetch.toFixed(0)}ms total=${tTotal.toFixed(0)}ms bytes=${text.length}`);
   const body = text ? safeJson(text) : null;
   if (!res.ok) {
-    if (res.status === 401) clearAuth();
+    if (res.status === 401) {
+      clearAuth();
+      if (typeof window !== "undefined") window.dispatchEvent(new Event("lab:auth-cleared"));
+    }
     const msg =
       (body && typeof body === "object" && "message" in body && (body as any).message) ||
       res.statusText ||
