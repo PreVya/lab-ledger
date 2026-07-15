@@ -15,6 +15,7 @@ import { EmployeesModule } from './modules/employees/employees.module';
 import { AttendanceModule } from './modules/attendance/attendance.module';
 import { SalaryModule } from './modules/salary/salary.module';
 import { StorageModule } from './modules/storage/storage.module';
+import { HolidaysModule } from './modules/holidays/holidays.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { StorageModule } from './modules/storage/storage.module';
     AttendanceModule,
     SalaryModule,
     StorageModule,
+    HolidaysModule,
   ],
 })
 export class AppModule {}
