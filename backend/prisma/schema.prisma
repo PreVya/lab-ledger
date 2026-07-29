@@ -94,6 +94,7 @@ model Patient {
   tests           PatientTest[]
   payments        Payment[]
   appointments    Appointment[]
+  bills           Bill[]
 
   @@unique([entryDate, dailySerial])
   @@unique([financialYear, registerNumber])
@@ -101,6 +102,67 @@ model Patient {
   @@index([name])
   @@index([entryDate])
   @@index([financialYear])
+}
+
+// ============================================================================
+// PHASE 3 — Optional patient bill printing
+// A Bill is created ONLY when staff explicitly generates it. Bill numbering is
+// global/sequential and completely independent of Patient.registerNumber.
+// All amount/patient/test values are snapshots taken at generation time.
+// ============================================================================
+
+model Bill {
+  id                            String   @id @default(uuid())
+  billNumber                    Int      @unique
+  financialYear                 String
+  billDate                      DateTime @db.Date
+
+  patientId                     String
+  patient                       Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  patientRegisterNumberSnapshot Int
+  patientFinancialYearSnapshot  String
+  patientNameSnapshot           String
+  patientAgeSnapshot            String
+  patientSexSnapshot            Sex
+  patientMobileSnapshot         String?
+  referredDoctorSnapshot        String?
+
+  totalAmount                   Decimal  @db.Decimal(10, 2) @default(0)
+  discount                      Decimal  @db.Decimal(10, 2) @default(0)
+  netAmount                     Decimal  @db.Decimal(10, 2) @default(0)
+  paidAmount                    Decimal  @db.Decimal(10, 2) @default(0)
+  balanceAmount                 Decimal  @db.Decimal(10, 2) @default(0)
+  amountInWords                 String
+
+  createdById                   String?
+  printedAt                     DateTime?
+  printedById                   String?
+  printCount                    Int      @default(0)
+  createdAt                     DateTime @default(now())
+  updatedAt                     DateTime @updatedAt
+
+  items                         BillItem[]
+
+  @@unique([financialYear, billNumber])
+  @@index([patientId])
+  @@index([billDate])
+}
+
+model BillItem {
+  id            String   @id @default(uuid())
+  billId        String
+  bill          Bill     @relation(fields: [billId], references: [id], onDelete: Cascade)
+  sortOrder     Int      @default(0)
+  testName      String
+  testCode      String?
+  outsourcedLab String?
+  rate          Decimal  @db.Decimal(10, 2)
+  quantity      Int      @default(1)
+  amount        Decimal  @db.Decimal(10, 2)
+  createdAt     DateTime @default(now())
+
+  @@index([billId])
 }
 
 model PatientTest {
