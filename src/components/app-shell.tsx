@@ -21,6 +21,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     { to: "/appointments", icon: CalendarClock, label: "Appointments" },
     { to: "/attendance", icon: UserCheck, label: "Attendance" },
     { to: "/tests", icon: FlaskConical, label: "Test Catalog" },
+    { to: "/bills", icon: Receipt, label: "Bill Register" },
     { to: "/users", icon: Users, label: "Users", roles: ["admin"] as const },
   ];
 
