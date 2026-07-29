@@ -13,6 +13,7 @@ import { Route as UsersRouteImport } from './routes/users'
 import { Route as TestsRouteImport } from './routes/tests'
 import { Route as SearchRouteImport } from './routes/search'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as BillsRouteImport } from './routes/bills'
 import { Route as AttendanceRouteImport } from './routes/attendance'
 import { Route as AppointmentsRouteImport } from './routes/appointments'
 import { Route as IndexRouteImport } from './routes/index'
@@ -37,6 +38,11 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BillsRoute = BillsRouteImport.update({
+  id: '/bills',
+  path: '/bills',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AttendanceRoute = AttendanceRouteImport.update({
   id: '/attendance',
   path: '/attendance',
@@ -57,6 +63,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/appointments': typeof AppointmentsRoute
   '/attendance': typeof AttendanceRoute
+  '/bills': typeof BillsRoute
   '/login': typeof LoginRoute
   '/search': typeof SearchRoute
   '/tests': typeof TestsRoute
@@ -66,6 +73,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/appointments': typeof AppointmentsRoute
   '/attendance': typeof AttendanceRoute
+  '/bills': typeof BillsRoute
   '/login': typeof LoginRoute
   '/search': typeof SearchRoute
   '/tests': typeof TestsRoute
@@ -76,6 +84,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/appointments': typeof AppointmentsRoute
   '/attendance': typeof AttendanceRoute
+  '/bills': typeof BillsRoute
   '/login': typeof LoginRoute
   '/search': typeof SearchRoute
   '/tests': typeof TestsRoute
@@ -87,6 +96,7 @@ export interface FileRouteTypes {
     | '/'
     | '/appointments'
     | '/attendance'
+    | '/bills'
     | '/login'
     | '/search'
     | '/tests'
@@ -96,6 +106,7 @@ export interface FileRouteTypes {
     | '/'
     | '/appointments'
     | '/attendance'
+    | '/bills'
     | '/login'
     | '/search'
     | '/tests'
@@ -105,6 +116,7 @@ export interface FileRouteTypes {
     | '/'
     | '/appointments'
     | '/attendance'
+    | '/bills'
     | '/login'
     | '/search'
     | '/tests'
@@ -115,6 +127,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppointmentsRoute: typeof AppointmentsRoute
   AttendanceRoute: typeof AttendanceRoute
+  BillsRoute: typeof BillsRoute
   LoginRoute: typeof LoginRoute
   SearchRoute: typeof SearchRoute
   TestsRoute: typeof TestsRoute
@@ -151,6 +164,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/bills': {
+      id: '/bills'
+      path: '/bills'
+      fullPath: '/bills'
+      preLoaderRoute: typeof BillsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/attendance': {
       id: '/attendance'
       path: '/attendance'
@@ -179,6 +199,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppointmentsRoute: AppointmentsRoute,
   AttendanceRoute: AttendanceRoute,
+  BillsRoute: BillsRoute,
   LoginRoute: LoginRoute,
   SearchRoute: SearchRoute,
   TestsRoute: TestsRoute,

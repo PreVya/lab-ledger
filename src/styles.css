@@ -145,3 +145,52 @@
     color: var(--color-foreground);
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Phase 3 — printable bill (shop-bill slip, 80mm roll)
+   Everything except .bill-sheet is hidden while printing.
+--------------------------------------------------------------------------- */
+.bill-sheet {
+  width: 80mm;
+  max-width: 100%;
+  color: #000;
+  background: #fff;
+}
+
+@media print {
+  @page {
+    size: 80mm auto;
+    margin: 4mm;
+  }
+
+  html,
+  body {
+    background: #fff !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  body * {
+    visibility: hidden !important;
+  }
+
+  .bill-sheet,
+  .bill-sheet * {
+    visibility: visible !important;
+  }
+
+  .bill-sheet {
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 80mm;
+    padding: 0 !important;
+    box-shadow: none !important;
+    border: 0 !important;
+  }
+
+  .no-print,
+  header nav,
+  [data-slot="dialog-close"] {
+    display: none !important;
+  }
+}

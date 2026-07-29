@@ -10,6 +10,7 @@ import type { AgeUnit, Patient, Sex, UpsertPatientInput } from "@/lib/types";
 import { Check, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { BillActions } from "@/components/bill-dialog";
 
 const num = (v: string) => (v === "" ? 0 : Number(v) || 0);
 
@@ -257,11 +258,14 @@ export function PatientFormDialog({ open, onOpenChange, patient, entryDate, pref
           </div>
         </div>
 
-        <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)}><X className="mr-1 h-4 w-4" />Cancel</Button>
-          <Button onClick={handleSave} disabled={create.isPending || update.isPending}>
-            {patient ? "Update" : "Save"} (Ctrl+S)
-          </Button>
+        <DialogFooter className="sm:justify-between">
+          <div>{patient?.id && <BillActions patientId={patient.id} />}</div>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" onClick={() => onOpenChange(false)}><X className="mr-1 h-4 w-4" />Cancel</Button>
+            <Button onClick={handleSave} disabled={create.isPending || update.isPending}>
+              {patient ? "Update" : "Save"} (Ctrl+S)
+            </Button>
+          </div>
         </DialogFooter>
 
         <KeyboardShortcuts onSave={handleSave} />

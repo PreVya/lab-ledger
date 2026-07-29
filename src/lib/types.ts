@@ -260,3 +260,44 @@ export interface SalaryAdvance {
   createdAt: string;
   employee?: { id: string; name: string };
 }
+
+// -------- Phase 3: Optional patient bill printing --------
+export interface BillItem {
+  id: string;
+  billId: string;
+  sortOrder: number;
+  testName: string;
+  testCode: string | null;
+  outsourcedLab: string | null;
+  rate: string;
+  quantity: number;
+  amount: string;
+}
+
+export interface Bill {
+  id: string;
+  billNumber: number;
+  financialYear: string;
+  billDate: string;
+  patientId: string;
+  patientRegisterNumberSnapshot: number;
+  patientFinancialYearSnapshot: string;
+  patientNameSnapshot: string;
+  patientAgeSnapshot: string;
+  patientSexSnapshot: Sex;
+  patientMobileSnapshot: string | null;
+  referredDoctorSnapshot: string | null;
+  totalAmount: string;
+  discount: string;
+  netAmount: string;
+  paidAmount: string;
+  balanceAmount: string;
+  amountInWords: string;
+  createdById: string | null;
+  printedAt: string | null;
+  printedById: string | null;
+  printCount: number;
+  createdAt: string;
+  updatedAt: string;
+  items: BillItem[];
+}
