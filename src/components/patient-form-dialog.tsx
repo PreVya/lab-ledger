@@ -10,6 +10,7 @@ import type { AgeUnit, Patient, Sex, UpsertPatientInput } from "@/lib/types";
 import { Check, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { BillActions } from "@/components/bill-dialog";
 
 const num = (v: string) => (v === "" ? 0 : Number(v) || 0);
 
