@@ -257,11 +257,14 @@ export function PatientFormDialog({ open, onOpenChange, patient, entryDate, pref
           </div>
         </div>
 
-        <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)}><X className="mr-1 h-4 w-4" />Cancel</Button>
-          <Button onClick={handleSave} disabled={create.isPending || update.isPending}>
-            {patient ? "Update" : "Save"} (Ctrl+S)
-          </Button>
+        <DialogFooter className="sm:justify-between">
+          <div>{patient?.id && <BillActions patientId={patient.id} />}</div>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" onClick={() => onOpenChange(false)}><X className="mr-1 h-4 w-4" />Cancel</Button>
+            <Button onClick={handleSave} disabled={create.isPending || update.isPending}>
+              {patient ? "Update" : "Save"} (Ctrl+S)
+            </Button>
+          </div>
         </DialogFooter>
 
         <KeyboardShortcuts onSave={handleSave} />
