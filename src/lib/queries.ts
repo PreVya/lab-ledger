@@ -337,3 +337,69 @@ export function useDeleteSalaryAdvance() {
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["salary-summary"] }); qc.invalidateQueries({ queryKey: ["salary-advances"] }); },
   });
 }
+
+// ============= Phase 3: Optional patient bill printing =============
+import type { Bill } from "./types";
+
+export const qkBills = {
+  list: (f: { from?: string; to?: string; q?: string; billNumber?: string }) =>
+    ["bills", f.from ?? "", f.to ?? "", f.q ?? "", f.billNumber ?? ""] as const,
+  byPatient: (patientId: string) => ["bill-by-patient", patientId] as const,
+  one: (id: string) => ["bill", id] as const,
+};
+
+/** Existing bill for a patient (null when the patient never asked for one). */
+export function useBillByPatient(patientId?: string) {
+  return useQuery({
+    queryKey: qkBills.byPatient(patientId ?? ""),
+    queryFn: () => api<Bill | null>(`/bills/by-patient/${patientId}`),
+    enabled: !!patientId,
+  });
+}
+
+export function useBill(id?: string) {
+  return useQuery({
+    queryKey: qkBills.one(id ?? ""),
+    queryFn: () => api<Bill>(`/bills/${id}`),
+    enabled: !!id,
+  });
+}
+
+export function useBills(filters: { from?: string; to?: string; q?: string; billNumber?: string }) {
+  return useQuery({
+    queryKey: qkBills.list(filters),
+    queryFn: () => {
+      const p = new URLSearchParams();
+      if (filters.from) p.set("from", filters.from);
+      if (filters.to) p.set("to", filters.to);
+      if (filters.q) p.set("q", filters.q);
+      if (filters.billNumber) p.set("billNumber", filters.billNumber);
+      return api<Bill[]>(`/bills?${p.toString()}`);
+    },
+  });
+}
+
+/** Manual generation only. Never called automatically on patient/payment save. */
+export function useGenerateBill() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (patientId: string) => api<Bill>(`/bills/generate/${patientId}`, { method: "POST" }),
+    onSuccess: (bill) => {
+      qc.setQueryData(qkBills.byPatient(bill.patientId), bill);
+      qc.setQueryData(qkBills.one(bill.id), bill);
+      qc.invalidateQueries({ queryKey: ["bills"] });
+    },
+  });
+}
+
+export function useMarkBillPrinted() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api<Bill>(`/bills/${id}/mark-printed`, { method: "POST" }),
+    onSuccess: (bill) => {
+      qc.setQueryData(qkBills.one(bill.id), bill);
+      qc.setQueryData(qkBills.byPatient(bill.patientId), bill);
+      qc.invalidateQueries({ queryKey: ["bills"] });
+    },
+  });
+}
