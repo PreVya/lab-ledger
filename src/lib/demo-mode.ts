@@ -1,4 +1,5 @@
 import type { AuthState, AuthUser } from "./api";
+import { amountInWords } from "./amount-in-words";
 import type { AgeUnit, CashAdded, CashHandover, PaymentMode, PaymentRow, Sex } from "./types";
 
 const DEMO_USERS: Array<{ username: string; password: string; user: AuthUser }> = [
@@ -51,6 +52,8 @@ const store = {
   cashAdded: [] as CashAdded[],
   ledgers: {} as Record<string, { openingBalance: string; closingBalance: string }>,
   users: DEMO_USERS.map(d => ({ id: d.user.id, username: d.user.username, fullName: d.user.fullName, role: d.user.role, active: true })),
+  bills: [] as any[],
+  billSeq: 0,
   serial: 0,
   reg: 0,
   currentUserId: "demo-admin",
@@ -323,6 +326,72 @@ export function demoHandle(path: string, init: RequestInit = {}): unknown {
       patient: { id: patient.id, name: patient.name, mobile: patient.mobile, registerNumber: patient.registerNumber, dailySerial: patient.dailySerial, entryDate: patient.entryDate, financialYear: patient.financialYear },
     });
     return { patient };
+  }
+
+  // ---- Phase 3: bills (manual generation only) ----
+  if (path.startsWith("/bills")) {
+    const byPatient = path.match(/^\/bills\/by-patient\/([^/?]+)$/);
+    if (byPatient && method === "GET") return store.bills.find(b => b.patientId === byPatient[1]) ?? null;
+
+    const gen = path.match(/^\/bills\/generate\/([^/?]+)$/);
+    if (gen && method === "POST") {
+      const existing = store.bills.find(b => b.patientId === gen[1]);
+      if (existing) return existing;
+      const patient = store.patients.find(p => p.id === gen[1]);
+      if (!patient) throw new Error("Patient not found");
+      const paid = Number(patient.advanceCash) + Number(patient.advanceUpi) + Number(patient.balanceCash) + Number(patient.balanceUpi);
+      const bill = {
+        id: uid(), billNumber: ++store.billSeq, financialYear: fyFor(todayIST()),
+        billDate: todayIST(), patientId: patient.id,
+        patientRegisterNumberSnapshot: patient.registerNumber,
+        patientFinancialYearSnapshot: patient.financialYear,
+        patientNameSnapshot: patient.name,
+        patientAgeSnapshot: `${patient.ageValue} ${patient.ageUnit}`,
+        patientSexSnapshot: patient.sex,
+        patientMobileSnapshot: patient.mobile || null,
+        referredDoctorSnapshot: patient.referredDoctor,
+        totalAmount: patient.total, discount: patient.discount, netAmount: patient.net,
+        paidAmount: String(paid), balanceAmount: patient.balance,
+        amountInWords: amountInWords(Number(patient.net)),
+        createdById: store.currentUserId, printedAt: null, printedById: null, printCount: 0,
+        createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+        items: patient.tests.map((t, i) => ({
+          id: uid(), billId: "", sortOrder: i + 1, testName: t.test.name,
+          testCode: t.test.testCode ?? null,
+          outsourcedLab: t.test.outsourced ? t.test.outsourcedLab ?? null : null,
+          rate: t.rateAtEntry, quantity: 1, amount: t.rateAtEntry,
+        })),
+      };
+      store.bills.push(bill);
+      return bill;
+    }
+
+    const printed = path.match(/^\/bills\/([^/?]+)\/mark-printed$/);
+    if (printed && method === "POST") {
+      const b = store.bills.find(x => x.id === printed[1]);
+      if (!b) throw new Error("Bill not found");
+      b.printCount += 1; b.printedAt = new Date().toISOString(); b.printedById = store.currentUserId;
+      return b;
+    }
+
+    const one = path.match(/^\/bills\/([^/?]+)(\/print)?$/);
+    if (one && method === "GET" && one[1] !== "by-patient") {
+      const b = store.bills.find(x => x.id === one[1]);
+      if (b) return b;
+    }
+
+    if (method === "GET") {
+      const url = new URL("http://x" + path);
+      const from = url.searchParams.get("from");
+      const to = url.searchParams.get("to");
+      const q = (url.searchParams.get("q") || "").toLowerCase();
+      const bn = url.searchParams.get("billNumber");
+      return store.bills
+        .filter(b => (!from || b.billDate >= from) && (!to || b.billDate <= to)
+          && (!q || b.patientNameSnapshot.toLowerCase().includes(q))
+          && (!bn || String(b.billNumber) === bn))
+        .sort((a, b) => b.billNumber - a.billNumber);
+    }
   }
 
   return null;
