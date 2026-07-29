@@ -37,6 +37,7 @@ import { BillsModule } from './modules/bills/bills.module';
     SalaryModule,
     StorageModule,
     HolidaysModule,
+    BillsModule,
   ],
 })
 export class AppModule {}
