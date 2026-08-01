@@ -152,8 +152,19 @@ export async function downloadBillPdf(bill: Bill) {
   y += 2;
 
 
-  // ---- Amounts ----------------------------------------------------------
-  pageBreak(45);
+  // ---- Amounts + words + signature (kept together on one page) ----------
+  const wordsLabel = "Amount in Words: ";
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(9);
+  const wlw = doc.getTextWidth(wordsLabel);
+  doc.setFont("helvetica", "normal");
+  const words = doc.splitTextToSize(bill.amountInWords, W - 2 * M - wlw);
+
+  const sigGap = 14;
+  const footerH =
+    5 * 5.2 + 1 + 4.5 + 4.2 * words.length + 6 + sigGap + 4.5 + (LAB_PROFILE.footerNote ? 8 : 0);
+  pageBreak(footerH);
+
   const boxX = center + 4;
   const amt = (label: string, value: string | number, bold = false) => {
     doc.setFont("helvetica", "bold");
@@ -173,18 +184,14 @@ export async function downloadBillPdf(bill: Bill) {
   rule(0.3, 4.5);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(9);
-  const wordsLabel = "Amount in Words: ";
   doc.text(wordsLabel, M, y);
-  const wlw = doc.getTextWidth(wordsLabel);
   doc.setFont("helvetica", "normal");
-  const words = doc.splitTextToSize(bill.amountInWords, W - 2 * M - wlw);
   doc.text(words, M + wlw, y);
   y += 4.2 * words.length;
   rule(0.3, 6);
 
   // ---- Signature ---------------------------------------------------------
-  pageBreak(35);
-  y += 22;
+  y += sigGap;
   doc.setLineWidth(0.2);
   doc.line(right - 45, y, right, y);
   y += 4.5;
@@ -192,11 +199,11 @@ export async function downloadBillPdf(bill: Bill) {
   doc.text("Authorized Signature", right - 22.5, y, { align: "center" });
 
   if (LAB_PROFILE.footerNote) {
-    y += 10;
-    pageBreak(8);
+    y += 8;
     doc.setFontSize(8);
     doc.text(LAB_PROFILE.footerNote, center, y, { align: "center" });
   }
+
 
   doc.save(`Bill-${bill.billNumber}-${bill.patientNameSnapshot.replace(/\s+/g, "_")}.pdf`);
 }
