@@ -3,8 +3,9 @@
  * LAB HEADER CONFIGURATION — EDIT THIS FILE WITH YOUR REAL DETAILS
  * ============================================================================
  * File to edit : src/lib/lab-profile.ts
- * Logo image   : src/assets/lab-logo.png  (replace this PNG with your own,
+ * Logo image   : public/lab-logo.png  (replace this PNG with your own,
  *                keep the same file name & path — square image works best)
+
  *
  * Everything below is printed on the bill header.
  * ============================================================================
