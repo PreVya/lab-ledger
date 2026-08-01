@@ -132,7 +132,7 @@ function Row({ label, value }: { label: string; value: string }) {
 
 function Amount({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
   return (
-    <div className="flex justify-between border-b border-black/15 py-1">
+    <div className="flex justify-between border-b border-black/15 py-0.5">
       <span className="font-bold">{label}:</span>
       <span className={`tabular-nums ${strong ? "font-bold" : ""}`}>{money(value)}</span>
     </div>
