@@ -131,21 +131,26 @@ export async function downloadBillPdf(bill: Bill) {
   bill.items.forEach((it, i) => {
     const nameLines2 = doc.splitTextToSize(it.testName, 66);
     const labLines = doc.splitTextToSize(it.outsourcedLab || "-", 22);
-    const rowH = 4.2 * Math.max(nameLines2.length, labLines.length) + 1.5;
+    const lines = Math.max(nameLines2.length, labLines.length);
+    const textH = 4.2 * lines;
+    const rowH = textH + 2.6; // padding below the last text baseline
     pageBreak(rowH);
     doc.text(String(i + 1), cx.sr, y);
     doc.text(nameLines2, cx.test, y);
     doc.text(Number(it.rate).toFixed(2), cx.rate, y, { align: "right" });
     doc.text(Number(it.amount).toFixed(2), cx.amount, y, { align: "right" });
     doc.text(labLines, cx.lab, y);
-    y += rowH;
-    doc.setDrawColor(180);
+    // separator sits BELOW the row's last baseline, never through the text
+    const sepY = y + textH - 2.4;
+    doc.setDrawColor(170);
     doc.setLineWidth(0.1);
-    doc.line(M, y - 2.6, right, y - 2.6);
+    doc.line(M, sepY, right, sepY);
     doc.setDrawColor(0);
+    y += rowH;
   });
 
-  y += 3;
+  y += 2;
+
 
   // ---- Amounts ----------------------------------------------------------
   pageBreak(45);
