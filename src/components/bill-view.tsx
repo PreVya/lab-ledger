@@ -12,7 +12,7 @@ function money(v: string | number) {
  */
 export function BillView({ bill }: { bill: Bill }) {
   return (
-    <div className="bill-sheet mx-auto bg-white p-[10mm] text-[12px] leading-normal text-black">
+    <div className="bill-sheet mx-auto bg-white p-[8mm] text-[12px] leading-normal text-black">
       {/* ---- Header ---- */}
       <header className="text-center">
         <h1
@@ -21,12 +21,12 @@ export function BillView({ bill }: { bill: Bill }) {
         >
           {LAB_PROFILE.name}
         </h1>
-        <p className="mt-1 text-[11px]">{LAB_PROFILE.address}</p>
+        <p className="mt-0.5 text-[11px]">{LAB_PROFILE.address}</p>
       </header>
 
       {/* ---- Doctor / logo / timings ---- */}
       <div
-        className="mt-3 grid items-center gap-x-3"
+        className="mt-2 grid items-center gap-x-3"
         style={{ gridTemplateColumns: "1fr auto 1fr" }}
       >
         <div className="text-[11px] leading-snug">
@@ -38,7 +38,7 @@ export function BillView({ bill }: { bill: Bill }) {
             src={LAB_PROFILE.logoUrl}
             alt={`${LAB_PROFILE.name} logo`}
             className="object-contain"
-            style={{ width: "32mm", height: "32mm" }}
+            style={{ width: "26mm", height: "26mm" }}
           />
         </div>
         <div className="text-right text-[11px] leading-snug">
@@ -50,10 +50,10 @@ export function BillView({ bill }: { bill: Bill }) {
         </div>
       </div>
 
-      <hr className="mt-3 border-t-2 border-black" />
+      <hr className="mt-2 border-t-2 border-black" />
 
       {/* ---- Bill & patient details ---- */}
-      <section className="mt-3 grid grid-cols-2 gap-x-8 gap-y-1.5 text-[12px]">
+      <section className="mt-2 grid grid-cols-2 gap-x-8 gap-y-1 text-[12px]">
         <Row label="Bill No." value={String(bill.billNumber)} />
         <Row label="Bill Date" value={bill.billDate.slice(0, 10)} />
         <Row label="Patient Reg No." value={String(bill.patientRegisterNumberSnapshot)} />
@@ -67,56 +67,59 @@ export function BillView({ bill }: { bill: Bill }) {
       </section>
 
       {/* ---- Tests ---- */}
-      <table className="mt-4 w-full border-collapse text-[12px]">
+      <table className="bill-table mt-3 w-full border-collapse text-[12px]">
         <thead>
-          <tr className="border-y border-black text-left font-bold">
-            <th className="w-[8%] py-1.5 pr-2">#</th>
-            <th className="py-1.5 pr-2">Test</th>
-            <th className="w-[15%] py-1.5 pr-2 text-right">Rate</th>
-            <th className="w-[17%] py-1.5 pr-2 text-right">Amount</th>
-            <th className="w-[22%] py-1.5">Outsourced to</th>
+          <tr>
+            <th className="w-[8%]">#</th>
+            <th>Test</th>
+            <th className="w-[15%] text-right">Rate</th>
+            <th className="w-[17%] text-right">Amount</th>
+            <th className="w-[22%]">Outsourced to</th>
           </tr>
         </thead>
         <tbody>
           {bill.items.map((it, i) => (
-            <tr key={it.id} className="border-b border-black/25 align-top">
-              <td className="py-1.5 pr-2">{i + 1}</td>
-              <td className="py-1.5 pr-2">{it.testName}</td>
-              <td className="py-1.5 pr-2 text-right tabular-nums">{Number(it.rate).toFixed(2)}</td>
-              <td className="py-1.5 pr-2 text-right tabular-nums">{Number(it.amount).toFixed(2)}</td>
-              <td className="py-1.5">{it.outsourcedLab || "—"}</td>
+            <tr key={it.id}>
+              <td>{i + 1}</td>
+              <td>{it.testName}</td>
+              <td className="text-right tabular-nums">{Number(it.rate).toFixed(2)}</td>
+              <td className="text-right tabular-nums">{Number(it.amount).toFixed(2)}</td>
+              <td>{it.outsourcedLab || "—"}</td>
             </tr>
           ))}
         </tbody>
       </table>
 
-      {/* ---- Amount summary ---- */}
-      <section className="mt-4 ml-auto w-[70%] text-[12px]">
-        <Amount label="Total Amount" value={bill.totalAmount} />
-        <Amount label="Discount" value={bill.discount} />
-        <Amount label="Net Amount" value={bill.netAmount} strong />
-        <Amount label="Paid Amount" value={bill.paidAmount} />
-        <Amount label="Balance Amount" value={bill.balanceAmount} />
-      </section>
+      {/* ---- Amount summary + words + signature: kept together ---- */}
+      <div className="bill-footer-block">
+        <section className="mt-3 ml-auto w-[70%] text-[12px]">
+          <Amount label="Total Amount" value={bill.totalAmount} />
+          <Amount label="Discount" value={bill.discount} />
+          <Amount label="Net Amount" value={bill.netAmount} strong />
+          <Amount label="Paid Amount" value={bill.paidAmount} />
+          <Amount label="Balance Amount" value={bill.balanceAmount} />
+        </section>
 
-      <div className="mt-3 border-y border-black py-2 text-[12px]">
-        <span className="font-bold">Amount in Words: </span>
-        <span>{bill.amountInWords}</span>
-      </div>
-
-      {/* ---- Signature ---- */}
-      <div className="mt-[22mm] flex justify-end">
-        <div className="w-[55mm] border-t border-black pt-1 text-center text-[11px]">
-          Authorized Signature
+        <div className="mt-2 border-y border-black py-1.5 text-[12px]">
+          <span className="font-bold">Amount in Words: </span>
+          <span>{bill.amountInWords}</span>
         </div>
-      </div>
 
-      {LAB_PROFILE.footerNote && (
-        <p className="mt-6 text-center text-[10px]">{LAB_PROFILE.footerNote}</p>
-      )}
+        {/* ---- Signature ---- */}
+        <div className="mt-[14mm] flex justify-end">
+          <div className="w-[55mm] border-t border-black pt-1 text-center text-[11px]">
+            Authorized Signature
+          </div>
+        </div>
+
+        {LAB_PROFILE.footerNote && (
+          <p className="mt-3 text-center text-[10px]">{LAB_PROFILE.footerNote}</p>
+        )}
+      </div>
     </div>
   );
 }
+
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
@@ -129,7 +132,7 @@ function Row({ label, value }: { label: string; value: string }) {
 
 function Amount({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
   return (
-    <div className="flex justify-between border-b border-black/15 py-1">
+    <div className="flex justify-between border-b border-black/15 py-0.5">
       <span className="font-bold">{label}:</span>
       <span className={`tabular-nums ${strong ? "font-bold" : ""}`}>{money(value)}</span>
     </div>

@@ -152,17 +152,45 @@
 --------------------------------------------------------------------------- */
 .bill-sheet {
   width: 148mm;
-  min-height: 210mm;
   max-width: 100%;
   color: #000;
   background: #fff;
   font-family: "Segoe UI", Arial, Helvetica, sans-serif;
 }
 
+/* Clean test table: separators sit between rows, never through text. */
+.bill-table {
+  border-collapse: collapse;
+  border-spacing: 0;
+}
+.bill-table th,
+.bill-table td {
+  padding: 2.2mm 2mm 2.2mm 0;
+  line-height: 1.35;
+  vertical-align: middle;
+  text-decoration: none;
+  border: 0;
+}
+.bill-table thead th {
+  text-align: left;
+  font-weight: 700;
+  border-top: 1px solid #000;
+  border-bottom: 1px solid #000;
+}
+.bill-table thead th.text-right {
+  text-align: right;
+}
+.bill-table tbody td {
+  border-bottom: 0.4pt solid rgba(0, 0, 0, 0.35);
+}
+.bill-table tbody tr:last-child td {
+  border-bottom: 1px solid #000;
+}
+
 @media print {
   @page {
     size: A5 portrait;
-    margin: 8mm;
+    margin: 6mm;
   }
 
   html,
@@ -184,18 +212,36 @@
   .bill-sheet {
     position: absolute;
     inset: 0 auto auto 0;
-    width: 148mm;
-    min-height: auto;
+    width: auto;
+    min-height: 0 !important;
+    height: auto !important;
     padding: 0 !important;
+    margin: 0 !important;
     box-shadow: none !important;
     border: 0 !important;
   }
 
+  /* Flow naturally; only break when content genuinely overflows. */
   .bill-sheet table {
     page-break-inside: auto;
+    break-inside: auto;
   }
-  .bill-sheet tr {
+  .bill-sheet thead {
+    display: table-header-group;
+  }
+  .bill-sheet tr,
+  .bill-sheet td,
+  .bill-sheet th {
     page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  /* Summary + words + signature stay together, on the last page. */
+  .bill-footer-block {
+    page-break-inside: avoid;
+    break-inside: avoid;
+    page-break-before: auto;
+    break-before: auto;
   }
 
   .no-print,
@@ -204,4 +250,5 @@
     display: none !important;
   }
 }
+
 
