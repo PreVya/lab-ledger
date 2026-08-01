@@ -147,20 +147,22 @@
 }
 
 /* ---------------------------------------------------------------------------
-   Phase 3 — printable bill (shop-bill slip, 80mm roll)
+   Phase 3 — printable bill (A5 portrait, 148mm x 210mm)
    Everything except .bill-sheet is hidden while printing.
 --------------------------------------------------------------------------- */
 .bill-sheet {
-  width: 80mm;
+  width: 148mm;
+  min-height: 210mm;
   max-width: 100%;
   color: #000;
   background: #fff;
+  font-family: "Segoe UI", Arial, Helvetica, sans-serif;
 }
 
 @media print {
   @page {
-    size: 80mm auto;
-    margin: 4mm;
+    size: A5 portrait;
+    margin: 8mm;
   }
 
   html,
@@ -182,10 +184,18 @@
   .bill-sheet {
     position: absolute;
     inset: 0 auto auto 0;
-    width: 80mm;
+    width: 148mm;
+    min-height: auto;
     padding: 0 !important;
     box-shadow: none !important;
     border: 0 !important;
+  }
+
+  .bill-sheet table {
+    page-break-inside: auto;
+  }
+  .bill-sheet tr {
+    page-break-inside: avoid;
   }
 
   .no-print,
@@ -194,3 +204,4 @@
     display: none !important;
   }
 }
+
