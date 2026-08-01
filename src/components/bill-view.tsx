@@ -2,130 +2,136 @@ import { LAB_PROFILE } from "@/lib/lab-profile";
 import type { Bill } from "@/lib/types";
 
 function money(v: string | number) {
-  return `₹${Number(v).toFixed(2)}`;
+  return `Rs. ${Number(v).toFixed(2)}`;
 }
 
 /**
- * Printable bill sheet. Sized for a narrow "shop bill" slip (80mm).
- * Wrapped in `.bill-sheet` — print CSS in src/styles.css hides everything else.
+ * Printable A5 (148mm x 210mm) pathology bill.
+ * Wrapped in `.bill-sheet` — print CSS lives in src/styles.css.
+ * Header text: src/lib/lab-profile.ts · Logo image: public/lab-logo.png
  */
 export function BillView({ bill }: { bill: Bill }) {
   return (
-    <div className="bill-sheet mx-auto bg-white p-4 text-[11px] leading-tight text-black">
-      {/* Header — edit contents in src/lib/lab-profile.ts, logo at src/assets/lab-logo.png */}
+    <div className="bill-sheet mx-auto bg-white p-[10mm] text-[12px] leading-normal text-black">
+      {/* ---- Header ---- */}
       <header className="text-center">
-        <h1 className="text-base font-bold uppercase tracking-wide">{LAB_PROFILE.name}</h1>
-        <p className="mt-0.5 text-[9px] font-normal">{LAB_PROFILE.address}</p>
-
-        <div className="mt-2 grid grid-cols-3 items-center gap-1">
-          <div className="text-left text-[9px]">
-            <div className="font-bold">{LAB_PROFILE.doctorName}</div>
-            <div className="font-normal">{LAB_PROFILE.doctorDesignation}</div>
-          </div>
-          <div className="flex justify-center">
-            <img
-              src={LAB_PROFILE.logoUrl}
-              alt={`${LAB_PROFILE.name} logo`}
-              width={64}
-              height={64}
-              loading="lazy"
-              className="h-16 w-16 object-contain"
-            />
-          </div>
-          <div className="text-right text-[9px] font-normal">
-            <div>{LAB_PROFILE.timingsLine1}</div>
-            <div>{LAB_PROFILE.timingsLine2}</div>
-          </div>
-        </div>
+        <h1
+          className="text-[25px] font-extrabold uppercase tracking-[0.5px]"
+          style={{ fontFamily: '"Segoe UI", Arial, Helvetica, sans-serif' }}
+        >
+          {LAB_PROFILE.name}
+        </h1>
+        <p className="mt-1 text-[11px]">{LAB_PROFILE.address}</p>
       </header>
 
-      <hr className="my-2 border-black" />
+      {/* ---- Doctor / logo / timings ---- */}
+      <div
+        className="mt-3 grid items-center gap-x-3"
+        style={{ gridTemplateColumns: "1fr auto 1fr" }}
+      >
+        <div className="text-[11px] leading-snug">
+          <div className="font-bold">{LAB_PROFILE.doctorName}</div>
+          <div>{LAB_PROFILE.doctorDesignation}</div>
+        </div>
+        <div className="flex justify-center">
+          <img
+            src={LAB_PROFILE.logoUrl}
+            alt={`${LAB_PROFILE.name} logo`}
+            className="object-contain"
+            style={{ width: "32mm", height: "32mm" }}
+          />
+        </div>
+        <div className="text-right text-[11px] leading-snug">
+          <div>
+            <span className="font-bold">Lab Timings: </span>
+            <span>{LAB_PROFILE.timingsValue}</span>
+          </div>
+          <div>{LAB_PROFILE.timingsLine2}</div>
+        </div>
+      </div>
 
-      {/* Bill identity */}
-      <section className="grid grid-cols-2 gap-x-3 gap-y-0.5">
-        <Row label="Bill No." value={String(bill.billNumber)} strong />
+      <hr className="mt-3 border-t-2 border-black" />
+
+      {/* ---- Bill & patient details ---- */}
+      <section className="mt-3 grid grid-cols-2 gap-x-8 gap-y-1.5 text-[12px]">
+        <Row label="Bill No." value={String(bill.billNumber)} />
         <Row label="Bill Date" value={bill.billDate.slice(0, 10)} />
         <Row label="Patient Reg No." value={String(bill.patientRegisterNumberSnapshot)} />
         <Row label="Patient FY" value={bill.patientFinancialYearSnapshot} />
-        <Row label="Patient" value={bill.patientNameSnapshot} strong />
+        <Row label="Patient" value={bill.patientNameSnapshot} />
         <Row label="Age / Sex" value={`${bill.patientAgeSnapshot} / ${bill.patientSexSnapshot}`} />
         {bill.patientMobileSnapshot && <Row label="Mobile" value={bill.patientMobileSnapshot} />}
-        {bill.referredDoctorSnapshot && <Row label="Referred by" value={bill.referredDoctorSnapshot} />}
+        {bill.referredDoctorSnapshot && (
+          <Row label="Referred By" value={bill.referredDoctorSnapshot} />
+        )}
       </section>
 
-      <hr className="my-2 border-black" />
-
-      {/* Items */}
-      <table className="w-full border-collapse text-[10px]">
+      {/* ---- Tests ---- */}
+      <table className="mt-4 w-full border-collapse text-[12px]">
         <thead>
-          <tr className="border-b border-black">
-            <th className="py-1 text-left">#</th>
-            <th className="py-1 text-left">Test</th>
-            <th className="py-1 text-right">Rate</th>
-            <th className="py-1 text-right">Amount</th>
+          <tr className="border-y border-black text-left font-bold">
+            <th className="w-[8%] py-1.5 pr-2">#</th>
+            <th className="py-1.5 pr-2">Test</th>
+            <th className="w-[15%] py-1.5 pr-2 text-right">Rate</th>
+            <th className="w-[17%] py-1.5 pr-2 text-right">Amount</th>
+            <th className="w-[22%] py-1.5">Outsourced to</th>
           </tr>
         </thead>
         <tbody>
           {bill.items.map((it, i) => (
-            <tr key={it.id} className="border-b border-dotted border-black/40 align-top">
-              <td className="py-1">{i + 1}</td>
-              <td className="py-1">
-                <div>{it.testName}</div>
-                {(it.testCode || it.outsourcedLab) && (
-                  <div className="text-[8px]">
-                    {[it.testCode, it.outsourcedLab].filter(Boolean).join(" · ")}
-                  </div>
-                )}
-              </td>
-              <td className="py-1 text-right tabular-nums">{money(it.rate)}</td>
-              <td className="py-1 text-right tabular-nums">{money(it.amount)}</td>
+            <tr key={it.id} className="border-b border-black/25 align-top">
+              <td className="py-1.5 pr-2">{i + 1}</td>
+              <td className="py-1.5 pr-2">{it.testName}</td>
+              <td className="py-1.5 pr-2 text-right tabular-nums">{Number(it.rate).toFixed(2)}</td>
+              <td className="py-1.5 pr-2 text-right tabular-nums">{Number(it.amount).toFixed(2)}</td>
+              <td className="py-1.5">{it.outsourcedLab || "—"}</td>
             </tr>
           ))}
         </tbody>
       </table>
 
-      {/* Amounts */}
-      <section className="mt-2 space-y-0.5">
+      {/* ---- Amount summary ---- */}
+      <section className="mt-4 ml-auto w-[70%] text-[12px]">
         <Amount label="Total Amount" value={bill.totalAmount} />
         <Amount label="Discount" value={bill.discount} />
         <Amount label="Net Amount" value={bill.netAmount} strong />
         <Amount label="Paid Amount" value={bill.paidAmount} />
-        {Number(bill.balanceAmount) !== 0 && (
-          <Amount label="Balance Amount" value={bill.balanceAmount} strong />
-        )}
+        <Amount label="Balance Amount" value={bill.balanceAmount} />
       </section>
 
-      <hr className="my-2 border-black" />
-      <p className="italic">{bill.amountInWords}</p>
+      <div className="mt-3 border-y border-black py-2 text-[12px]">
+        <span className="font-bold">Amount in Words: </span>
+        <span>{bill.amountInWords}</span>
+      </div>
 
-      {/* Signature */}
-      <div className="mt-10 flex justify-end">
-        <div className="w-40 border-t border-black pt-1 text-right text-[9px]">
+      {/* ---- Signature ---- */}
+      <div className="mt-[22mm] flex justify-end">
+        <div className="w-[55mm] border-t border-black pt-1 text-center text-[11px]">
           Authorized Signature
         </div>
       </div>
 
       {LAB_PROFILE.footerNote && (
-        <p className="mt-4 text-center text-[9px]">{LAB_PROFILE.footerNote}</p>
+        <p className="mt-6 text-center text-[10px]">{LAB_PROFILE.footerNote}</p>
       )}
     </div>
   );
 }
 
-function Row({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
+function Row({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex justify-between gap-2">
-      <span>{label}</span>
-      <span className={strong ? "font-bold" : ""}>{value}</span>
+    <div className="flex gap-2">
+      <span className="font-bold">{label}:</span>
+      <span className="flex-1">{value}</span>
     </div>
   );
 }
 
 function Amount({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
   return (
-    <div className={`flex justify-between ${strong ? "font-bold" : ""}`}>
-      <span>{label}</span>
-      <span className="tabular-nums">{money(value)}</span>
+    <div className="flex justify-between border-b border-black/15 py-1">
+      <span className="font-bold">{label}:</span>
+      <span className={`tabular-nums ${strong ? "font-bold" : ""}`}>{money(value)}</span>
     </div>
   );
 }
