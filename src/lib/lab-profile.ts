@@ -14,11 +14,11 @@ export const LAB_PROFILE = {
   /** Big, bold, centred at the very top of the bill. */
   name: "PRATHAM PATHOLOGY",
   /** Small, not bold, directly under the lab name. */
-  address: "Shop No. 1, Main Road, Your City, State – 000000 · Ph: 00000 00000",
+  address: "Mahalaxmi Arcade, Shop no. 11&12, Upper Gr. Fllor, Station Road, Badlapur (E), Dist. Thane - 421503, Contact: 9921120841",
   /** Centre logo — replace the file at public/lab-logo.png (square PNG works best). */
   logoUrl: "/lab-logo.png",
   /** Left of the logo — doctor name (bold, small) + designation (not bold). */
-  doctorName: "Dr. Full Name",
+  doctorName: "Dr. Gayatri Vyavahare",
   doctorDesignation: "Consultant Pathologist (MD)",
   /** Right of the logo — printed as "Lab Timings: <value>" then line 2. */
   timingsValue: "8 AM to 4 PM",

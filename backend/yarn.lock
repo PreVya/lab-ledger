@@ -106,22 +106,6 @@
   resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/@jridgewell/sourcemap-codec/-/sourcemap-codec-1.5.5.tgz"
   integrity sha512-cYQ9310grqxueWbl+WuIUIaiUaDcj7WOq5fVhEljNVgRfOUhY9fy2zTvfoqWsnebh8Sl70VScFbICvJnLKB0Og==
 
-"@jridgewell/trace-mapping@^0.3.24":
-  version "0.3.31"
-  resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/@jridgewell/trace-mapping/-/trace-mapping-0.3.31.tgz"
-  integrity sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==
-  dependencies:
-    "@jridgewell/resolve-uri" "^3.1.0"
-    "@jridgewell/sourcemap-codec" "^1.4.14"
-
-"@jridgewell/trace-mapping@^0.3.25":
-  version "0.3.31"
-  resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/@jridgewell/trace-mapping/-/trace-mapping-0.3.31.tgz"
-  integrity sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==
-  dependencies:
-    "@jridgewell/resolve-uri" "^3.1.0"
-    "@jridgewell/sourcemap-codec" "^1.4.14"
-
 "@jridgewell/trace-mapping@0.3.9":
   version "0.3.9"
   resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/@jridgewell/trace-mapping/-/trace-mapping-0.3.9.tgz"
@@ -129,6 +113,14 @@
   dependencies:
     "@jridgewell/resolve-uri" "^3.0.3"
     "@jridgewell/sourcemap-codec" "^1.4.10"
+
+"@jridgewell/trace-mapping@^0.3.24", "@jridgewell/trace-mapping@^0.3.25":
+  version "0.3.31"
+  resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/@jridgewell/trace-mapping/-/trace-mapping-0.3.31.tgz"
+  integrity sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==
+  dependencies:
+    "@jridgewell/resolve-uri" "^3.1.0"
+    "@jridgewell/sourcemap-codec" "^1.4.14"
 
 "@ljharb/through@^2.3.12":
   version "2.3.14"
@@ -182,15 +174,15 @@
     webpack "5.97.1"
     webpack-node-externals "3.0.0"
 
-"@nestjs/common@^10.0.0", "@nestjs/common@^10.3.0", "@nestjs/common@^8.0.0 || ^9.0.0 || ^10.0.0":
+"@nestjs/common@^10.3.0":
   version "10.4.22"
   resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/@nestjs/common/-/common-10.4.22.tgz"
   integrity sha512-fxJ4v85nDHaqT1PmfNCQ37b/jcv2OojtXTaK1P2uAXhzLf9qq6WNUOFvxBrV4fhQek1EQoT1o9oj5xAZmv3NRw==
   dependencies:
+    uid "2.0.2"
     file-type "20.4.1"
     iterare "1.2.1"
     tslib "2.8.1"
-    uid "2.0.2"
 
 "@nestjs/config@^3.2.0":
   version "3.3.0"
@@ -201,17 +193,17 @@
     dotenv-expand "10.0.0"
     lodash "4.17.21"
 
-"@nestjs/core@^10.0.0", "@nestjs/core@^10.3.0":
+"@nestjs/core@^10.3.0":
   version "10.4.22"
   resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/@nestjs/core/-/core-10.4.22.tgz"
   integrity sha512-6IX9+VwjiKtCjx+mXVPncpkQ5ZjKfmssOZPFexmT+6T9H9wZ3svpYACAo7+9e7Nr9DZSoRZw3pffkJP7Z0UjaA==
   dependencies:
+    uid "2.0.2"
     "@nuxtjs/opencollective" "0.3.2"
     fast-safe-stringify "2.1.1"
     iterare "1.2.1"
     path-to-regexp "3.3.0"
     tslib "2.8.1"
-    uid "2.0.2"
 
 "@nestjs/jwt@^10.2.0":
   version "10.2.0"
@@ -226,7 +218,7 @@
   resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/@nestjs/passport/-/passport-10.0.3.tgz"
   integrity sha512-znJ9Y4S8ZDVY+j4doWAJ8EuuVO7SkQN3yOBmzxbGaXbvcSwFDAdGJ+OMCg52NdzIO4tQoN4pYKx8W6M0ArfFRQ==
 
-"@nestjs/platform-express@^10.0.0", "@nestjs/platform-express@^10.3.0":
+"@nestjs/platform-express@^10.3.0":
   version "10.4.22"
   resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/@nestjs/platform-express/-/platform-express-10.4.22.tgz"
   integrity sha512-ySSq7Py/DFozzZdNDH67m/vHoeVdphDniWBnl6q5QVoXldDdrZIHLXLRMPayTDh5A95nt7jjJzmD4qpTbNQ6tA==
@@ -590,7 +582,7 @@
   resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/@types/validator/-/validator-13.15.10.tgz"
   integrity sha512-T8L6i7wCuyoK8A/ZeLYt1+q0ty3Zb9+qbSSvrIVitzT3YjZqkTZ40IbRsPanlB4h1QB3JVL1SYCdR6ngtFYcuA==
 
-"@webassemblyjs/ast@^1.14.1", "@webassemblyjs/ast@1.14.1":
+"@webassemblyjs/ast@1.14.1", "@webassemblyjs/ast@^1.14.1":
   version "1.14.1"
   resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/@webassemblyjs/ast/-/ast-1.14.1.tgz"
   integrity sha512-nuBEDgQfm1ccRp/8bCQrx1frohyufl4JlbMMZ4P1wpeOfDhF6FQkxZJ1b/e+PLwr6X1Nhw6OLme5usuBWYBvuQ==
@@ -691,7 +683,7 @@
     "@webassemblyjs/wasm-gen" "1.14.1"
     "@webassemblyjs/wasm-parser" "1.14.1"
 
-"@webassemblyjs/wasm-parser@^1.14.1", "@webassemblyjs/wasm-parser@1.14.1":
+"@webassemblyjs/wasm-parser@1.14.1", "@webassemblyjs/wasm-parser@^1.14.1":
   version "1.14.1"
   resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/@webassemblyjs/wasm-parser/-/wasm-parser-1.14.1.tgz"
   integrity sha512-JLBl+KZ0R5qB7mCnud/yyX08jWFw5MsoalJ1pQ4EdFlgj9VdXKGuENGsiCIjegI1W7p91rUlcB/LB5yRJKNTcQ==
@@ -753,7 +745,7 @@ agent-base@6:
   dependencies:
     debug "4"
 
-ajv-formats@^2.1.1, ajv-formats@2.1.1:
+ajv-formats@2.1.1, ajv-formats@^2.1.1:
   version "2.1.1"
   resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/ajv-formats/-/ajv-formats-2.1.1.tgz"
   integrity sha512-Wx0Kx52hxE7C18hkMEggYlEifqWZtYaRgouJor+WMdPnQyEK13vgEWyVNup7SoeeoLMsr4kf5h6dOW11I15MUA==
@@ -772,17 +764,7 @@ ajv-keywords@^5.1.0:
   dependencies:
     fast-deep-equal "^3.1.3"
 
-ajv@^6.12.5, ajv@^6.9.1:
-  version "6.15.0"
-  resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/ajv/-/ajv-6.15.0.tgz"
-  integrity sha512-fgFx7Hfoq60ytK2c7DhnF8jIvzYgOMxfugjLOSMHjLIPgenqa7S7oaagATUq99mV6IYvN2tRmC0wnTYX6iPbMw==
-  dependencies:
-    fast-deep-equal "^3.1.1"
-    fast-json-stable-stringify "^2.0.0"
-    json-schema-traverse "^0.4.1"
-    uri-js "^4.2.2"
-
-ajv@^8.0.0, ajv@^8.8.2, ajv@^8.9.0, ajv@8.12.0:
+ajv@8.12.0, ajv@^8.0.0, ajv@^8.9.0:
   version "8.12.0"
   resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/ajv/-/ajv-8.12.0.tgz"
   integrity sha512-sRu1kpcO9yLtYxBKvqfTeh9KzZEwO3STyX1HT+4CaDzC6HpTGYhIhPIzj9XuKU7KYDwnaeh5hcOwjy1QuJzBPA==
@@ -790,6 +772,16 @@ ajv@^8.0.0, ajv@^8.8.2, ajv@^8.9.0, ajv@8.12.0:
     fast-deep-equal "^3.1.1"
     json-schema-traverse "^1.0.0"
     require-from-string "^2.0.2"
+    uri-js "^4.2.2"
+
+ajv@^6.12.5:
+  version "6.15.0"
+  resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/ajv/-/ajv-6.15.0.tgz"
+  integrity sha512-fgFx7Hfoq60ytK2c7DhnF8jIvzYgOMxfugjLOSMHjLIPgenqa7S7oaagATUq99mV6IYvN2tRmC0wnTYX6iPbMw==
+  dependencies:
+    fast-deep-equal "^3.1.1"
+    fast-json-stable-stringify "^2.0.0"
+    json-schema-traverse "^0.4.1"
     uri-js "^4.2.2"
 
 ansi-colors@4.1.3:
@@ -909,7 +901,7 @@ bl@^4.1.0:
     inherits "^2.0.4"
     readable-stream "^3.4.0"
 
-body-parser@~1.20.3, body-parser@1.20.4:
+body-parser@1.20.4, body-parser@~1.20.3:
   version "1.20.4"
   resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/body-parser/-/body-parser-1.20.4.tgz"
   integrity sha512-ZTgYYLMOXY9qKU/57FAo8F+HA2dGX7bqGc71txDRC1rS4frdFI5R7NhluHxH6M0YItAP0sHB4uqAOcYKxO6uGA==
@@ -949,7 +941,7 @@ braces@~3.0.2:
   dependencies:
     fill-range "^7.1.1"
 
-browserslist@^4.24.0, "browserslist@>= 4.21.0":
+browserslist@^4.24.0:
   version "4.28.2"
   resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/browserslist/-/browserslist-4.28.2.tgz"
   integrity sha512-48xSriZYYg+8qXna9kwqjIVzuQxi+KYWp2+5nCYnYKPTr0LvD89Jqk2Or5ogxz0NUMfIjhh2lIUX/LyX9B4oIg==
@@ -1026,7 +1018,7 @@ caniuse-lite@^1.0.30001782:
   resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/caniuse-lite/-/caniuse-lite-1.0.30001799.tgz"
   integrity sha512-hG1bReV+OUU+MOqK4t/ZWI0tZOyz3rqS9XuhOUz1cIcbwBKjOyJEJuw9ER5JuNyqxNk8u/JUVbGibBOL1yrjFw==
 
-chalk@^4.1.0, chalk@^4.1.1, chalk@^4.1.2, chalk@4.1.2:
+chalk@4.1.2, chalk@^4.1.0, chalk@^4.1.1, chalk@^4.1.2:
   version "4.1.2"
   resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/chalk/-/chalk-4.1.2.tgz"
   integrity sha512-oKnbhFyRIXpUuez8iBMmyEa4nbj4IOQyuhc/wy9kY7/WVPcwIO9VA668Pu8RkO7+0G76SLROeyw9CpQ061i4mA==
@@ -1044,7 +1036,7 @@ chardet@^0.7.0:
   resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/chardet/-/chardet-0.7.0.tgz"
   integrity sha512-mT8iDcrh03qDGRRmoA2hmBJnxpllMR+0/0qlzjqZES6NdiWDcZkCNAk4rPFZ9Q85r27unkiNNg8ZOiwZXBHwcA==
 
-chokidar@^3.5.2, chokidar@^3.5.3, chokidar@3.6.0:
+chokidar@3.6.0, chokidar@^3.5.3:
   version "3.6.0"
   resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/chokidar/-/chokidar-3.6.0.tgz"
   integrity sha512-7VT13fmjotKpGipCW9JEQAusEPE+Ei8nl6/g4FBAmIm0GOOLMua9NDDo/DWp0ZAxCr3cPq5ZpBqmPAQgDda2Pw==
@@ -1069,12 +1061,12 @@ chrome-trace-event@^1.0.2:
   resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/chrome-trace-event/-/chrome-trace-event-1.0.4.tgz"
   integrity sha512-rNjApaLzuwaOTjCiT8lSDdGN1APCiqkChLMJxJPWLunPAt5fy8xgU9/jNOchV84wfIxrA0lRQB7oCT8jrn/wrQ==
 
-class-transformer@*, class-transformer@^0.5.1:
+class-transformer@^0.5.1:
   version "0.5.1"
   resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/class-transformer/-/class-transformer-0.5.1.tgz"
   integrity sha512-SQa1Ws6hUbfC98vKGxZH3KFY0Y1lm5Zm0SY8XX9zbK7FJCyVEac3ATW0RIpwzW+oOfmHE5PMPufDG9hCfoEOMw==
 
-class-validator@*, class-validator@^0.14.1:
+class-validator@^0.14.1:
   version "0.14.4"
   resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/class-validator/-/class-validator-0.14.4.tgz"
   integrity sha512-AwNusCCam51q703dW82x95tOqQp6oC9HNUl724KxJJOfnKscI8dOloXFgyez7LbTTKWuRBA37FScqVbJEoq8Yw==
@@ -1136,15 +1128,15 @@ color-support@^1.1.2:
   resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/color-support/-/color-support-1.1.3.tgz"
   integrity sha512-qiBjkpbMLO/HL68y+lh4q0/O1MZFj2RX6X/KmMa3+gJD3z+WwI1ZzDHysvqHGS3mP6mznPckpXmw1nI9cJjyRg==
 
-commander@^2.20.0:
-  version "2.20.3"
-  resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/commander/-/commander-2.20.3.tgz"
-  integrity sha512-GpVkmM8vF2vQUkj2LvZmD35JxeJOLCwJ9cUkugyk2nuhbv3+mJvpLYYt+0+USMxE+oj+ey/lJEnhZw75x/OMcQ==
-
 commander@4.1.1:
   version "4.1.1"
   resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/commander/-/commander-4.1.1.tgz"
   integrity sha512-NOKm8xhkzAjzFx8B2v5OAHT+u5pRQc2UCa2Vq9jYL/31o2wi9mxBA7LIFs3sV5VSC49z6pEhfbMULvShKj26WA==
+
+commander@^2.20.0:
+  version "2.20.3"
+  resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/commander/-/commander-2.20.3.tgz"
+  integrity sha512-GpVkmM8vF2vQUkj2LvZmD35JxeJOLCwJ9cUkugyk2nuhbv3+mJvpLYYt+0+USMxE+oj+ey/lJEnhZw75x/OMcQ==
 
 comment-json@4.2.5:
   version "4.2.5"
@@ -1241,13 +1233,6 @@ cross-spawn@^7.0.6:
     shebang-command "^2.0.0"
     which "^2.0.1"
 
-debug@^4.4.0:
-  version "4.4.3"
-  resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/debug/-/debug-4.4.3.tgz"
-  integrity sha512-RGwwWnwQvkVfavKVt22FGLw+xYSdzARwm0ru6DhTVA3umU5hZc28V3kO4stgYryrTlLpuvgI9GiijltAjNbcqA==
-  dependencies:
-    ms "^2.1.3"
-
 debug@2.6.9:
   version "2.6.9"
   resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/debug/-/debug-2.6.9.tgz"
@@ -1255,7 +1240,7 @@ debug@2.6.9:
   dependencies:
     ms "2.0.0"
 
-debug@4:
+debug@4, debug@^4.4.0:
   version "4.4.3"
   resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/debug/-/debug-4.4.3.tgz"
   integrity sha512-RGwwWnwQvkVfavKVt22FGLw+xYSdzARwm0ru6DhTVA3umU5hZc28V3kO4stgYryrTlLpuvgI9GiijltAjNbcqA==
@@ -1288,12 +1273,12 @@ delegates@^1.0.0:
   resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/delegates/-/delegates-1.0.0.tgz"
   integrity sha512-bd2L678uiWATM6m5Z1VzNCErI3jiGzt6HGY8OVICs40JQq/HALfbyNJmp0UDakEY4pMMaN0Ly5om/B1VI/+xfQ==
 
-depd@~2.0.0, depd@2.0.0:
+depd@2.0.0, depd@~2.0.0:
   version "2.0.0"
   resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/depd/-/depd-2.0.0.tgz"
   integrity sha512-g7nH6P6dyDioJogAAGprGpCtVImJhpPk/roCzdb3fIh61/s/nPsfR6onyMwkCAR/OlC3yBC0lESvUoQEAssIrw==
 
-destroy@~1.2.0, destroy@1.2.0:
+destroy@1.2.0, destroy@~1.2.0:
   version "1.2.0"
   resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/destroy/-/destroy-1.2.0.tgz"
   integrity sha512-2sJGJTaXIIaR1w4iJSNoN0hnMY7Gpc/n8D4qSCJw8QqFWXf7cuAgnEHxBpweaVcPevC2l3KpjYCx3NypQQgaJg==
@@ -1621,6 +1606,11 @@ fs.realpath@^1.0.0:
   resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/fs.realpath/-/fs.realpath-1.0.0.tgz"
   integrity sha512-OO0pH2lK6a0hZnAdau5ItzHPI6pUlvI7jMVnxUQRtw4owF2wk8lOSabtGDCTP4Ggrg2MbGnWO9X8K1t4+fGMDw==
 
+fsevents@2.3.3, fsevents@~2.3.2:
+  version "2.3.3"
+  resolved "https://registry.yarnpkg.com/fsevents/-/fsevents-2.3.3.tgz#cac6407785d03675a2a5e1a5305c697b347d90d6"
+  integrity sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw==
+
 function-bind@^1.1.2:
   version "1.1.2"
   resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/function-bind/-/function-bind-1.1.2.tgz"
@@ -1677,18 +1667,6 @@ glob-to-regexp@^0.4.1:
   resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/glob-to-regexp/-/glob-to-regexp-0.4.1.tgz"
   integrity sha512-lkX1HJXwyMcprw/5YUZc2s7DrpAiHB21/V+E1rHUrVNokkvB6bqMzT0VfV6/86ZNabt1k14YOIaT7nDvOX3Iiw==
 
-glob@^7.1.3:
-  version "7.2.3"
-  resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/glob/-/glob-7.2.3.tgz"
-  integrity sha512-nFR0zLpU2YCaRxwoCJvL6UvCH2JFyFVIvwTLsIf21AuHlMskA1hhTdk+LlYJtOlYt9v6dvszD2BGRqBL+iQK9Q==
-  dependencies:
-    fs.realpath "^1.0.0"
-    inflight "^1.0.4"
-    inherits "2"
-    minimatch "^3.1.1"
-    once "^1.3.0"
-    path-is-absolute "^1.0.0"
-
 glob@10.4.5:
   version "10.4.5"
   resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/glob/-/glob-10.4.5.tgz"
@@ -1700,6 +1678,18 @@ glob@10.4.5:
     minipass "^7.1.2"
     package-json-from-dist "^1.0.0"
     path-scurry "^1.11.1"
+
+glob@^7.1.3:
+  version "7.2.3"
+  resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/glob/-/glob-7.2.3.tgz"
+  integrity sha512-nFR0zLpU2YCaRxwoCJvL6UvCH2JFyFVIvwTLsIf21AuHlMskA1hhTdk+LlYJtOlYt9v6dvszD2BGRqBL+iQK9Q==
+  dependencies:
+    fs.realpath "^1.0.0"
+    inflight "^1.0.4"
+    inherits "2"
+    minimatch "^3.1.1"
+    once "^1.3.0"
+    path-is-absolute "^1.0.0"
 
 gopd@^1.0.1, gopd@^1.2.0:
   version "1.2.0"
@@ -1797,7 +1787,7 @@ inflight@^1.0.4:
     once "^1.3.0"
     wrappy "1"
 
-inherits@^2.0.3, inherits@^2.0.4, inherits@~2.0.4, inherits@2:
+inherits@2, inherits@^2.0.3, inherits@^2.0.4, inherits@~2.0.4:
   version "2.0.4"
   resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/inherits/-/inherits-2.0.4.tgz"
   integrity sha512-k/vGaX4/Yla3WzyMCvTQOXYeIHvqOKtnqBduzTHpzpQZzAskKMhZ2K+EnBiSM9zGSoIFeMpXKxa4dYeZIQqewQ==
@@ -1972,7 +1962,7 @@ jsonfile@^6.0.1:
   optionalDependencies:
     graceful-fs "^4.1.6"
 
-jsonwebtoken@^9.0.0, jsonwebtoken@9.0.2:
+jsonwebtoken@9.0.2, jsonwebtoken@^9.0.0:
   version "9.0.2"
   resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/jsonwebtoken/-/jsonwebtoken-9.0.2.tgz"
   integrity sha512-PRp66vJ865SSqOlgqS8hujT5U4AOgMfhrwYIuIhfKaoSCZcirrmASQr8CX7cUg+RMih+hgznrjp99o+W4pJLHQ==
@@ -2055,7 +2045,7 @@ lodash.once@^4.0.0:
   resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/lodash.once/-/lodash.once-4.1.1.tgz"
   integrity sha512-Sb487aTOCr9drQVL8pIxOzVhafOjZN9UU54hiN8PU3uAiSV7lx1yYNpbNmex2PK6dSJoNTSJUUswT651yww3Mg==
 
-lodash@^4.17.21, lodash@4.17.21:
+lodash@4.17.21, lodash@^4.17.21:
   version "4.17.21"
   resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/lodash/-/lodash-4.17.21.tgz"
   integrity sha512-v2kDEe57lecTulaDIuNTPy3Ry4gLGJ6Z1O3vE1krgXZNrsQ+LFTGHVxVjcXPs17LhbZVGedAJv8XZ1tvj5FvSg==
@@ -2172,15 +2162,15 @@ minipass@^3.0.0:
   dependencies:
     yallist "^4.0.0"
 
-"minipass@^5.0.0 || ^6.0.2 || ^7.0.0", minipass@^7.1.2:
-  version "7.1.3"
-  resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/minipass/-/minipass-7.1.3.tgz"
-  integrity sha512-tEBHqDnIoM/1rXME1zgka9g6Q2lcoCkxHLuc7ODJ5BxbP5d4c2Z5cGgtXAku59200Cx7diuHTOYfSBD8n6mm8A==
-
 minipass@^5.0.0:
   version "5.0.0"
   resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/minipass/-/minipass-5.0.0.tgz"
   integrity sha512-3FnjYuehv9k6ovOEbyOswadCDPX1piCfhV8ncmYtHOjuPwylVWsghTLo7rabjC3Rx5xD4HDx8Wm1xnMF7S5qFQ==
+
+"minipass@^5.0.0 || ^6.0.2 || ^7.0.0", minipass@^7.1.2:
+  version "7.1.3"
+  resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/minipass/-/minipass-7.1.3.tgz"
+  integrity sha512-tEBHqDnIoM/1rXME1zgka9g6Q2lcoCkxHLuc7ODJ5BxbP5d4c2Z5cGgtXAku59200Cx7diuHTOYfSBD8n6mm8A==
 
 minizlib@^2.1.1:
   version "2.1.2"
@@ -2202,35 +2192,15 @@ mkdirp@^1.0.3:
   resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/mkdirp/-/mkdirp-1.0.4.tgz"
   integrity sha512-vVqVZQyf3WLx2Shd0qJ9xuvqgAyKPLAiqITEtqW0oIUjzo3PePDd6fW9iFz30ef7Ysp/oiWqbhszeGWW2T6Gzw==
 
-ms@^2.1.1:
-  version "2.1.3"
-  resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/ms/-/ms-2.1.3.tgz"
-  integrity sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA==
-
-ms@^2.1.3:
-  version "2.1.3"
-  resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/ms/-/ms-2.1.3.tgz"
-  integrity sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA==
-
 ms@2.0.0:
   version "2.0.0"
   resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/ms/-/ms-2.0.0.tgz"
   integrity sha512-Tpp60P6IUJDTuOq/5Z8cdskzJujfwqfOTkrwIwj7IRISpnkJnT6SyJ4PCPnGMoFjC9ddhal5KVIYtAt97ix05A==
 
-ms@2.1.3:
+ms@2.1.3, ms@^2.1.1, ms@^2.1.3:
   version "2.1.3"
   resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/ms/-/ms-2.1.3.tgz"
   integrity sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA==
-
-multer@^2.2.0:
-  version "2.2.0"
-  resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/multer/-/multer-2.2.0.tgz"
-  integrity sha512-6rdyFg2kLrMh9Jee7/BMPuV9lEAd7lLW2YUpF9/YxR7njyoUwwQ0ZPh3TaIY50Sw6vlyD2HW3wGOkTS4P79xrQ==
-  dependencies:
-    append-field "^1.0.0"
-    busboy "^1.6.0"
-    concat-stream "^2.0.0"
-    type-is "^1.6.18"
 
 multer@2.0.2:
   version "2.0.2"
@@ -2244,6 +2214,16 @@ multer@2.0.2:
     object-assign "^4.1.1"
     type-is "^1.6.18"
     xtend "^4.0.2"
+
+multer@^2.2.0:
+  version "2.2.0"
+  resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/multer/-/multer-2.2.0.tgz"
+  integrity sha512-6rdyFg2kLrMh9Jee7/BMPuV9lEAd7lLW2YUpF9/YxR7njyoUwwQ0ZPh3TaIY50Sw6vlyD2HW3wGOkTS4P79xrQ==
+  dependencies:
+    append-field "^1.0.0"
+    busboy "^1.6.0"
+    concat-stream "^2.0.0"
+    type-is "^1.6.18"
 
 mute-stream@0.0.8:
   version "0.0.8"
@@ -2347,7 +2327,7 @@ onetime@^5.1.0:
   dependencies:
     mimic-fn "^2.1.0"
 
-ora@^5.4.1, ora@5.4.1:
+ora@5.4.1, ora@^5.4.1:
   version "5.4.1"
   resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/ora/-/ora-5.4.1.tgz"
   integrity sha512-5b6Y85tPxZZ7QytO+BQzysW31HJku27cRIlkbAXaNx+BdcVi+LlRFmVXzeF6a7JCwJpyw5c4b+YSVImQIrBpuQ==
@@ -2402,12 +2382,12 @@ passport-jwt@^4.0.1:
     jsonwebtoken "^9.0.0"
     passport-strategy "^1.0.0"
 
-passport-strategy@^1.0.0, passport-strategy@1.x.x:
+passport-strategy@1.x.x, passport-strategy@^1.0.0:
   version "1.0.0"
   resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/passport-strategy/-/passport-strategy-1.0.0.tgz"
   integrity sha512-CB97UUvDKJde2V0KDWWB3lyf6PC3FaZP7YxZ2G8OAtn9p4HI9j9JLP9qjOGZFvyl8uwNT8qM+hGnz/n16NI7oA==
 
-"passport@^0.4.0 || ^0.5.0 || ^0.6.0 || ^0.7.0", passport@^0.7.0:
+passport@^0.7.0:
   version "0.7.0"
   resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/passport/-/passport-0.7.0.tgz"
   integrity sha512-cPLl+qZpSc+ireUvt+IzqbED1cHHkDoVYMo30jbJIdOOjQ1MQYZBPiNvmi8UM6lJuOpTPXJGZQk0DtC4y61MYQ==
@@ -2434,15 +2414,15 @@ path-scurry@^1.11.1:
     lru-cache "^10.2.0"
     minipass "^5.0.0 || ^6.0.2 || ^7.0.0"
 
-path-to-regexp@~0.1.12:
-  version "0.1.13"
-  resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/path-to-regexp/-/path-to-regexp-0.1.13.tgz"
-  integrity sha512-A/AGNMFN3c8bOlvV9RreMdrv7jsmF9XIfDeCd87+I8RNg6s78BhJxMu69NEMHBSJFxKidViTEdruRwEk/WIKqA==
-
 path-to-regexp@3.3.0:
   version "3.3.0"
   resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/path-to-regexp/-/path-to-regexp-3.3.0.tgz"
   integrity sha512-qyCH421YQPS2WFDxDjftfc1ZR5WKQzVzqsp4n9M2kQhVOo/ByahFoUNJfl58kOcEGfQ//7weFTDhm+ss8Ecxgw==
+
+path-to-regexp@~0.1.12:
+  version "0.1.13"
+  resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/path-to-regexp/-/path-to-regexp-0.1.13.tgz"
+  integrity sha512-A/AGNMFN3c8bOlvV9RreMdrv7jsmF9XIfDeCd87+I8RNg6s78BhJxMu69NEMHBSJFxKidViTEdruRwEk/WIKqA==
 
 path-type@^4.0.0:
   version "4.0.0"
@@ -2459,27 +2439,22 @@ picocolors@^1.1.1:
   resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/picocolors/-/picocolors-1.1.1.tgz"
   integrity sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA==
 
-picomatch@^2.0.4:
-  version "2.3.2"
-  resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/picomatch/-/picomatch-2.3.2.tgz"
-  integrity sha512-V7+vQEJ06Z+c5tSye8S+nHUfI51xoXIXjHQ99cQtKUkQqqO1kO/KCJUfZXuB47h/YBlDhah2H3hdUGXn8ie0oA==
-
-picomatch@^2.2.1:
-  version "2.3.2"
-  resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/picomatch/-/picomatch-2.3.2.tgz"
-  integrity sha512-V7+vQEJ06Z+c5tSye8S+nHUfI51xoXIXjHQ99cQtKUkQqqO1kO/KCJUfZXuB47h/YBlDhah2H3hdUGXn8ie0oA==
-
 picomatch@4.0.1:
   version "4.0.1"
   resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/picomatch/-/picomatch-4.0.1.tgz"
   integrity sha512-xUXwsxNjwTQ8K3GnT4pCJm+xq3RUPQbmkYJTP5aFIfNIvbcc/4MUxgBaaRSZJ6yGJZiGSyYlM6MzwTsRk8SYCg==
+
+picomatch@^2.0.4, picomatch@^2.2.1:
+  version "2.3.2"
+  resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/picomatch/-/picomatch-2.3.2.tgz"
+  integrity sha512-V7+vQEJ06Z+c5tSye8S+nHUfI51xoXIXjHQ99cQtKUkQqqO1kO/KCJUfZXuB47h/YBlDhah2H3hdUGXn8ie0oA==
 
 pluralize@8.0.0:
   version "8.0.0"
   resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/pluralize/-/pluralize-8.0.0.tgz"
   integrity sha512-Nc3IT5yHzflTfbjgqWcCPpo7DaKy4FnpB0l/zCAW0Tc7jxAiuqSxHasntB3D7887LSrA93kDJ9IXovxJYxyLCA==
 
-prisma@*, prisma@^5.10.0:
+prisma@^5.10.0:
   version "5.22.0"
   resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/prisma/-/prisma-5.22.0.tgz"
   integrity sha512-vtpjW3XuYCSnMsNVBjLMNkTj6OZbudcPPTPYHqX0CJfpcdWciI1dM8uHETwmDxxiqEwCIE6WvXucWUetJgfu/A==
@@ -2539,7 +2514,7 @@ readdirp@~3.6.0:
   dependencies:
     picomatch "^2.2.1"
 
-"reflect-metadata@^0.1.12 || ^0.2.0", reflect-metadata@^0.2.1:
+reflect-metadata@^0.2.1:
   version "0.2.2"
   resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/reflect-metadata/-/reflect-metadata-0.2.2.tgz"
   integrity sha512-urBwgfrvVP/eAyXx4hluJivBKzuEbSQs9rKWCrCkbSxNv8mxPcUZKeuoF3Uy4mJl3Lwprp6yy5/39VWigZ4K6Q==
@@ -2584,13 +2559,6 @@ run-async@^3.0.0:
   resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/run-async/-/run-async-3.0.0.tgz"
   integrity sha512-540WwVDOMxA6dN6We19EcT9sc3hkXPw5mzRNGM3FkdN/vtE9NFvj5lFAPNwUDmJjXidm3v7TC1cTE7t17Ulm1Q==
 
-rxjs@^7.1.0, rxjs@^7.5.5, rxjs@^7.8.1:
-  version "7.8.2"
-  resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/rxjs/-/rxjs-7.8.2.tgz"
-  integrity sha512-dhKf903U/PQZY6boNNtAGdWbG85WAbjT/1xYoZIC7FAY0yWapOBQVsVrDl58W86//e1VpMNBtRV4MaXfdMySFA==
-  dependencies:
-    tslib "^2.1.0"
-
 rxjs@7.8.1:
   version "7.8.1"
   resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/rxjs/-/rxjs-7.8.1.tgz"
@@ -2598,7 +2566,14 @@ rxjs@7.8.1:
   dependencies:
     tslib "^2.1.0"
 
-safe-buffer@^5.0.1, safe-buffer@~5.2.0, safe-buffer@5.2.1:
+rxjs@^7.5.5, rxjs@^7.8.1:
+  version "7.8.2"
+  resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/rxjs/-/rxjs-7.8.2.tgz"
+  integrity sha512-dhKf903U/PQZY6boNNtAGdWbG85WAbjT/1xYoZIC7FAY0yWapOBQVsVrDl58W86//e1VpMNBtRV4MaXfdMySFA==
+  dependencies:
+    tslib "^2.1.0"
+
+safe-buffer@5.2.1, safe-buffer@^5.0.1, safe-buffer@~5.2.0:
   version "5.2.1"
   resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/safe-buffer/-/safe-buffer-5.2.1.tgz"
   integrity sha512-rp3So07KcdmmKbGvgaNxQSJr7bGVSVk5S9Eq1F+ppbRo70+YeaDxkw5Dd8NPN+GD6bjnYm2VuPuCXmpuYvmCXQ==
@@ -2683,7 +2658,7 @@ set-function-length@^1.2.2:
     gopd "^1.0.1"
     has-property-descriptors "^1.0.2"
 
-setprototypeof@~1.2.0, setprototypeof@1.2.0:
+setprototypeof@1.2.0, setprototypeof@~1.2.0:
   version "1.2.0"
   resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/setprototypeof/-/setprototypeof-1.2.0.tgz"
   integrity sha512-E5LDX7Wrp85Kil5bhZv46j8jOeboKq5JMmYM3gVGdGH8xFpPWXUMsNrlODCrkoxMEeNi/XZIwuRvY4XNwYMJpw==
@@ -2740,12 +2715,7 @@ side-channel@^1.1.0:
     side-channel-map "^1.0.1"
     side-channel-weakmap "^1.0.2"
 
-signal-exit@^3.0.0:
-  version "3.0.7"
-  resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/signal-exit/-/signal-exit-3.0.7.tgz"
-  integrity sha512-wnD2ZE+l+SPC/uoS0vXeE9L1+0wuaMqKlfz9AMUo38JsyLSBWSFcHR1Rri62LZc12vLr1gb3jl7iwQhgwpAbGQ==
-
-signal-exit@^3.0.2:
+signal-exit@^3.0.0, signal-exit@^3.0.2:
   version "3.0.7"
   resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/signal-exit/-/signal-exit-3.0.7.tgz"
   integrity sha512-wnD2ZE+l+SPC/uoS0vXeE9L1+0wuaMqKlfz9AMUo38JsyLSBWSFcHR1Rri62LZc12vLr1gb3jl7iwQhgwpAbGQ==
@@ -2763,15 +2733,15 @@ source-map-support@~0.5.20:
     buffer-from "^1.0.0"
     source-map "^0.6.0"
 
-source-map@^0.6.0:
-  version "0.6.1"
-  resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/source-map/-/source-map-0.6.1.tgz"
-  integrity sha512-UjgapumWlbMhkBgzT7Ykc5YXUT46F0iKu8SGXq0bcwP5dz/h0Plj6enJqjz1Zbq2l5WaqYnrVbwWOWMyF3F47g==
-
 source-map@0.7.4:
   version "0.7.4"
   resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/source-map/-/source-map-0.7.4.tgz"
   integrity sha512-l3BikUxvPOcn5E74dZiq5BGsTb5yEwhaTSzccU6t4sDOH8NWJCstKO5QT2CvtFoK6F0saL7p9xHAqHOlCPJygA==
+
+source-map@^0.6.0:
+  version "0.6.1"
+  resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/source-map/-/source-map-0.6.1.tgz"
+  integrity sha512-UjgapumWlbMhkBgzT7Ykc5YXUT46F0iKu8SGXq0bcwP5dz/h0Plj6enJqjz1Zbq2l5WaqYnrVbwWOWMyF3F47g==
 
 statuses@~2.0.1, statuses@~2.0.2:
   version "2.0.2"
@@ -2782,13 +2752,6 @@ streamsearch@^1.1.0:
   version "1.1.0"
   resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/streamsearch/-/streamsearch-1.1.0.tgz"
   integrity sha512-Mcc5wHehp9aXz1ax6bZUyY5afg9u2rv5cqQI3mRrYkGC8rW2hM02jWuwjtL++LS5qinSyhj2QfLyNsuc+VsExg==
-
-string_decoder@^1.1.1:
-  version "1.3.0"
-  resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/string_decoder/-/string_decoder-1.3.0.tgz"
-  integrity sha512-hkRX8U1WjJFd8LsDJ2yQ/wWWxaopEsABU1XfkM8A+j0+85JAGppt16cr1Whg6KIbb4okU6Mql6BOj+uup/wKeA==
-  dependencies:
-    safe-buffer "~5.2.0"
 
 "string-width-cjs@npm:string-width@^4.2.0":
   version "4.2.3"
@@ -2816,6 +2779,13 @@ string-width@^5.0.1, string-width@^5.1.2:
     eastasianwidth "^0.2.0"
     emoji-regex "^9.2.2"
     strip-ansi "^7.0.1"
+
+string_decoder@^1.1.1:
+  version "1.3.0"
+  resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/string_decoder/-/string_decoder-1.3.0.tgz"
+  integrity sha512-hkRX8U1WjJFd8LsDJ2yQ/wWWxaopEsABU1XfkM8A+j0+85JAGppt16cr1Whg6KIbb4okU6Mql6BOj+uup/wKeA==
+  dependencies:
+    safe-buffer "~5.2.0"
 
 "strip-ansi-cjs@npm:strip-ansi@^6.0.1":
   version "6.0.1"
@@ -2978,7 +2948,7 @@ tsconfig-paths-webpack-plugin@4.2.0:
     tapable "^2.2.1"
     tsconfig-paths "^4.1.2"
 
-tsconfig-paths@^4.1.2, tsconfig-paths@4.2.0:
+tsconfig-paths@4.2.0, tsconfig-paths@^4.1.2:
   version "4.2.0"
   resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/tsconfig-paths/-/tsconfig-paths-4.2.0.tgz"
   integrity sha512-NoZ4roiN7LnbKn9QqE1amc9DJfzvZXxF4xDavcOWt1BPkdx+m+0gJuPM+S0vCe7zTJMYUP0R8pO2XMr+Y8oLIg==
@@ -2987,7 +2957,7 @@ tsconfig-paths@^4.1.2, tsconfig-paths@4.2.0:
     minimist "^1.2.6"
     strip-bom "^3.0.0"
 
-tslib@^2.1.0, tslib@2.8.1:
+tslib@2.8.1, tslib@^2.1.0:
   version "2.8.1"
   resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/tslib/-/tslib-2.8.1.tgz"
   integrity sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w==
@@ -3010,15 +2980,15 @@ typedarray@^0.0.6:
   resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/typedarray/-/typedarray-0.0.6.tgz"
   integrity sha512-/aCDEGatGvZ2BIk+HmLf4ifCJFwvKFNb9/JeZPMulfgFracn9QFcAf5GO8B/mweUjSoblS5In0cWhqpfs/5PQA==
 
-typescript@^5.3.3, typescript@>=2.7, typescript@>=4.8.2, typescript@>=4.9.5, typescript@>3.6.0:
-  version "5.9.3"
-  resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/typescript/-/typescript-5.9.3.tgz"
-  integrity sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw==
-
 typescript@5.7.2:
   version "5.7.2"
   resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/typescript/-/typescript-5.7.2.tgz"
   integrity sha512-i5t66RHxDvVN40HfDd1PsEThGNnlMCMT3jMUuoh9/0TaqWevNontacunWyN02LA9/fIbEWlcHZcgTKb9QoaLfg==
+
+typescript@^5.3.3:
+  version "5.9.3"
+  resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/typescript/-/typescript-5.9.3.tgz"
+  integrity sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw==
 
 uid@2.0.2:
   version "2.0.2"
@@ -3067,7 +3037,7 @@ util-deprecate@^1.0.1:
   resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/util-deprecate/-/util-deprecate-1.0.2.tgz"
   integrity sha512-EPD5q1uXyFxJpCrLnCc1nHnq3gOa6DZBocAIiI2TaSCA7VCJ1UJDMagCzIkXNsUYfD1daK//LTEQ8xiIbrHtcw==
 
-utils-merge@^1.0.1, utils-merge@1.0.1:
+utils-merge@1.0.1, utils-merge@^1.0.1:
   version "1.0.1"
   resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/utils-merge/-/utils-merge-1.0.1.tgz"
   integrity sha512-pMZTvIkT1d+TFGvDOqodOclx0QWkkgi6Tdoa8gC8ffGAAqz9pzPTZWAybbsHHoED/ztMtkv/VoYTYyShUn81hA==
@@ -3116,7 +3086,7 @@ webpack-sources@^3.2.3:
   resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/webpack-sources/-/webpack-sources-3.5.0.tgz"
   integrity sha512-HPuy+uuoTCaaoEoI1LQ3JN9+vrPBvEesnnX1jADHy728cHSMlq4wUc4afYqahq2B1mhQVZxCXOkNTnXltr+2vQ==
 
-webpack@^5.1.0, webpack@^5.11.0, webpack@5.97.1:
+webpack@5.97.1:
   version "5.97.1"
   resolved "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/webpack/-/webpack-5.97.1.tgz"
   integrity sha512-EksG6gFY3L1eFMROS/7Wzgrii5mBAFe4rIr3r2BTfo7bcc+DWwFZ4OJ/miOuHJO/A85HwyI4eQ0F6IKXesO7Fg==
