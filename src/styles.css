@@ -222,6 +222,12 @@
     visibility: visible !important;
   }
 
+  .bill-preview-stage {
+    display: block !important;
+    padding: 0 !important;
+    background: #fff !important;
+  }
+
   .bill-sheet {
     position: absolute;
     inset: 0 auto auto 0;
@@ -233,6 +239,7 @@
     box-shadow: none !important;
     border: 0 !important;
   }
+
 
   /* Flow naturally; only break when content genuinely overflows. */
   .bill-sheet table {
