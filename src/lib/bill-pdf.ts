@@ -160,10 +160,18 @@ export async function downloadBillPdf(bill: Bill) {
   doc.setFont("helvetica", "normal");
   const words = doc.splitTextToSize(bill.amountInWords, W - 2 * M - wlw);
 
-  const sigGap = 14;
-  const footerH =
-    5 * 5.2 + 1 + 4.5 + 4.2 * words.length + 6 + sigGap + 4.5 + (LAB_PROFILE.footerNote ? 8 : 0);
-  pageBreak(footerH);
+  // Footer height without the signature breathing gap (the compressible part).
+  const baseFooterH =
+    5 * 5.2 + 1 + 4.5 + 4.2 * words.length + 6 + 4.5 + (LAB_PROFILE.footerNote ? 8 : 0);
+  const spaceLeft = H - M - y;
+  // Use as much of the leftover space as looks good (max 14mm), shrink to 3mm
+  // before ever spilling onto a second page.
+  let sigGap = Math.min(14, Math.max(3, spaceLeft - baseFooterH));
+  if (baseFooterH + 3 > spaceLeft) {
+    sigGap = 14;
+    pageBreak(baseFooterH + sigGap);
+  }
+
 
   const boxX = center + 4;
   const amt = (label: string, value: string | number, bold = false) => {
