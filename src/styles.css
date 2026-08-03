@@ -158,6 +158,19 @@
   font-family: "Segoe UI", Arial, Helvetica, sans-serif;
 }
 
+/* On-screen preview: real A5 paper sheet on a contrasting stage. */
+.bill-preview-stage {
+  display: flex;
+  justify-content: center;
+  padding: 8mm 0;
+  background: #6b7280;
+}
+.bill-preview-stage .bill-sheet {
+  min-height: 210mm;
+  box-shadow: 0 2px 18px rgba(0, 0, 0, 0.35);
+}
+
+
 /* Clean test table: separators sit between rows, never through text. */
 .bill-table {
   border-collapse: collapse;
@@ -209,6 +222,12 @@
     visibility: visible !important;
   }
 
+  .bill-preview-stage {
+    display: block !important;
+    padding: 0 !important;
+    background: #fff !important;
+  }
+
   .bill-sheet {
     position: absolute;
     inset: 0 auto auto 0;
@@ -220,6 +239,7 @@
     box-shadow: none !important;
     border: 0 !important;
   }
+
 
   /* Flow naturally; only break when content genuinely overflows. */
   .bill-sheet table {
