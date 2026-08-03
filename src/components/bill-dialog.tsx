@@ -37,7 +37,7 @@ export function BillDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] max-w-md overflow-auto">
+      <DialogContent className="flex h-[90vh] max-h-[90vh] w-[90vw] max-w-[1100px] flex-col gap-3 overflow-hidden sm:max-w-[1100px]">
         <DialogHeader className="no-print">
           <DialogTitle>
             {bill ? `Bill No. ${bill.billNumber}` : "Bill"}
@@ -51,8 +51,10 @@ export function BillDialog({
         {isLoading && <div className="p-6 text-sm text-muted-foreground">Loading bill…</div>}
         {bill && (
           <>
-            <div className="rounded-md border">
-              <BillView bill={bill} />
+            <div className="flex-1 overflow-auto rounded-md border">
+              <div className="bill-preview-stage">
+                <BillView bill={bill} />
+              </div>
             </div>
             <div className="no-print flex justify-end gap-2">
               <Button variant="outline" onClick={() => window.print()} className="gap-2">
@@ -64,6 +66,7 @@ export function BillDialog({
             </div>
           </>
         )}
+
       </DialogContent>
     </Dialog>
   );
