@@ -5,7 +5,21 @@ import type { Bill } from "./types";
 /** A5 portrait bill: 148mm x 210mm. */
 const W = 148;
 const H = 210;
-const M = 10; // margin mm
+const M = 8;
+const CONTENT_W = W - 2 * M;
+const PAGE_BOTTOM = H - M;
+
+const TABLE_WIDTHS = {
+  number: CONTENT_W * 0.06,
+  test: CONTENT_W * 0.48,
+  rate: CONTENT_W * 0.14,
+  amount: CONTENT_W * 0.14,
+  lab: CONTENT_W * 0.18,
+};
+
+const CELL_PAD_X = 1.2;
+const CELL_PAD_Y = 1.1;
+const ROW_LINE_H = 3.7;
 
 function money(v: string | number) {
   return `Rs. ${Number(v).toFixed(2)}`;
@@ -27,7 +41,7 @@ export async function downloadBillPdf(bill: Bill) {
   const doc = new jsPDF({ unit: "mm", format: "a5", orientation: "portrait" });
   const center = W / 2;
   const right = W - M;
-  let y = M + 4;
+  let y = M + 3;
 
   const rule = (weight = 0.2, gap = 3) => {
     doc.setLineWidth(weight);
@@ -35,29 +49,22 @@ export async function downloadBillPdf(bill: Bill) {
     y += gap;
   };
 
-  const pageBreak = (need: number) => {
-    if (y + need > H - M) {
-      doc.addPage();
-      y = M;
-    }
-  };
-
   // ---- Header ---------------------------------------------------------
   doc.setFont("helvetica", "bold");
   doc.setFontSize(17);
-  const nameLines = doc.splitTextToSize(LAB_PROFILE.name.toUpperCase(), W - 2 * M);
+  const nameLines = doc.splitTextToSize(LAB_PROFILE.name.toUpperCase(), CONTENT_W);
   doc.text(nameLines, center, y, { align: "center" });
   y += 6.5 * nameLines.length;
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8.5);
-  const addr = doc.splitTextToSize(LAB_PROFILE.address, W - 2 * M);
+  const addr = doc.splitTextToSize(LAB_PROFILE.address, CONTENT_W);
   doc.text(addr, center, y, { align: "center" });
   y += 4 * addr.length + 2;
 
   // ---- Doctor / logo / timings ----------------------------------------
   const logo = await loadLogo();
-  const logoSize = 26;
+  const logoSize = 22;
   const top = y;
   if (logo) {
     try {
@@ -80,8 +87,8 @@ export async function downloadBillPdf(bill: Bill) {
   doc.text(LAB_PROFILE.timingsValue, right, mid - 1, { align: "right" });
   doc.text(LAB_PROFILE.timingsLine2, right, mid + 3.5, { align: "right" });
 
-  y = top + logoSize + 3;
-  rule(0.5, 5);
+  y = top + logoSize + 2;
+  rule(0.5, 4);
 
   // ---- Bill & patient details -----------------------------------------
   doc.setFontSize(9);
@@ -99,54 +106,95 @@ export async function downloadBillPdf(bill: Bill) {
 
   pairs.forEach(([label, value], i) => {
     const x = colX[i % 2];
-    const rowY = y + Math.floor(i / 2) * 5.5;
+    const rowY = y + Math.floor(i / 2) * 4.5;
     doc.setFont("helvetica", "bold");
     doc.text(`${label}:`, x, rowY);
     const lw = doc.getTextWidth(`${label}: `);
     doc.setFont("helvetica", "normal");
     doc.text(doc.splitTextToSize(value, 62 - lw), x + lw, rowY);
   });
-  y += Math.ceil(pairs.length / 2) * 5.5 + 3;
+  y += Math.ceil(pairs.length / 2) * 4.5 + 2;
 
   // ---- Test table -------------------------------------------------------
-  const cx = {
-    sr: M,
-    test: M + 8,
-    rate: M + 79,
-    amount: M + 101,
-    lab: M + 105,
+  const col = {
+    number: M,
+    test: M + TABLE_WIDTHS.number,
+    rate: M + TABLE_WIDTHS.number + TABLE_WIDTHS.test,
+    amount: M + TABLE_WIDTHS.number + TABLE_WIDTHS.test + TABLE_WIDTHS.rate,
+    lab:
+      M +
+      TABLE_WIDTHS.number +
+      TABLE_WIDTHS.test +
+      TABLE_WIDTHS.rate +
+      TABLE_WIDTHS.amount,
   };
-  rule(0.4, 4.5);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(9);
-  doc.text("#", cx.sr, y);
-  doc.text("Test", cx.test, y);
-  doc.text("Rate", cx.rate, y, { align: "right" });
-  doc.text("Amount", cx.amount, y, { align: "right" });
-  doc.text("Outsourced to", cx.lab, y);
-  y += 2;
-  rule(0.4, 4.5);
 
+  const drawTableHeader = () => {
+    doc.setDrawColor(0);
+    doc.setLineWidth(0.4);
+    doc.line(M, y, right, y);
+    y += 4;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    doc.text("#", col.number + CELL_PAD_X, y);
+    doc.text("Test", col.test + CELL_PAD_X, y);
+    doc.text("Rate", col.amount - CELL_PAD_X, y, { align: "right" });
+    doc.text("Amount", col.lab - CELL_PAD_X, y, { align: "right" });
+    doc.text("Outsourced to", col.lab + CELL_PAD_X, y);
+    y += 2;
+    doc.line(M, y, right, y);
+    y += 0.6;
+  };
+
+  const measuredRows = bill.items.map((it) => {
+    const testLines = doc.splitTextToSize(
+      it.testName,
+      TABLE_WIDTHS.test - 2 * CELL_PAD_X,
+    ) as string[];
+    const labLines = doc.splitTextToSize(
+      it.outsourcedLab || "-",
+      TABLE_WIDTHS.lab - 2 * CELL_PAD_X,
+    ) as string[];
+    const lineCount = Math.max(testLines.length, labLines.length, 1);
+    return {
+      item: it,
+      testLines,
+      labLines,
+      height: lineCount * ROW_LINE_H + 2 * CELL_PAD_Y,
+    };
+  });
+
+  drawTableHeader();
   doc.setFont("helvetica", "normal");
-  bill.items.forEach((it, i) => {
-    const nameLines2 = doc.splitTextToSize(it.testName, 66);
-    const labLines = doc.splitTextToSize(it.outsourcedLab || "-", 22);
-    const lines = Math.max(nameLines2.length, labLines.length);
-    const textH = 4.2 * lines;
-    const rowH = textH + 2.6; // padding below the last text baseline
-    pageBreak(rowH);
-    doc.text(String(i + 1), cx.sr, y);
-    doc.text(nameLines2, cx.test, y);
-    doc.text(Number(it.rate).toFixed(2), cx.rate, y, { align: "right" });
-    doc.text(Number(it.amount).toFixed(2), cx.amount, y, { align: "right" });
-    doc.text(labLines, cx.lab, y);
-    // separator sits BELOW the row's last baseline, never through the text
-    const sepY = y + textH - 2.4;
+  doc.setFontSize(9);
+
+  measuredRows.forEach((row, i) => {
+    if (y + row.height > PAGE_BOTTOM) {
+      doc.addPage("a5", "portrait");
+      y = M;
+      drawTableHeader();
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+    }
+
+    const rowTop = y;
+    const baseline = rowTop + CELL_PAD_Y + 2.8;
+    const textOptions = { lineHeightFactor: 1.17 };
+    doc.text(String(i + 1), col.number + CELL_PAD_X, baseline);
+    doc.text(row.testLines, col.test + CELL_PAD_X, baseline, textOptions);
+    doc.text(Number(row.item.rate).toFixed(2), col.amount - CELL_PAD_X, baseline, {
+      align: "right",
+    });
+    doc.text(Number(row.item.amount).toFixed(2), col.lab - CELL_PAD_X, baseline, {
+      align: "right",
+    });
+    doc.text(row.labLines, col.lab + CELL_PAD_X, baseline, textOptions);
+
+    y = rowTop + row.height;
     doc.setDrawColor(170);
     doc.setLineWidth(0.1);
-    doc.line(M, sepY, right, sepY);
+    doc.line(M, y, right, y);
     doc.setDrawColor(0);
-    y += rowH;
   });
 
   y += 2;
@@ -158,18 +206,22 @@ export async function downloadBillPdf(bill: Bill) {
   doc.setFontSize(9);
   const wlw = doc.getTextWidth(wordsLabel);
   doc.setFont("helvetica", "normal");
-  const words = doc.splitTextToSize(bill.amountInWords, W - 2 * M - wlw);
+  const words = doc.splitTextToSize(bill.amountInWords, CONTENT_W - wlw) as string[];
 
   // Footer height without the signature breathing gap (the compressible part).
-  const baseFooterH =
-    5 * 5.2 + 1 + 4.5 + 4.2 * words.length + 6 + 4.5 + (LAB_PROFILE.footerNote ? 8 : 0);
-  const spaceLeft = H - M - y;
-  // Use as much of the leftover space as looks good (max 14mm), shrink to 3mm
-  // before ever spilling onto a second page.
-  let sigGap = Math.min(14, Math.max(3, spaceLeft - baseFooterH));
-  if (baseFooterH + 3 > spaceLeft) {
-    sigGap = 14;
-    pageBreak(baseFooterH + sigGap);
+  const amountRowsH = 5 * 4.4;
+  const wordsBlockH = 1 + 3.5 + ROW_LINE_H * words.length + 4;
+  const signatureH = 4.5;
+  const noteH = LAB_PROFILE.footerNote ? 6 : 0;
+  const compactFooterH = amountRowsH + wordsBlockH + 3 + signatureH + noteH;
+  let spaceLeft = PAGE_BOTTOM - y;
+  let sigGap = Math.min(10, Math.max(3, spaceLeft - compactFooterH + 3));
+
+  if (compactFooterH > spaceLeft) {
+    doc.addPage("a5", "portrait");
+    y = M;
+    spaceLeft = PAGE_BOTTOM - y;
+    sigGap = Math.min(10, Math.max(3, spaceLeft - compactFooterH + 3));
   }
 
 
@@ -180,7 +232,7 @@ export async function downloadBillPdf(bill: Bill) {
     doc.text(`${label}:`, boxX, y);
     doc.setFont("helvetica", bold ? "bold" : "normal");
     doc.text(money(value), right, y, { align: "right" });
-    y += 5.2;
+    y += 4.4;
   };
   amt("Total Amount", bill.totalAmount);
   amt("Discount", bill.discount);
@@ -189,14 +241,14 @@ export async function downloadBillPdf(bill: Bill) {
   amt("Balance Amount", bill.balanceAmount);
 
   y += 1;
-  rule(0.3, 4.5);
+  rule(0.3, 3.5);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(9);
   doc.text(wordsLabel, M, y);
   doc.setFont("helvetica", "normal");
   doc.text(words, M + wlw, y);
-  y += 4.2 * words.length;
-  rule(0.3, 6);
+  y += ROW_LINE_H * words.length;
+  rule(0.3, 4);
 
   // ---- Signature ---------------------------------------------------------
   y += sigGap;

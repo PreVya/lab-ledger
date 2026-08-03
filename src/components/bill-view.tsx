@@ -68,13 +68,20 @@ export function BillView({ bill }: { bill: Bill }) {
 
       {/* ---- Tests ---- */}
       <table className="bill-table mt-3 w-full border-collapse text-[12px]">
+        <colgroup>
+          <col className="bill-col-number" />
+          <col className="bill-col-test" />
+          <col className="bill-col-rate" />
+          <col className="bill-col-amount" />
+          <col className="bill-col-lab" />
+        </colgroup>
         <thead>
           <tr>
-            <th className="w-[8%]">#</th>
+            <th>#</th>
             <th>Test</th>
-            <th className="w-[15%] text-right">Rate</th>
-            <th className="w-[17%] text-right">Amount</th>
-            <th className="w-[22%]">Outsourced to</th>
+            <th className="text-right">Rate</th>
+            <th className="text-right">Amount</th>
+            <th>Outsourced to</th>
           </tr>
         </thead>
         <tbody>

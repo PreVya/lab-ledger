@@ -12,11 +12,12 @@ interface Ctx {
 const AuthContext = createContext<Ctx | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [state, setState] = useState<AuthState | null>(() => loadAuth());
+  const [state, setState] = useState<AuthState | null>(null);
 
   // Sync React state when auth is cleared elsewhere (401 responses, other tabs).
   useEffect(() => {
     if (typeof window === "undefined") return;
+    setState(loadAuth());
     const onCleared = () => setState(null);
     const onStorage = (e: StorageEvent) => {
       if (e.key === null || e.key === "lab.auth") setState(loadAuth());

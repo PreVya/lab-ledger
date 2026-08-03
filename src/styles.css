@@ -173,14 +173,33 @@
 
 /* Clean test table: separators sit between rows, never through text. */
 .bill-table {
+  width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
   border-spacing: 0;
 }
+.bill-table .bill-col-number {
+  width: 6%;
+}
+.bill-table .bill-col-test {
+  width: 48%;
+}
+.bill-table .bill-col-rate,
+.bill-table .bill-col-amount {
+  width: 14%;
+}
+.bill-table .bill-col-lab {
+  width: 18%;
+}
 .bill-table th,
 .bill-table td {
-  padding: 2.2mm 2mm 2.2mm 0;
-  line-height: 1.35;
-  vertical-align: middle;
+  padding: 1.2mm 1.5mm 1.2mm 0;
+  line-height: 1.25;
+  vertical-align: top;
+  white-space: normal;
+  overflow-wrap: break-word;
+  word-break: normal;
+  overflow: hidden;
   text-decoration: none;
   border: 0;
 }
@@ -203,7 +222,7 @@
 @media print {
   @page {
     size: A5 portrait;
-    margin: 6mm;
+    margin: 8mm;
   }
 
   html,
