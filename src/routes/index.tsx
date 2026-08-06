@@ -17,12 +17,14 @@ import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/")({ component: () => <AppShell><Register /></AppShell> });
 
-const MIN_ENTRY_DATE = "2026-04-01";
+const MIN_ENTRY_DATE = "2026-08-01";
+const BLOCKED_MSG = "Ledger starts from 01-Aug-2026. Entries before this date are blocked.";
 
 function Register() {
   const today = todayKey();
   const [selectedDate, setSelectedDate] = useState<string>(today);
   const isToday = selectedDate === today;
+  const isBlocked = selectedDate < MIN_ENTRY_DATE;
   const { data, isLoading, error } = useLedger(selectedDate);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Patient | null>(null);
@@ -65,13 +67,20 @@ function Register() {
               </Button>
             )}
           </div>
-          <Button onClick={() => { setEditing(null); setOpen(true); }} size="lg" className="gap-2">
+          <Button onClick={() => { setEditing(null); setOpen(true); }} size="lg" className="gap-2" disabled={isBlocked}>
             <Plus className="h-4 w-4" /> Add Patient {isToday && <kbd className="ml-2 rounded bg-primary-foreground/20 px-1.5 py-0.5 text-[10px]">N</kbd>}
           </Button>
         </div>
       </div>
 
-      {!isToday && (
+      {isBlocked && (
+        <div className="flex items-center gap-2 border-b bg-destructive/10 px-6 py-2 text-sm font-medium text-destructive">
+          <AlertCircle className="h-4 w-4" />
+          {BLOCKED_MSG}
+        </div>
+      )}
+
+      {!isToday && !isBlocked && (
         <div className="flex items-center gap-2 border-b bg-amber-50 px-6 py-2 text-sm text-amber-900">
           <AlertCircle className="h-4 w-4" />
           Entries will be saved for: <span className="font-semibold">{shortDateStr}</span>
@@ -106,16 +115,19 @@ function Register() {
             </div>
             <div className="col-span-4 flex flex-col overflow-auto">
               <CashHandoverPanel
+                readOnly={isBlocked}
                 date={selectedDate}
                 handovers={data.cashHandovers}
                 total={data.totals.cashTakenAway}
               />
               <CashAddedPanel
+                readOnly={isBlocked}
                 date={selectedDate}
                 entries={data.cashAdded ?? []}
                 total={data.totals.addedCash ?? "0"}
               />
               <ExpensesPanel
+                readOnly={isBlocked}
                 date={selectedDate}
                 expenses={data.expenses}
                 totalExpenses={data.totals.expenses}
@@ -131,7 +143,7 @@ function Register() {
         patient={editing}
         entryDate={!editing ? selectedDate : undefined}
       />
-      <Hotkeys onNew={() => { setEditing(null); setOpen(true); }} dialogOpen={open} />
+      {!isBlocked && <Hotkeys onNew={() => { setEditing(null); setOpen(true); }} dialogOpen={open} />}
     </div>
   );
 }
