@@ -249,7 +249,7 @@ function BalanceReceivedPanel({ rows }: { rows: PaymentRow[] }) {
   );
 }
 
-function CashHandoverPanel({ date, handovers, total }: { date: string; handovers: CashHandover[]; total: string }) {
+function CashHandoverPanel({ date, handovers, total, readOnly }: { date: string; handovers: CashHandover[]; total: string; readOnly?: boolean }) {
   const create = useCreateCashHandover(date);
   const del = useDeleteCashHandover(date);
   const [amt, setAmt] = useState("");
@@ -268,11 +268,13 @@ function CashHandoverPanel({ date, handovers, total }: { date: string; handovers
         <div className="flex items-center gap-2 text-sm font-medium"><HandCoins className="h-4 w-4" /> Cash Taken Away</div>
         <div className="text-sm font-semibold tabular-nums">{money(total)}</div>
       </div>
+      {!readOnly && (
       <form onSubmit={add} className="space-y-2 border-b p-3">
         <Input placeholder="Amount" value={amt} onChange={e => setAmt(e.target.value)} inputMode="decimal" className="h-8" />
         <Input placeholder="Notes (e.g. handed to Dr. Mam)" value={notes} onChange={e => setNotes(e.target.value)} className="h-8" />
         <Button type="submit" size="sm" className="w-full">Add Cash Taken Away</Button>
       </form>
+      )}
       <div>
         {handovers.map(h => (
           <div key={h.id} className="flex items-center justify-between border-b px-3 py-2 text-sm">
@@ -291,7 +293,7 @@ function CashHandoverPanel({ date, handovers, total }: { date: string; handovers
   );
 }
 
-function ExpensesPanel({ date, expenses, totalExpenses }: { date: string; expenses: Expense[]; totalExpenses: string }) {
+function ExpensesPanel({ date, expenses, totalExpenses, readOnly }: { date: string; expenses: Expense[]; totalExpenses: string; readOnly?: boolean }) {
   const create = useCreateExpense(date);
   const del = useDeleteExpense(date);
   const [desc, setDesc] = useState("");
@@ -311,6 +313,7 @@ function ExpensesPanel({ date, expenses, totalExpenses }: { date: string; expens
         <div className="flex items-center gap-2 text-sm font-medium"><AlertCircle className="h-4 w-4" /> Expenses</div>
         <div className="text-sm font-semibold tabular-nums">{money(totalExpenses)}</div>
       </div>
+      {!readOnly && (
       <form onSubmit={add} className="space-y-2 border-b p-3">
         <Input placeholder="Description" value={desc} onChange={e => setDesc(e.target.value)} className="h-8" />
         <div className="flex gap-2">
@@ -327,6 +330,7 @@ function ExpensesPanel({ date, expenses, totalExpenses }: { date: string; expens
         </div>
         <Button type="submit" size="sm" className="w-full">Add Expense</Button>
       </form>
+      )}
       <div>
         {expenses.map(e => (
           <div key={e.id} className="flex items-center justify-between border-b px-3 py-2 text-sm">
@@ -348,7 +352,7 @@ function ExpensesPanel({ date, expenses, totalExpenses }: { date: string; expens
   );
 }
 
-function CashAddedPanel({ date, entries, total }: { date: string; entries: CashAdded[]; total: string }) {
+function CashAddedPanel({ date, entries, total, readOnly }: { date: string; entries: CashAdded[]; total: string; readOnly?: boolean }) {
   const create = useCreateCashAdded(date);
   const del = useDeleteCashAdded(date);
   const [amt, setAmt] = useState("");
@@ -367,11 +371,13 @@ function CashAddedPanel({ date, entries, total }: { date: string; entries: CashA
         <div className="flex items-center gap-2 text-sm font-medium"><PlusCircle className="h-4 w-4" /> Added Cash</div>
         <div className="text-sm font-semibold tabular-nums">{money(total)}</div>
       </div>
+      {!readOnly && (
       <form onSubmit={add} className="space-y-2 border-b p-3">
         <Input placeholder="Amount" value={amt} onChange={e => setAmt(e.target.value)} inputMode="decimal" className="h-8" />
         <Input placeholder="Notes (e.g. change money top-up)" value={notes} onChange={e => setNotes(e.target.value)} className="h-8" />
         <Button type="submit" size="sm" className="w-full">Add Cash</Button>
       </form>
+      )}
       <div>
         {entries.map(c => (
           <div key={c.id} className="flex items-center justify-between border-b px-3 py-2 text-sm">
