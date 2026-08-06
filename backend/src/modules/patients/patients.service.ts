@@ -1,8 +1,9 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, Sex, PaymentKind, PaymentMode } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
-import { dateOnly, LedgerService } from '../ledger/ledger.service';
+import { assertLedgerDate, dateOnly, LedgerService } from '../ledger/ledger.service';
 import { financialYearFor } from './fy';
+import { getRegisterStartNumber } from '../../config/ledger.config';
 
 export type AgeUnit = 'days' | 'months' | 'years';
 
@@ -60,10 +61,11 @@ export class PatientsService {
   }
 
   private resolveDate(s: string | null | undefined, fallback: Date): Date {
-    return s ? dateOnly(new Date(s)) : fallback;
+    return assertLedgerDate(s ? dateOnly(new Date(s)) : fallback);
   }
 
   async assignNumbersAndCreate(entryDate: Date, data: Omit<Prisma.PatientUncheckedCreateInput, 'financialYear' | 'registerNumber' | 'dailySerial' | 'entryDate'>) {
+    assertLedgerDate(entryDate);
     const fy = financialYearFor(entryDate);
     let lastErr: unknown = null;
     for (let attempt = 0; attempt < 5; attempt++) {
@@ -73,7 +75,9 @@ export class PatientsService {
             tx.patient.findFirst({ where: { financialYear: fy }, orderBy: { registerNumber: 'desc' }, select: { registerNumber: true } }),
             tx.patient.findFirst({ where: { entryDate }, orderBy: { dailySerial: 'desc' }, select: { dailySerial: true } }),
           ]);
-          const registerNumber = (lastFy?.registerNumber ?? 0) + 1;
+          const registerNumber = lastFy
+            ? lastFy.registerNumber + 1
+            : getRegisterStartNumber(fy);
           const dailySerial = (lastDay?.dailySerial ?? 0) + 1;
           return tx.patient.create({
             data: { ...data, entryDate, financialYear: fy, registerNumber, dailySerial },
@@ -92,7 +96,7 @@ export class PatientsService {
   async create(input: UpsertPatientInput) {
     if (!input.testIds?.length) throw new BadRequestException('At least one test required');
     if (!input.createdById) throw new BadRequestException('createdById missing — login required');
-    const entryDay = input.entryDate ? dateOnly(new Date(input.entryDate)) : dateOnly();
+    const entryDay = assertLedgerDate(input.entryDate ? dateOnly(new Date(input.entryDate)) : dateOnly());
     await this.ledger.ensureDay(entryDay);
 
     const tests = await this.prisma.testCatalog.findMany({ where: { id: { in: input.testIds } } });
@@ -157,6 +161,7 @@ export class PatientsService {
     const pay = this.computePayment(tests.map((t) => Number(t.rate)), input);
     const { ageValue, ageUnit, legacyAge } = normalizeAge(input);
 
+    assertLedgerDate(existing.entryDate);
     const today = dateOnly();
     const advanceDate = this.resolveDate(input.advancePaidOn, today);
     const balanceDate = this.resolveDate(input.balancePaidOn, today);

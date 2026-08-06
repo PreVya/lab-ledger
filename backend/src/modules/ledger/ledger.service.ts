@@ -1,6 +1,19 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import {
+  LEDGER_START_ERROR,
+  LEDGER_START_OPENING_CASH,
+  isBeforeLedgerStart,
+  isLedgerStartDay,
+} from '../../config/ledger.config';
+
+/** Throws when a business/ledger entry is attempted before the official start date. */
+export function assertLedgerDate(d: Date): Date {
+  if (isBeforeLedgerStart(d)) throw new BadRequestException(LEDGER_START_ERROR);
+  return d;
+}
+
 
 /**
  * IST (Asia/Kolkata, UTC+5:30) business-date helpers.
@@ -34,16 +47,23 @@ export class LedgerService {
 
   /**
    * Ensure DailyLedger row for given day. Opening = previous day's closing
-   * (cash-only since Phase 1.75) or 0 if no prior row.
+   * (cash-only since Phase 1.75). On the official start day (01-Aug-2026) the
+   * opening cash is seeded to the carry-forward amount. Dates before the start
+   * date are rejected and never create a row.
    */
   async ensureDay(day: Date = dateOnly()) {
+    assertLedgerDate(day);
     const existing = await this.prisma.dailyLedger.findUnique({ where: { date: day } });
     if (existing) return existing;
     const previous = await this.prisma.dailyLedger.findFirst({
       where: { date: { lt: day } },
       orderBy: { date: 'desc' },
     });
-    const opening = previous ? new Prisma.Decimal(previous.closingBalance) : ZERO();
+    const opening = previous
+      ? new Prisma.Decimal(previous.closingBalance)
+      : isLedgerStartDay(day)
+        ? new Prisma.Decimal(LEDGER_START_OPENING_CASH)
+        : ZERO();
     return this.prisma.dailyLedger.create({
       data: { date: day, openingBalance: opening, closingBalance: opening },
     });
@@ -53,9 +73,11 @@ export class LedgerService {
 
   /** Recompute & persist closing CASH balance for the given date. */
   async recompute(date: Date = dateOnly()) {
+    if (isBeforeLedgerStart(date)) return null;
     const __t0 = Date.now();
     const [ledger, payments, expenses, handovers, added] = await Promise.all([
       this.ensureDay(date),
+
       this.prisma.payment.findMany({ where: { date }, select: { amount: true, mode: true } }),
       this.prisma.expense.findMany({ where: { date }, select: { amount: true, mode: true } }),
       this.prisma.cashHandover.aggregate({ where: { date }, _sum: { amount: true } }),
@@ -85,9 +107,36 @@ export class LedgerService {
     return updated;
   }
 
+  /**
+   * Read-only zero summary for dates before the official ledger start.
+   * IMPORTANT: never creates a DailyLedger row.
+   */
+  private blockedSummary(day: Date) {
+    const z = ZERO();
+    return {
+      date: day,
+      readonlyBlocked: true,
+      blockedReason: LEDGER_START_ERROR,
+      ledger: { id: null, date: day, openingBalance: z, closingBalance: z, notes: null },
+      patients: [] as any[],
+      totals: {
+        total: z, discount: z, net: z, balance: z,
+        collected: z, cashCollected: z, upiCollected: z, cardCollected: z, otherCollected: z,
+        expenses: z, cashExpenses: z, cashTakenAway: z, addedCash: z,
+        openingCashBalance: z, closingCashBalance: z, count: 0,
+      },
+      expenses: [] as any[],
+      payments: [] as any[],
+      cashHandovers: [] as any[],
+      cashAdded: [] as any[],
+    };
+  }
+
   /** Ledger summary for any date — drives Today Register UI. */
   async summary(day: Date = dateOnly()) {
+    if (isBeforeLedgerStart(day)) return this.blockedSummary(day);
     const __tAll = Date.now();
+
 
     const [ledger, patients, expenses, paymentsToday, handovers, cashAddedEntries] = await Promise.all([
       this.ensureDay(day),
@@ -165,7 +214,9 @@ export class LedgerService {
 
     return {
       date: day,
+      readonlyBlocked: false,
       ledger: { ...ledger, openingBalance: openingCashBalance, closingBalance: closingCashBalance },
+
       patients,
       totals: {
         ...billing,

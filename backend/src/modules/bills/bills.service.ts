@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
-import { dateOnly } from '../ledger/ledger.service';
+import { assertLedgerDate, dateOnly } from '../ledger/ledger.service';
 import { financialYearFor } from '../patients/fy';
 import { amountInWords } from './words';
 
@@ -48,6 +48,7 @@ export class BillsService {
     });
     if (!patient) throw new NotFoundException('Patient not found');
     if (!patient.tests.length) throw new BadRequestException('Patient has no tests to bill');
+    assertLedgerDate(patient.entryDate);
 
     const billDate = dateOnly();
     const fy = financialYearFor(billDate);

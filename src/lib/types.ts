@@ -106,6 +106,8 @@ export interface PaymentRow {
 
 export interface TodayResponse {
   date: string;
+  readonlyBlocked?: boolean;
+  blockedReason?: string;
   ledger: DailyLedger;
   patients: Patient[];
   totals: {

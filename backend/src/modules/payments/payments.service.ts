@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, PaymentKind, PaymentMode } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
-import { dateOnly, LedgerService } from '../ledger/ledger.service';
+import { assertLedgerDate, dateOnly, LedgerService } from '../ledger/ledger.service';
 
 export interface RecordPaymentInput {
   patientId: string;
@@ -28,7 +28,7 @@ export class PaymentsService {
     const patient = await this.prisma.patient.findUnique({ where: { id: input.patientId } });
     if (!patient) throw new NotFoundException('Patient not found');
 
-    const date = input.date ? dateOnly(new Date(input.date)) : dateOnly();
+    const date = assertLedgerDate(input.date ? dateOnly(new Date(input.date)) : dateOnly());
     const amount = new Prisma.Decimal(input.amount);
 
     // Mirror into Patient buckets so legacy logic (ledger.recompute) stays correct.
