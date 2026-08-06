@@ -107,9 +107,36 @@ export class LedgerService {
     return updated;
   }
 
+  /**
+   * Read-only zero summary for dates before the official ledger start.
+   * IMPORTANT: never creates a DailyLedger row.
+   */
+  private blockedSummary(day: Date) {
+    const z = ZERO();
+    return {
+      date: day,
+      readonlyBlocked: true,
+      blockedReason: LEDGER_START_ERROR,
+      ledger: { id: null, date: day, openingBalance: z, closingBalance: z, notes: null },
+      patients: [] as any[],
+      totals: {
+        total: z, discount: z, net: z, balance: z,
+        collected: z, cashCollected: z, upiCollected: z, cardCollected: z, otherCollected: z,
+        expenses: z, cashExpenses: z, cashTakenAway: z, addedCash: z,
+        openingCashBalance: z, closingCashBalance: z, count: 0,
+      },
+      expenses: [] as any[],
+      payments: [] as any[],
+      cashHandovers: [] as any[],
+      cashAdded: [] as any[],
+    };
+  }
+
   /** Ledger summary for any date — drives Today Register UI. */
   async summary(day: Date = dateOnly()) {
+    if (isBeforeLedgerStart(day)) return this.blockedSummary(day);
     const __tAll = Date.now();
+
 
     const [ledger, patients, expenses, paymentsToday, handovers, cashAddedEntries] = await Promise.all([
       this.ensureDay(day),
