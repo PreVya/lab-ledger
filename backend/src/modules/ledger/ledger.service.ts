@@ -47,16 +47,23 @@ export class LedgerService {
 
   /**
    * Ensure DailyLedger row for given day. Opening = previous day's closing
-   * (cash-only since Phase 1.75) or 0 if no prior row.
+   * (cash-only since Phase 1.75). On the official start day (01-Aug-2026) the
+   * opening cash is seeded to the carry-forward amount. Dates before the start
+   * date are rejected and never create a row.
    */
   async ensureDay(day: Date = dateOnly()) {
+    assertLedgerDate(day);
     const existing = await this.prisma.dailyLedger.findUnique({ where: { date: day } });
     if (existing) return existing;
     const previous = await this.prisma.dailyLedger.findFirst({
       where: { date: { lt: day } },
       orderBy: { date: 'desc' },
     });
-    const opening = previous ? new Prisma.Decimal(previous.closingBalance) : ZERO();
+    const opening = previous
+      ? new Prisma.Decimal(previous.closingBalance)
+      : isLedgerStartDay(day)
+        ? new Prisma.Decimal(LEDGER_START_OPENING_CASH)
+        : ZERO();
     return this.prisma.dailyLedger.create({
       data: { date: day, openingBalance: opening, closingBalance: opening },
     });
@@ -66,9 +73,11 @@ export class LedgerService {
 
   /** Recompute & persist closing CASH balance for the given date. */
   async recompute(date: Date = dateOnly()) {
+    if (isBeforeLedgerStart(date)) return null;
     const __t0 = Date.now();
     const [ledger, payments, expenses, handovers, added] = await Promise.all([
       this.ensureDay(date),
+
       this.prisma.payment.findMany({ where: { date }, select: { amount: true, mode: true } }),
       this.prisma.expense.findMany({ where: { date }, select: { amount: true, mode: true } }),
       this.prisma.cashHandover.aggregate({ where: { date }, _sum: { amount: true } }),
