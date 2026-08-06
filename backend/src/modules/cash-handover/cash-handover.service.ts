@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
-import { dateOnly, LedgerService, parseDateOnly } from '../ledger/ledger.service';
+import { assertLedgerDate, dateOnly, LedgerService, parseDateOnly } from '../ledger/ledger.service';
 
 export interface CreateCashHandoverInput {
   amount: number;
@@ -16,7 +16,7 @@ export class CashHandoverService {
 
   async create(input: CreateCashHandoverInput) {
     if (!input.createdById) throw new BadRequestException('Login required');
-    const day = input.date ? parseDateOnly(input.date) : dateOnly();
+    const day = assertLedgerDate(input.date ? parseDateOnly(input.date) : dateOnly());
     const row = await this.prisma.cashHandover.create({
       data: {
         date: day,
