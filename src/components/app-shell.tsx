@@ -56,7 +56,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             {user?.fullName} <span className="rounded bg-secondary px-1.5 py-0.5 text-xs uppercase">{user?.role}</span>
           </span>
           <button
-            onClick={() => { logout(); navigate({ to: "/login" }); }}
+            onClick={() => { logout(); navigate({ to: "/login", search: { redirect: "/" } }); }}
             className="flex items-center gap-1 rounded-md px-2 py-1 text-muted-foreground hover:bg-secondary"
           >
             <LogOut className="h-4 w-4" /> Logout
