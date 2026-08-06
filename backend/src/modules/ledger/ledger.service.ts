@@ -1,6 +1,19 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import {
+  LEDGER_START_ERROR,
+  LEDGER_START_OPENING_CASH,
+  isBeforeLedgerStart,
+  isLedgerStartDay,
+} from '../../config/ledger.config';
+
+/** Throws when a business/ledger entry is attempted before the official start date. */
+export function assertLedgerDate(d: Date): Date {
+  if (isBeforeLedgerStart(d)) throw new BadRequestException(LEDGER_START_ERROR);
+  return d;
+}
+
 
 /**
  * IST (Asia/Kolkata, UTC+5:30) business-date helpers.
