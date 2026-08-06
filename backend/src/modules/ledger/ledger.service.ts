@@ -214,7 +214,9 @@ export class LedgerService {
 
     return {
       date: day,
+      readonlyBlocked: false,
       ledger: { ...ledger, openingBalance: openingCashBalance, closingBalance: closingCashBalance },
+
       patients,
       totals: {
         ...billing,
