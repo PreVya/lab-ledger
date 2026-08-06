@@ -3,7 +3,7 @@
  * LAB HEADER CONFIGURATION — EDIT THIS FILE WITH YOUR REAL DETAILS
  * ============================================================================
  * File to edit : src/lib/lab-profile.ts
- * Logo image   : public/lab-logo.png  (replace this PNG with your own,
+ * Logo image   : public/pratham-logo.png  (replace this PNG with your own,
  *                keep the same file name & path — square image works best)
 
  *
@@ -15,8 +15,8 @@ export const LAB_PROFILE = {
   name: "PRATHAM PATHOLOGY",
   /** Small, not bold, directly under the lab name. */
   address: "Mahalaxmi Arcade, Shop no. 11&12, Upper Gr. Floor, Station Road, Badlapur (E), Dist. Thane - 421503, Contact: 9921120841",
-  /** Centre logo — replace the file at public/lab-logo.png (square PNG works best). */
-  logoUrl: "/lab-logo.png",
+  /** Centre logo — replace the file at public/pratham-logo.png (square PNG works best). */
+  logoUrl: "/pratham-logo.png",
   /** Left of the logo — doctor name (bold, small) + designation (not bold). */
   doctorName: "Dr. Gayatri Vyavahare",
   doctorDesignation: "Consultant Pathologist (MD)",
