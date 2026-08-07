@@ -65,14 +65,14 @@ export function PatientFormDialog({ open, onOpenChange, patient, entryDate, pref
       setBalanceCash(patient.balanceCash); setBalanceUpi(patient.balanceUpi);
       setBalancePaidOn(patient.balancePaidOn?.slice(0, 10) ?? "");
     } else {
-      const d = entryDate ?? "";
       setName(prefill?.name ?? ""); setMobile(prefill?.mobile ?? "");
       setAgeValue(prefill?.ageValue != null ? String(prefill.ageValue) : "");
       setAgeUnit((prefill?.ageUnit ?? "years") as AgeUnit);
       setSex((prefill?.sex ?? "M") as Sex); setReferredDoctor(prefill?.referredDoctor ?? "");
       setNotes(prefill?.notes ?? "");
       setSelectedTests([]); setDiscount(""); setAdvanceCash(""); setAdvanceUpi("");
-      setAdvancePaidOn(d); setBalanceCash(""); setBalanceUpi(""); setBalancePaidOn(d);
+      // Payment dates are NEVER auto-filled — the user must pick the actual money-received date.
+      setAdvancePaidOn(""); setBalanceCash(""); setBalanceUpi(""); setBalancePaidOn("");
     }
     setTimeout(() => nameRef.current?.focus(), 50);
   }, [open, patient, entryDate]);
