@@ -4,13 +4,21 @@ import { PrismaService } from '../../prisma/prisma.service';
 import {
   LEDGER_START_ERROR,
   LEDGER_START_OPENING_CASH,
+  SUNDAY_BLOCKED_ERROR,
   isBeforeLedgerStart,
   isLedgerStartDay,
+  isSunday,
 } from '../../config/ledger.config';
 
-/** Throws when a business/ledger entry is attempted before the official start date. */
+/** true when the date is not writable (before official start, or a Sunday holiday). */
+export function isLedgerBlocked(d: Date): boolean {
+  return isBeforeLedgerStart(d) || isSunday(d);
+}
+
+/** Throws when a business/ledger entry is attempted on a blocked date. */
 export function assertLedgerDate(d: Date): Date {
   if (isBeforeLedgerStart(d)) throw new BadRequestException(LEDGER_START_ERROR);
+  if (isSunday(d)) throw new BadRequestException(SUNDAY_BLOCKED_ERROR);
   return d;
 }
 
