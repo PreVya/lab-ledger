@@ -81,7 +81,7 @@ export class LedgerService {
 
   /** Recompute & persist closing CASH balance for the given date. */
   async recompute(date: Date = dateOnly()) {
-    if (isBeforeLedgerStart(date)) return null;
+    if (isLedgerBlocked(date)) return null;
     const __t0 = Date.now();
     const [ledger, payments, expenses, handovers, added] = await Promise.all([
       this.ensureDay(date),
@@ -121,10 +121,12 @@ export class LedgerService {
    */
   private blockedSummary(day: Date) {
     const z = ZERO();
+    const sunday = isSunday(day);
     return {
       date: day,
       readonlyBlocked: true,
-      blockedReason: LEDGER_START_ERROR,
+      isSunday: sunday,
+      blockedReason: sunday && !isBeforeLedgerStart(day) ? SUNDAY_BLOCKED_ERROR : LEDGER_START_ERROR,
       ledger: { id: null, date: day, openingBalance: z, closingBalance: z, notes: null },
       patients: [] as any[],
       totals: {
@@ -142,7 +144,7 @@ export class LedgerService {
 
   /** Ledger summary for any date — drives Today Register UI. */
   async summary(day: Date = dateOnly()) {
-    if (isBeforeLedgerStart(day)) return this.blockedSummary(day);
+    if (isLedgerBlocked(day)) return this.blockedSummary(day);
     const __tAll = Date.now();
 
 
@@ -223,6 +225,7 @@ export class LedgerService {
     return {
       date: day,
       readonlyBlocked: false,
+      isSunday: false,
       ledger: { ...ledger, openingBalance: openingCashBalance, closingBalance: closingCashBalance },
 
       patients,
