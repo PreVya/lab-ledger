@@ -413,12 +413,19 @@ function Hotkeys({ onNew, dialogOpen }: { onNew: () => void; dialogOpen: boolean
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
       if (dialogOpen) return;
+      if (e.repeat || e.isComposing) return;
       if (e.key.toLowerCase() !== "n") return;
       if (e.ctrlKey || e.metaKey || e.altKey) return;
+
       const t = e.target as HTMLElement | null;
       const tag = t?.tagName;
-      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || tag === "OPTION") return;
       if (t?.isContentEditable) return;
+      if (t?.closest?.("input, textarea, select, [contenteditable='true'], [role='combobox'], [role='textbox']")) return;
+
+      // Never fire while any dialog / popover / menu is open anywhere on the page.
+      if (document.querySelector("[role='dialog'], [role='alertdialog'], [role='menu'], [data-state='open'][role='listbox']")) return;
+
       e.preventDefault();
       onNew();
     };
