@@ -19,12 +19,16 @@ export const Route = createFileRoute("/")({ component: () => <AppShell><Register
 
 const MIN_ENTRY_DATE = "2026-08-01";
 const BLOCKED_MSG = "Ledger starts from 01-Aug-2026. Entries before this date are blocked.";
+const SUNDAY_MSG = "Sunday / Clinic Holiday. Ledger entries are blocked for this date.";
+const isSundayISO = (d: string) => new Date(d + "T00:00:00Z").getUTCDay() === 0;
 
 function Register() {
   const today = todayKey();
   const [selectedDate, setSelectedDate] = useState<string>(today);
   const isToday = selectedDate === today;
-  const isBlocked = selectedDate < MIN_ENTRY_DATE;
+  const isSunday = isSundayISO(selectedDate);
+  const isBeforeStart = selectedDate < MIN_ENTRY_DATE;
+  const isBlocked = isBeforeStart || isSunday;
   const { data, isLoading, error } = useLedger(selectedDate);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Patient | null>(null);
@@ -76,7 +80,15 @@ function Register() {
       {isBlocked && (
         <div className="flex items-center gap-2 border-b bg-destructive/10 px-6 py-2 text-sm font-medium text-destructive">
           <AlertCircle className="h-4 w-4" />
-          {BLOCKED_MSG}
+          {isBeforeStart ? BLOCKED_MSG : SUNDAY_MSG}
+        </div>
+      )}
+      {isSunday && !isBeforeStart && (
+        <div className="border-b bg-secondary/40 px-6 py-6 text-center">
+          <div className="text-lg font-semibold">Sunday / Clinic Holiday</div>
+          <div className="text-sm text-muted-foreground">
+            This is a read-only summary. No ledger entries can be recorded for this date.
+          </div>
         </div>
       )}
 
