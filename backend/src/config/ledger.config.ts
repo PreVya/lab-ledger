@@ -17,6 +17,15 @@ export const LEDGER_START_OPENING_CASH = 1020;
 
 export const LEDGER_START_ERROR = 'Ledger entries are allowed only from 01-Aug-2026 onward.';
 
+/** Sundays are clinic holidays — no ledger writes allowed. */
+export const SUNDAY_BLOCKED_ERROR =
+  'Sunday / Clinic Holiday. Ledger entries are blocked for this date.';
+
+/** true when the given date-only Date is a Sunday (UTC-midnight = IST calendar day). */
+export function isSunday(d: Date): boolean {
+  return d.getUTCDay() === 0;
+}
+
 /** true when the given date-only Date falls before the official ledger start. */
 export function isBeforeLedgerStart(d: Date): boolean {
   return d.getTime() < LEDGER_START_DAY.getTime();

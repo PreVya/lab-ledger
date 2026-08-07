@@ -162,10 +162,10 @@ function buildPatient(b: Record<string, unknown>, existing?: DemoPatient): DemoP
     createdById: existing?.createdById ?? store.currentUserId,
     total: String(total), discount: String(discount), net: String(net),
     advanceCash: String(advanceCash), advanceUpi: String(advanceUpi),
-    advancePaidOn: (b.advancePaidOn as string) ?? (advanceCash + advanceUpi > 0 ? today : null),
+    advancePaidOn: (b.advancePaidOn as string) ?? null,
     balance: String(balance),
     balanceCash: String(balanceCash), balanceUpi: String(balanceUpi),
-    balancePaidOn: (b.balancePaidOn as string) ?? (balanceCash + balanceUpi > 0 ? today : null),
+    balancePaidOn: (b.balancePaidOn as string) ?? null,
     tests,
   };
 }
