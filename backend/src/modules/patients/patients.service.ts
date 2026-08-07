@@ -60,8 +60,26 @@ export class PatientsService {
     return { total, discount, net, advanceCash, advanceUpi, balanceCash, balanceUpi, balance };
   }
 
-  private resolveDate(s: string | null | undefined, fallback: Date): Date {
-    return assertLedgerDate(s ? dateOnly(new Date(s)) : fallback);
+  /**
+   * Payment dates are NEVER assumed. The user must select them explicitly whenever
+   * money was received; we only validate + normalize here.
+   */
+  private resolvePaidOn(s: string | null | undefined): Date | null {
+    if (!s) return null;
+    return assertLedgerDate(dateOnly(new Date(s)));
+  }
+
+  private assertPaidDates(
+    pay: { advanceCash: number; advanceUpi: number; balanceCash: number; balanceUpi: number },
+    advancePaidOn: Date | null,
+    balancePaidOn: Date | null,
+  ) {
+    if (pay.advanceCash + pay.advanceUpi > 0 && !advancePaidOn) {
+      throw new BadRequestException('Please select Advance Paid On date.');
+    }
+    if (pay.balanceCash + pay.balanceUpi > 0 && !balancePaidOn) {
+      throw new BadRequestException('Please select Balance Paid On date.');
+    }
   }
 
   async assignNumbersAndCreate(entryDate: Date, data: Omit<Prisma.PatientUncheckedCreateInput, 'financialYear' | 'registerNumber' | 'dailySerial' | 'entryDate'>) {
@@ -104,8 +122,9 @@ export class PatientsService {
     const pay = this.computePayment(tests.map((t) => Number(t.rate)), input);
     const { ageValue, ageUnit, legacyAge } = normalizeAge(input);
 
-    const advanceDate = this.resolveDate(input.advancePaidOn, entryDay);
-    const balanceDate = this.resolveDate(input.balancePaidOn, entryDay);
+    const advanceDate = this.resolvePaidOn(input.advancePaidOn);
+    const balanceDate = this.resolvePaidOn(input.balancePaidOn);
+    this.assertPaidDates(pay, advanceDate, balanceDate);
 
     const patient = await this.assignNumbersAndCreate(entryDay, {
       name: input.name,
@@ -122,11 +141,11 @@ export class PatientsService {
       net: new Prisma.Decimal(pay.net),
       advanceCash: new Prisma.Decimal(pay.advanceCash),
       advanceUpi: new Prisma.Decimal(pay.advanceUpi),
-      advancePaidOn: input.advancePaidOn ? new Date(input.advancePaidOn) : (pay.advanceCash + pay.advanceUpi > 0 ? entryDay : null),
+      advancePaidOn: advanceDate,
       balance: new Prisma.Decimal(pay.balance),
       balanceCash: new Prisma.Decimal(pay.balanceCash),
       balanceUpi: new Prisma.Decimal(pay.balanceUpi),
-      balancePaidOn: input.balancePaidOn ? new Date(input.balancePaidOn) : (pay.balanceCash + pay.balanceUpi > 0 ? entryDay : null),
+      balancePaidOn: balanceDate,
       tests: { create: tests.map((t) => ({ testId: t.id, rateAtEntry: t.rate })) },
     } as any);
 
@@ -136,7 +155,7 @@ export class PatientsService {
       if (amount > 0) {
         paymentRows.push({
           patientId: patient.id,
-          date: b.kind === 'advance' ? advanceDate : balanceDate,
+          date: (b.kind === 'advance' ? advanceDate : balanceDate) as Date,
           kind: b.kind,
           mode: b.mode,
           amount: new Prisma.Decimal(amount),
@@ -162,9 +181,9 @@ export class PatientsService {
     const { ageValue, ageUnit, legacyAge } = normalizeAge(input);
 
     assertLedgerDate(existing.entryDate);
-    const today = dateOnly();
-    const advanceDate = this.resolveDate(input.advancePaidOn, today);
-    const balanceDate = this.resolveDate(input.balancePaidOn, today);
+    const advanceDate = this.resolvePaidOn(input.advancePaidOn) ?? (existing.advancePaidOn ? dateOnly(existing.advancePaidOn) : null);
+    const balanceDate = this.resolvePaidOn(input.balancePaidOn) ?? (existing.balancePaidOn ? dateOnly(existing.balancePaidOn) : null);
+    this.assertPaidDates(pay, advanceDate, balanceDate);
 
     const updated = await this.prisma.$transaction(async (tx) => {
       await tx.patientTest.deleteMany({ where: { patientId: id } });
@@ -184,11 +203,11 @@ export class PatientsService {
           net: new Prisma.Decimal(pay.net),
           advanceCash: new Prisma.Decimal(pay.advanceCash),
           advanceUpi: new Prisma.Decimal(pay.advanceUpi),
-          advancePaidOn: input.advancePaidOn ? new Date(input.advancePaidOn) : existing.advancePaidOn,
+          advancePaidOn: advanceDate,
           balance: new Prisma.Decimal(pay.balance),
           balanceCash: new Prisma.Decimal(pay.balanceCash),
           balanceUpi: new Prisma.Decimal(pay.balanceUpi),
-          balancePaidOn: input.balancePaidOn ? new Date(input.balancePaidOn) : existing.balancePaidOn,
+          balancePaidOn: balanceDate,
           tests: { create: tests.map((t) => ({ testId: t.id, rateAtEntry: t.rate })) },
         } as any,
         include: { tests: { include: { test: true } } },
@@ -212,7 +231,7 @@ export class PatientsService {
       const current = lookup.get(`${b.kind}:${b.mode}`) ?? new Prisma.Decimal(0);
       const delta = target.minus(current);
       if (!delta.isZero()) {
-        const d = b.kind === 'advance' ? advanceDate : balanceDate;
+        const d = (b.kind === 'advance' ? advanceDate : balanceDate) as Date;
         deltaRows.push({
           patientId: id,
           date: d,
