@@ -14,6 +14,9 @@ import { BillActions } from "@/components/bill-dialog";
 
 const num = (v: string) => (v === "" ? 0 : Number(v) || 0);
 
+const LEDGER_START = "2026-08-01";
+const isSundayISO = (d: string) => !!d && new Date(d + "T00:00:00Z").getUTCDay() === 0;
+
 interface Props {
   open: boolean;
   onOpenChange: (o: boolean) => void;
@@ -86,6 +89,15 @@ export function PatientFormDialog({ open, onOpenChange, patient, entryDate, pref
   const balanceCollected = num(balanceCash) + num(balanceUpi);
   const balance = net - advanceTotal - balanceCollected;
 
+  const advanceDateRequired = advanceTotal > 0 && !advancePaidOn;
+  const balanceDateRequired = balanceCollected > 0 && !balancePaidOn;
+  const advanceDateInvalid =
+    !!advancePaidOn && (advancePaidOn < LEDGER_START || isSundayISO(advancePaidOn));
+  const balanceDateInvalid =
+    !!balancePaidOn && (balancePaidOn < LEDGER_START || isSundayISO(balancePaidOn));
+  const paymentDatesInvalid =
+    advanceDateRequired || balanceDateRequired || advanceDateInvalid || balanceDateInvalid;
+
   const filteredTests = useMemo(() => {
     const q = testFilter.toLowerCase();
     return tests.filter(t => t.active && (
@@ -103,6 +115,12 @@ export function PatientFormDialog({ open, onOpenChange, patient, entryDate, pref
   async function handleSave() {
     if (!name.trim() || !mobile.trim() || !ageValue || !selectedTests.length) {
       toast.error("Name, mobile, age, and at least one test are required");
+      return;
+    }
+    if (advanceDateRequired) { toast.error("Please select Advance Paid On date."); return; }
+    if (balanceDateRequired) { toast.error("Please select Balance Paid On date."); return; }
+    if (advanceDateInvalid || balanceDateInvalid) {
+      toast.error("Payment date must be on/after 01-Aug-2026 and not a Sunday.");
       return;
     }
     const input: UpsertPatientInput = {
@@ -238,8 +256,20 @@ export function PatientFormDialog({ open, onOpenChange, patient, entryDate, pref
               <Input value={advanceUpi} onChange={e => setAdvanceUpi(e.target.value)} className="h-8 text-right" inputMode="decimal" />
             </Row>
             <Row label="Advance Paid On">
-              <Input type="date" value={advancePaidOn} onChange={e => setAdvancePaidOn(e.target.value)} className="h-8" />
+              <Input
+                type="date"
+                min={LEDGER_START}
+                value={advancePaidOn}
+                onChange={e => setAdvancePaidOn(e.target.value)}
+                className={cn("h-8", (advanceDateRequired || advanceDateInvalid) && "border-destructive")}
+              />
             </Row>
+            {advanceDateRequired && (
+              <div className="text-right text-xs text-destructive">Please select Advance Paid On date.</div>
+            )}
+            {advanceDateInvalid && (
+              <div className="text-right text-xs text-destructive">Date must be on/after 01-Aug-2026 and not a Sunday.</div>
+            )}
             <div className="my-2 border-t" />
             <Row label="Balance" emphasis>
               <span className={cn("tabular-nums", balance > 0 ? "text-destructive" : "text-foreground")}>
@@ -253,8 +283,20 @@ export function PatientFormDialog({ open, onOpenChange, patient, entryDate, pref
               <Input value={balanceUpi} onChange={e => setBalanceUpi(e.target.value)} className="h-8 text-right" inputMode="decimal" />
             </Row>
             <Row label="Balance Paid On">
-              <Input type="date" value={balancePaidOn} onChange={e => setBalancePaidOn(e.target.value)} className="h-8" />
+              <Input
+                type="date"
+                min={LEDGER_START}
+                value={balancePaidOn}
+                onChange={e => setBalancePaidOn(e.target.value)}
+                className={cn("h-8", (balanceDateRequired || balanceDateInvalid) && "border-destructive")}
+              />
             </Row>
+            {balanceDateRequired && (
+              <div className="text-right text-xs text-destructive">Please select Balance Paid On date.</div>
+            )}
+            {balanceDateInvalid && (
+              <div className="text-right text-xs text-destructive">Date must be on/after 01-Aug-2026 and not a Sunday.</div>
+            )}
           </div>
         </div>
 
@@ -262,7 +304,7 @@ export function PatientFormDialog({ open, onOpenChange, patient, entryDate, pref
           <div>{patient?.id && <BillActions patientId={patient.id} />}</div>
           <div className="flex items-center gap-2">
             <Button variant="ghost" onClick={() => onOpenChange(false)}><X className="mr-1 h-4 w-4" />Cancel</Button>
-            <Button onClick={handleSave} disabled={create.isPending || update.isPending}>
+            <Button onClick={handleSave} disabled={create.isPending || update.isPending || paymentDatesInvalid}>
               {patient ? "Update" : "Save"} (Ctrl+S)
             </Button>
           </div>
