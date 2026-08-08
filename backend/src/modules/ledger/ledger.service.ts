@@ -54,44 +54,50 @@ export class LedgerService {
   constructor(private prisma: PrismaService) {}
 
   /**
-   * Ensure DailyLedger row for given day. Opening = previous day's closing
-   * (cash-only since Phase 1.75). On the official start day (01-Aug-2026) the
-   * opening cash is seeded to the carry-forward amount. Dates before the start
-   * date are rejected and never create a row.
+   * Ensure DailyLedger row for given day. Opening = previous VALID day's closing
+   * cash (cash-only). On the official start day (01-Aug-2026) the opening cash is
+   * the seeded carry-forward amount. Blocked dates never create a row.
+   *
+   * The opening balance is always re-synced from the previous valid day so it can
+   * never go stale.
    */
   async ensureDay(day: Date = dateOnly()) {
     assertLedgerDate(day);
+    const opening = await this.openingFor(day);
     const existing = await this.prisma.dailyLedger.findUnique({ where: { date: day } });
-    if (existing) return existing;
-    const previous = await this.prisma.dailyLedger.findFirst({
-      where: { date: { lt: day } },
-      orderBy: { date: 'desc' },
-    });
-    const opening = previous
-      ? new Prisma.Decimal(previous.closingBalance)
-      : isLedgerStartDay(day)
-        ? new Prisma.Decimal(LEDGER_START_OPENING_CASH)
-        : ZERO();
+    if (existing) {
+      if (new Prisma.Decimal(existing.openingBalance).equals(opening)) return existing;
+      return this.prisma.dailyLedger.update({
+        where: { id: existing.id },
+        data: { openingBalance: opening },
+      });
+    }
     return this.prisma.dailyLedger.create({
       data: { date: day, openingBalance: opening, closingBalance: opening },
     });
   }
 
+  /** Opening cash for a valid ledger day = previous valid day's closing (anchor on start day). */
+  private async openingFor(day: Date): Promise<Prisma.Decimal> {
+    if (isLedgerStartDay(day)) return new Prisma.Decimal(LEDGER_START_OPENING_CASH);
+    const previous = await this.prisma.dailyLedger.findFirst({
+      where: { date: { lt: day } },
+      orderBy: { date: 'desc' },
+    });
+    if (previous) return new Prisma.Decimal(previous.closingBalance);
+    return new Prisma.Decimal(LEDGER_START_OPENING_CASH);
+  }
+
   ensureToday(today: Date = dateOnly()) { return this.ensureDay(today); }
 
-  /** Recompute & persist closing CASH balance for the given date. */
-  async recompute(date: Date = dateOnly()) {
-    if (isLedgerBlocked(date)) return null;
-    const __t0 = Date.now();
-    const [ledger, payments, expenses, handovers, added] = await Promise.all([
-      this.ensureDay(date),
-
+  /** Cash-only closing balance for a day, given its opening balance. */
+  private async closingFor(date: Date, opening: Prisma.Decimal) {
+    const [payments, expenses, handovers, added] = await Promise.all([
       this.prisma.payment.findMany({ where: { date }, select: { amount: true, mode: true } }),
       this.prisma.expense.findMany({ where: { date }, select: { amount: true, mode: true } }),
       this.prisma.cashHandover.aggregate({ where: { date }, _sum: { amount: true } }),
       this.prisma.cashAdded.aggregate({ where: { date }, _sum: { amount: true } }),
     ]);
-
     const cashCollected = payments
       .filter((p) => p.mode === 'cash')
       .reduce((s, p) => s.plus(p.amount), ZERO());
@@ -100,20 +106,70 @@ export class LedgerService {
       .reduce((s, e) => s.plus(e.amount), ZERO());
     const takenAway = handovers._sum.amount ?? ZERO();
     const addedCash = added._sum.amount ?? ZERO();
+    return opening.plus(cashCollected).minus(cashExpenses).minus(takenAway).plus(addedCash);
+  }
 
-    const closingCash = new Prisma.Decimal(ledger.openingBalance)
-      .plus(cashCollected)
-      .minus(cashExpenses)
-      .minus(takenAway)
-      .plus(addedCash);
+  /**
+   * Recompute & persist closing CASH balance for the given date, then cascade the
+   * new closing forward into every later valid ledger day.
+   */
+  async recompute(date: Date = dateOnly()) {
+    if (isLedgerBlocked(date)) return null;
+    const __t0 = Date.now();
+    const ledger = await this.ensureDay(date);
+    const closingCash = await this.closingFor(date, new Prisma.Decimal(ledger.openingBalance));
 
     const updated = await this.prisma.dailyLedger.update({
       where: { id: ledger.id },
       data: { closingBalance: closingCash },
     });
+    await this.cascadeForward(date);
     console.log(`[perf] ledger.recompute(${formatDateOnly(date)}) ${Date.now() - __t0}ms`);
     return updated;
   }
+
+  /**
+   * Re-chain every existing DailyLedger row after `from`: opening = previous
+   * valid day's closing, closing recomputed from that day's cash movements.
+   * Blocked (pre-start / Sunday) rows are skipped and never created.
+   */
+  async cascadeForward(from: Date) {
+    const later = await this.prisma.dailyLedger.findMany({
+      where: { date: { gt: from } },
+      orderBy: { date: 'asc' },
+    });
+    for (const row of later) {
+      if (isLedgerBlocked(row.date)) continue;
+      const opening = await this.openingFor(row.date);
+      const closing = await this.closingFor(row.date, opening);
+      if (
+        new Prisma.Decimal(row.openingBalance).equals(opening) &&
+        new Prisma.Decimal(row.closingBalance).equals(closing)
+      ) {
+        continue;
+      }
+      await this.prisma.dailyLedger.update({
+        where: { id: row.id },
+        data: { openingBalance: opening, closingBalance: closing },
+      });
+    }
+  }
+
+  /** One-time / on-demand repair: re-chain the whole ledger from the start date. */
+  async repairAll() {
+    const rows = await this.prisma.dailyLedger.findMany({ orderBy: { date: 'asc' } });
+    for (const row of rows) {
+      if (isLedgerBlocked(row.date)) continue;
+      const opening = await this.openingFor(row.date);
+      const closing = await this.closingFor(row.date, opening);
+      await this.prisma.dailyLedger.update({
+        where: { id: row.id },
+        data: { openingBalance: opening, closingBalance: closing },
+      });
+    }
+    return { ok: true, days: rows.length };
+  }
+
 
   /**
    * Read-only zero summary for dates before the official ledger start.
@@ -217,8 +273,10 @@ export class LedgerService {
     if (!new Prisma.Decimal(ledger.closingBalance).equals(closingCashBalance)) {
       this.prisma.dailyLedger
         .update({ where: { id: ledger.id }, data: { closingBalance: closingCashBalance } })
+        .then(() => this.cascadeForward(day))
         .catch((err) => console.error('[ledger] background closingBalance update failed', err));
     }
+
 
     console.log(`[perf] ledger.summary(${formatDateOnly(day)}) TOTAL ${Date.now() - __tAll}ms`);
 

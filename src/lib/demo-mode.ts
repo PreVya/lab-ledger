@@ -66,13 +66,44 @@ function fyFor(d: string) {
   return `${start}-${String((start + 1) % 100).padStart(2, "0")}`;
 }
 
-function ledgerFor(date: string) {
-  if (!store.ledgers[date]) {
-    // opening = prior day closing
-    const days = Object.keys(store.ledgers).filter(d => d < date).sort();
-    const prev = days.length ? store.ledgers[days[days.length - 1]] : { closingBalance: "0" };
-    store.ledgers[date] = { openingBalance: prev.closingBalance, closingBalance: prev.closingBalance };
+const LEDGER_START = "2026-08-01";
+const LEDGER_START_OPENING = 1020;
+
+function isSundayStr(d: string) {
+  const [y, m, day] = d.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, day)).getUTCDay() === 0;
+}
+
+/** Net cash movement for a single date. */
+function cashDeltaFor(date: string) {
+  const cash = store.payments.filter(p => p.date === date && p.mode === "cash").reduce((s, p) => s + Number(p.amount), 0);
+  const cashExpenses = store.expenses.filter(e => e.date === date && e.mode === "cash").reduce((s, e) => s + Number(e.amount), 0);
+  const takenAway = store.handovers.filter(h => h.date === date).reduce((s, h) => s + Number(h.amount), 0);
+  const added = store.cashAdded.filter(c => c.date === date).reduce((s, c) => s + Number(c.amount), 0);
+  return cash - cashExpenses - takenAway + added;
+}
+
+/** Opening cash = 1020 anchor at start date + every cash movement on valid days before `date`. */
+function openingFor(date: string) {
+  if (date <= LEDGER_START) return LEDGER_START_OPENING;
+  const dates = new Set<string>([
+    ...store.payments.map(p => p.date),
+    ...store.expenses.map(e => e.date),
+    ...store.handovers.map(h => h.date),
+    ...store.cashAdded.map(c => c.date),
+  ]);
+  let bal = LEDGER_START_OPENING;
+  for (const d of [...dates].sort()) {
+    if (d < LEDGER_START || d >= date || isSundayStr(d)) continue;
+    bal += cashDeltaFor(d);
   }
+  return bal;
+}
+
+function ledgerFor(date: string) {
+  const opening = openingFor(date);
+  const closing = opening + cashDeltaFor(date);
+  store.ledgers[date] = { openingBalance: String(opening), closingBalance: String(closing) };
   return store.ledgers[date];
 }
 
@@ -98,8 +129,8 @@ function summary(date: string) {
   const cashTakenAway = handovers.reduce((s, h) => s + Number(h.amount), 0);
   const addedCash = cashAddedEntries.reduce((s, c) => s + Number(c.amount), 0);
   const opening = Number(ledger.openingBalance);
-  const closing = opening + cash - cashExpenses - cashTakenAway + addedCash;
-  ledger.closingBalance = String(closing);
+  const closing = Number(ledger.closingBalance);
+
 
   return {
     date,

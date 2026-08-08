@@ -72,7 +72,7 @@ function Register() {
             )}
           </div>
           <Button onClick={() => { setEditing(null); setOpen(true); }} size="lg" className="gap-2" disabled={isBlocked}>
-            <Plus className="h-4 w-4" /> Add Patient {isToday && <kbd className="ml-2 rounded bg-primary-foreground/20 px-1.5 py-0.5 text-[10px]">N</kbd>}
+            <Plus className="h-4 w-4" /> Add Patient <span className="opacity-80">(N)</span>
           </Button>
         </div>
       </div>
