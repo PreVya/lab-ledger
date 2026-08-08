@@ -224,7 +224,9 @@ export class LedgerService {
       readonlyBlocked: true,
       isSunday: sunday,
       blockedReason: sunday && !isBeforeLedgerStart(day) ? SUNDAY_BLOCKED_ERROR : LEDGER_START_ERROR,
-      ledger: { id: null, date: day, openingBalance: z, closingBalance: z, notes: null },
+      ledger: { id: null, date: day, openingBalance: z, closingBalance: z, closedAt: null, notes: null },
+      dayClosed: false,
+      canCloseDay: false,
       patients: [] as any[],
       totals: {
         total: z, discount: z, net: z, balance: z,
@@ -314,7 +316,8 @@ export class LedgerService {
     if (!new Prisma.Decimal(ledger.closingBalance).equals(closingCashBalance)) {
       this.prisma.dailyLedger
         .update({ where: { id: ledger.id }, data: { closingBalance: closingCashBalance } })
-        .then(() => this.cascadeForward(day))
+        // Only a closed day pushes its cash into the next day.
+        .then(() => (ledger.closedAt ? this.carryForward(day) : undefined))
         .catch((err) => console.error('[ledger] background closingBalance update failed', err));
     }
 
@@ -326,6 +329,9 @@ export class LedgerService {
       readonlyBlocked: false,
       isSunday: false,
       ledger: { ...ledger, openingBalance: openingCashBalance, closingBalance: closingCashBalance },
+      dayClosed: !!ledger.closedAt,
+      // Days without a Cash Taken Away entry need the manual close button.
+      canCloseDay: !ledger.closedAt && handovers.length === 0,
 
       patients,
       totals: {
