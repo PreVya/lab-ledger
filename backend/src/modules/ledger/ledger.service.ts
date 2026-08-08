@@ -147,8 +147,8 @@ export class LedgerService {
   }
 
   /**
-   * Recompute & persist closing CASH balance for the given date, then cascade the
-   * new closing forward into every later valid ledger day.
+   * Recompute & persist the closing CASH balance for the given date.
+   * Opening balances of later days are NOT touched unless this day is closed.
    */
   async recompute(date: Date = dateOnly()) {
     if (isLedgerBlocked(date)) return null;
@@ -160,17 +160,18 @@ export class LedgerService {
       where: { id: ledger.id },
       data: { closingBalance: closingCash },
     });
-    await this.cascadeForward(date);
+    // Only a CLOSED day pushes its closing cash into the next day.
+    if (updated.closedAt) await this.carryForward(date);
     console.log(`[perf] ledger.recompute(${formatDateOnly(date)}) ${Date.now() - __t0}ms`);
     return updated;
   }
 
   /**
-   * Re-chain every existing DailyLedger row after `from`: opening = previous
-   * valid day's closing, closing recomputed from that day's cash movements.
-   * Blocked (pre-start / Sunday) rows are skipped and never created.
+   * Push a closed day's closing cash into the following ledger days.
+   * A day whose predecessor is NOT closed gets opening 0 (openingFor handles it),
+   * so this stops carrying as soon as it hits an open day.
    */
-  async cascadeForward(from: Date) {
+  async carryForward(from: Date) {
     const later = await this.prisma.dailyLedger.findMany({
       where: { date: { gt: from } },
       orderBy: { date: 'asc' },
@@ -189,8 +190,11 @@ export class LedgerService {
         where: { id: row.id },
         data: { openingBalance: opening, closingBalance: closing },
       });
+      // Stop propagating past an open (not carried-forward) day.
+      if (!row.closedAt) break;
     }
   }
+
 
   /** One-time / on-demand repair: re-chain the whole ledger from the start date. */
   async repairAll() {
