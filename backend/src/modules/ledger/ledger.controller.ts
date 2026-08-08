@@ -1,4 +1,4 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { LedgerService, parseDateOnly } from './ledger.service';
 
@@ -18,4 +18,11 @@ export class LedgerController {
     const day = date ? parseDateOnly(date) : undefined;
     return this.ledger.summary(day);
   }
+
+  // POST /api/ledger/repair — re-chain opening/closing cash from the start date.
+  @Post('repair')
+  repair() {
+    return this.ledger.repairAll();
+  }
 }
+
