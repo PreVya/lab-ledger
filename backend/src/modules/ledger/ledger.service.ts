@@ -273,8 +273,10 @@ export class LedgerService {
     if (!new Prisma.Decimal(ledger.closingBalance).equals(closingCashBalance)) {
       this.prisma.dailyLedger
         .update({ where: { id: ledger.id }, data: { closingBalance: closingCashBalance } })
+        .then(() => this.cascadeForward(day))
         .catch((err) => console.error('[ledger] background closingBalance update failed', err));
     }
+
 
     console.log(`[perf] ledger.summary(${formatDateOnly(day)}) TOTAL ${Date.now() - __tAll}ms`);
 
