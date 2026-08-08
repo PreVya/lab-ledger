@@ -303,7 +303,7 @@ export function demoHandle(path: string, init: RequestInit = {}): unknown {
     return store.patients.find(p => p.id === patientIdMatch[1]) || null;
   }
 
-  if (path.startsWith("/ledger")) {
+  if (path.startsWith("/ledger") && method === "GET") {
     const clean = path.replace("/today", "");
     const url = new URL("http://x" + clean);
     const date = url.searchParams.get("date") || todayIST();
