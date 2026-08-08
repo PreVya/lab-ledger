@@ -54,12 +54,13 @@ export class LedgerService {
   constructor(private prisma: PrismaService) {}
 
   /**
-   * Ensure DailyLedger row for given day. Opening = previous VALID day's closing
-   * cash (cash-only). On the official start day (01-Aug-2026) the opening cash is
-   * the seeded carry-forward amount. Blocked dates never create a row.
+   * Ensure DailyLedger row for given day.
    *
-   * The opening balance is always re-synced from the previous valid day so it can
-   * never go stale.
+   * Opening cash rule (NO automatic cascade):
+   *  - 01-Aug-2026 (ledger start day) -> seeded carry-forward cash.
+   *  - any other day -> the previous ledger day's closing cash ONLY IF that day
+   *    was CLOSED (Cash Taken Away recorded, or "Close Day & Carry Forward"
+   *    pressed). Otherwise the opening stays 0 until the previous day is closed.
    */
   async ensureDay(day: Date = dateOnly()) {
     assertLedgerDate(day);
@@ -77,18 +78,54 @@ export class LedgerService {
     });
   }
 
-  /** Opening cash for a valid ledger day = previous valid day's closing (anchor on start day). */
+  /** Opening cash = previous day's closing ONLY when that previous day is closed. */
   private async openingFor(day: Date): Promise<Prisma.Decimal> {
     if (isLedgerStartDay(day)) return new Prisma.Decimal(LEDGER_START_OPENING_CASH);
     const previous = await this.prisma.dailyLedger.findFirst({
       where: { date: { lt: day } },
       orderBy: { date: 'desc' },
     });
-    if (previous) return new Prisma.Decimal(previous.closingBalance);
-    return new Prisma.Decimal(LEDGER_START_OPENING_CASH);
+    if (previous && previous.closedAt) return new Prisma.Decimal(previous.closingBalance);
+    return ZERO();
+  }
+
+  /** true when the day has at least one Cash Taken Away entry. */
+  private async hasHandover(day: Date): Promise<boolean> {
+    const n = await this.prisma.cashHandover.count({ where: { date: day } });
+    return n > 0;
+  }
+
+  /**
+   * Close the day and carry its closing cash forward to the next ledger day.
+   * Triggered automatically when Cash Taken Away is recorded, or manually.
+   */
+  async closeDay(day: Date = dateOnly()) {
+    assertLedgerDate(day);
+    const ledger = await this.ensureDay(day);
+    const closing = await this.closingFor(day, new Prisma.Decimal(ledger.openingBalance));
+    const updated = await this.prisma.dailyLedger.update({
+      where: { id: ledger.id },
+      data: { closingBalance: closing, closedAt: ledger.closedAt ?? new Date() },
+    });
+    await this.carryForward(day);
+    return updated;
+  }
+
+  /** Re-open a day (used when the Cash Taken Away that closed it is deleted). */
+  async reopenDay(day: Date) {
+    if (isLedgerBlocked(day)) return null;
+    const existing = await this.prisma.dailyLedger.findUnique({ where: { date: day } });
+    if (!existing || !existing.closedAt) return existing;
+    const updated = await this.prisma.dailyLedger.update({
+      where: { id: existing.id },
+      data: { closedAt: null },
+    });
+    await this.carryForward(day);
+    return updated;
   }
 
   ensureToday(today: Date = dateOnly()) { return this.ensureDay(today); }
+
 
   /** Cash-only closing balance for a day, given its opening balance. */
   private async closingFor(date: Date, opening: Prisma.Decimal) {
