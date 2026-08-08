@@ -51,6 +51,7 @@ const store = {
   handovers: [] as CashHandover[],
   cashAdded: [] as CashAdded[],
   ledgers: {} as Record<string, { openingBalance: string; closingBalance: string }>,
+  closedDays: [] as string[],
   users: DEMO_USERS.map(d => ({ id: d.user.id, username: d.user.username, fullName: d.user.fullName, role: d.user.role, active: true })),
   bills: [] as any[],
   billSeq: 0,
@@ -83,21 +84,38 @@ function cashDeltaFor(date: string) {
   return cash - cashExpenses - takenAway + added;
 }
 
-/** Opening cash = 1020 anchor at start date + every cash movement on valid days before `date`. */
-function openingFor(date: string) {
-  if (date <= LEDGER_START) return LEDGER_START_OPENING;
+/** Days explicitly closed (Cash Taken Away recorded, or "Close Day & Carry Forward"). */
+function isClosed(date: string) {
+  return store.closedDays.includes(date) || store.handovers.some(h => h.date === date);
+}
+
+/** Candidate ledger days (any activity or explicit close), ascending. */
+function ledgerDays() {
   const dates = new Set<string>([
+    LEDGER_START,
     ...store.payments.map(p => p.date),
     ...store.expenses.map(e => e.date),
     ...store.handovers.map(h => h.date),
     ...store.cashAdded.map(c => c.date),
+    ...store.closedDays,
   ]);
-  let bal = LEDGER_START_OPENING;
-  for (const d of [...dates].sort()) {
-    if (d < LEDGER_START || d >= date || isSundayStr(d)) continue;
-    bal += cashDeltaFor(d);
+  return [...dates].filter(d => d >= LEDGER_START && !isSundayStr(d)).sort();
+}
+
+/**
+ * Opening cash carries forward ONLY from a CLOSED previous day.
+ * An open (not carried-forward) day leaves the next day's opening at 0.
+ */
+function openingFor(date: string) {
+  if (date <= LEDGER_START) return LEDGER_START_OPENING;
+  let carry: number | null = null;
+  for (const d of ledgerDays()) {
+    if (d >= date) break;
+    const opening = d === LEDGER_START ? LEDGER_START_OPENING : (carry ?? 0);
+    const closing = opening + cashDeltaFor(d);
+    carry = isClosed(d) ? closing : null;
   }
-  return bal;
+  return carry ?? 0;
 }
 
 function ledgerFor(date: string) {
@@ -134,7 +152,9 @@ function summary(date: string) {
 
   return {
     date,
-    ledger: { id: "demo-ledger-" + date, date, openingBalance: String(opening), closingBalance: String(closing), notes: null },
+    ledger: { id: "demo-ledger-" + date, date, openingBalance: String(opening), closingBalance: String(closing), closedAt: isClosed(date) ? new Date().toISOString() : null, notes: null },
+    dayClosed: isClosed(date),
+    canCloseDay: !isClosed(date),
     patients,
     totals: {
       total: String(patients.reduce((s, p) => s + Number(p.total), 0)),
@@ -300,6 +320,14 @@ export function demoHandle(path: string, init: RequestInit = {}): unknown {
     return { ok: true };
   }
 
+  // Close Day & Carry Forward
+  if (path.startsWith("/ledger/close") && method === "POST") {
+    const url = new URL("http://x" + path);
+    const date = url.searchParams.get("date") || todayIST();
+    if (!store.closedDays.includes(date)) store.closedDays.push(date);
+    return ledgerFor(date);
+  }
+
   // Cash handover
   if (path === "/cash-handover" && method === "POST") {
     const h: CashHandover = {
@@ -315,7 +343,11 @@ export function demoHandle(path: string, init: RequestInit = {}): unknown {
   }
   const handoverIdMatch = path.match(/^\/cash-handover\/([^/?]+)$/);
   if (handoverIdMatch && method === "DELETE") {
+    const removed = store.handovers.find(h => h.id === handoverIdMatch[1]);
     store.handovers = store.handovers.filter(h => h.id !== handoverIdMatch[1]);
+    if (removed && !store.handovers.some(h => h.date === removed.date)) {
+      store.closedDays = store.closedDays.filter(d => d !== removed.date);
+    }
     return { ok: true };
   }
 
