@@ -4,7 +4,7 @@ import { AppShell } from "@/components/app-shell";
 import {
   useLedger, useCreateExpense, useDeleteExpense, todayKey,
   useCreateCashHandover, useDeleteCashHandover,
-  useCreateCashAdded, useDeleteCashAdded,
+  useCreateCashAdded, useDeleteCashAdded, useCloseDay,
 } from "@/lib/queries";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,6 +32,7 @@ function Register() {
   const { data, isLoading, error } = useLedger(selectedDate);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Patient | null>(null);
+  const closeDay = useCloseDay(selectedDate);
 
   if (error) return <div className="p-6 text-sm text-destructive">Failed to load. Is the backend running on {import.meta.env.VITE_API_BASE_URL || "http://localhost:3000"}?</div>;
 
@@ -114,7 +115,33 @@ function Register() {
             <Stat label="Added Cash" value={money(data.totals.addedCash ?? "0")} />
             <Stat label="Net Billing" value={money(data.totals.net)} />
             <Stat label="Pending Balance" value={money(data.totals.balance)} />
-            <Stat label="Closing Cash" value={money(data.totals.closingCashBalance)} accent />
+            <div>
+              <div className="flex items-center gap-2">
+                <div className="text-xs uppercase text-muted-foreground">Closing Cash</div>
+                {data.dayClosed && (
+                  <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium uppercase text-primary">
+                    Carried forward
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="text-lg font-semibold tabular-nums text-primary">
+                  {money(data.totals.closingCashBalance)}
+                </div>
+                {!isBlocked && data.canCloseDay && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 px-2 text-xs"
+                    disabled={closeDay.isPending}
+                    onClick={() => closeDay.mutate()}
+                    title="Carry this day's closing cash into the next day's opening cash"
+                  >
+                    Close Day &amp; Carry Forward
+                  </Button>
+                )}
+              </div>
+            </div>
           </div>
 
           <div className="grid flex-1 grid-cols-12 gap-0 overflow-hidden">
