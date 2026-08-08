@@ -19,6 +19,12 @@ export class LedgerController {
     return this.ledger.summary(day);
   }
 
+  // POST /api/ledger/close?date=YYYY-MM-DD — "Close Day & Carry Forward".
+  @Post('close')
+  close(@Query('date') date?: string) {
+    return this.ledger.closeDay(date ? parseDateOnly(date) : undefined);
+  }
+
   // POST /api/ledger/repair — re-chain opening/closing cash from the start date.
   @Post('repair')
   repair() {

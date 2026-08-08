@@ -89,12 +89,6 @@ export class LedgerService {
     return ZERO();
   }
 
-  /** true when the day has at least one Cash Taken Away entry. */
-  private async hasHandover(day: Date): Promise<boolean> {
-    const n = await this.prisma.cashHandover.count({ where: { date: day } });
-    return n > 0;
-  }
-
   /**
    * Close the day and carry its closing cash forward to the next ledger day.
    * Triggered automatically when Cash Taken Away is recorded, or manually.
