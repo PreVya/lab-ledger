@@ -111,8 +111,8 @@ function openingFor(date: string) {
   let carry: number | null = null;
   for (const d of ledgerDays()) {
     if (d >= date) break;
-    const opening = d === LEDGER_START ? LEDGER_START_OPENING : (carry ?? 0);
-    const closing = opening + cashDeltaFor(d);
+    const opening: number = d === LEDGER_START ? LEDGER_START_OPENING : (carry ?? 0);
+    const closing: number = opening + cashDeltaFor(d);
     carry = isClosed(d) ? closing : null;
   }
   return carry ?? 0;
