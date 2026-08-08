@@ -184,6 +184,10 @@ model DailyLedger {
   date            DateTime @unique @db.Date
   openingBalance  Decimal  @db.Decimal(12, 2)
   closingBalance  Decimal  @db.Decimal(12, 2) @default(0)
+  // Set when the day is closed & carried forward (auto on Cash Taken Away entry,
+  // or manually via the "Close Day & Carry Forward" action). Until a day is
+  // closed, the NEXT day's opening cash stays 0 — no automatic cascade.
+  closedAt        DateTime?
   notes           String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt

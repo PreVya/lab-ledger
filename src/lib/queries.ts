@@ -113,6 +113,17 @@ export function useDeleteExpense(date: string = todayKey()) {
   });
 }
 
+// --- Day close ----------------------------------------------------------
+
+/** "Close Day & Carry Forward": today's closing cash becomes tomorrow's opening. */
+export function useCloseDay(date: string = todayKey()) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api(`/ledger/close?date=${date}`, { method: "POST" }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["ledger"] }); },
+  });
+}
+
 // --- Cash handover ------------------------------------------------------
 
 export function useCreateCashHandover(date: string = todayKey()) {
@@ -124,7 +135,8 @@ export function useCreateCashHandover(date: string = todayKey()) {
         body: JSON.stringify({ ...input, date }),
       }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: qk.ledger(date) });
+      // Recording Cash Taken Away closes the day and carries cash forward.
+      qc.invalidateQueries({ queryKey: ["ledger"] });
     },
   });
 }
@@ -133,7 +145,7 @@ export function useDeleteCashHandover(date: string = todayKey()) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => api(`/cash-handover/${id}`, { method: "DELETE" }).then(() => id),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: qk.ledger(date) }); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["ledger"] }); },
   });
 }
 

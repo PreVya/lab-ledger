@@ -55,6 +55,7 @@ export interface DailyLedger {
   date: string;
   openingBalance: string;
   closingBalance: string;
+  closedAt?: string | null;
   notes?: string | null;
 }
 
@@ -110,6 +111,10 @@ export interface TodayResponse {
   isSunday?: boolean;
   blockedReason?: string;
   ledger: DailyLedger;
+  /** true once the day is closed & its cash carried into the next day. */
+  dayClosed?: boolean;
+  /** true when the day has no Cash Taken Away entry, so it needs manual closing. */
+  canCloseDay?: boolean;
   patients: Patient[];
   totals: {
     total: string;

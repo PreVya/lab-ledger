@@ -25,7 +25,9 @@ export class CashHandoverService {
         createdById: input.createdById,
       },
     });
-    void this.ledger.recompute(day).catch((e) => console.error('[cash-handover.create] bg recompute', e));
+    // Cash Taken Away closes the day: closing cash is finalised and carried
+    // forward into the next ledger day's opening cash.
+    void this.ledger.closeDay(day).catch((e) => console.error('[cash-handover.create] bg close', e));
     return row;
   }
 
@@ -39,7 +41,12 @@ export class CashHandoverService {
 
   async remove(id: string) {
     const row = await this.prisma.cashHandover.delete({ where: { id } });
-    void this.ledger.recompute(row.date).catch((e) => console.error('[cash-handover.remove] bg recompute', e));
+    void (async () => {
+      const left = await this.prisma.cashHandover.count({ where: { date: row.date } });
+      // No handover left -> the day is no longer auto-closed.
+      if (left === 0) await this.ledger.reopenDay(row.date);
+      await this.ledger.recompute(row.date);
+    })().catch((e) => console.error('[cash-handover.remove] bg recompute', e));
     return { ok: true };
   }
 }

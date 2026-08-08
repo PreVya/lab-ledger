@@ -54,12 +54,13 @@ export class LedgerService {
   constructor(private prisma: PrismaService) {}
 
   /**
-   * Ensure DailyLedger row for given day. Opening = previous VALID day's closing
-   * cash (cash-only). On the official start day (01-Aug-2026) the opening cash is
-   * the seeded carry-forward amount. Blocked dates never create a row.
+   * Ensure DailyLedger row for given day.
    *
-   * The opening balance is always re-synced from the previous valid day so it can
-   * never go stale.
+   * Opening cash rule (NO automatic cascade):
+   *  - 01-Aug-2026 (ledger start day) -> seeded carry-forward cash.
+   *  - any other day -> the previous ledger day's closing cash ONLY IF that day
+   *    was CLOSED (Cash Taken Away recorded, or "Close Day & Carry Forward"
+   *    pressed). Otherwise the opening stays 0 until the previous day is closed.
    */
   async ensureDay(day: Date = dateOnly()) {
     assertLedgerDate(day);
@@ -77,18 +78,48 @@ export class LedgerService {
     });
   }
 
-  /** Opening cash for a valid ledger day = previous valid day's closing (anchor on start day). */
+  /** Opening cash = previous day's closing ONLY when that previous day is closed. */
   private async openingFor(day: Date): Promise<Prisma.Decimal> {
     if (isLedgerStartDay(day)) return new Prisma.Decimal(LEDGER_START_OPENING_CASH);
     const previous = await this.prisma.dailyLedger.findFirst({
       where: { date: { lt: day } },
       orderBy: { date: 'desc' },
     });
-    if (previous) return new Prisma.Decimal(previous.closingBalance);
-    return new Prisma.Decimal(LEDGER_START_OPENING_CASH);
+    if (previous && previous.closedAt) return new Prisma.Decimal(previous.closingBalance);
+    return ZERO();
+  }
+
+  /**
+   * Close the day and carry its closing cash forward to the next ledger day.
+   * Triggered automatically when Cash Taken Away is recorded, or manually.
+   */
+  async closeDay(day: Date = dateOnly()) {
+    assertLedgerDate(day);
+    const ledger = await this.ensureDay(day);
+    const closing = await this.closingFor(day, new Prisma.Decimal(ledger.openingBalance));
+    const updated = await this.prisma.dailyLedger.update({
+      where: { id: ledger.id },
+      data: { closingBalance: closing, closedAt: ledger.closedAt ?? new Date() },
+    });
+    await this.carryForward(day);
+    return updated;
+  }
+
+  /** Re-open a day (used when the Cash Taken Away that closed it is deleted). */
+  async reopenDay(day: Date) {
+    if (isLedgerBlocked(day)) return null;
+    const existing = await this.prisma.dailyLedger.findUnique({ where: { date: day } });
+    if (!existing || !existing.closedAt) return existing;
+    const updated = await this.prisma.dailyLedger.update({
+      where: { id: existing.id },
+      data: { closedAt: null },
+    });
+    await this.carryForward(day);
+    return updated;
   }
 
   ensureToday(today: Date = dateOnly()) { return this.ensureDay(today); }
+
 
   /** Cash-only closing balance for a day, given its opening balance. */
   private async closingFor(date: Date, opening: Prisma.Decimal) {
@@ -110,8 +141,8 @@ export class LedgerService {
   }
 
   /**
-   * Recompute & persist closing CASH balance for the given date, then cascade the
-   * new closing forward into every later valid ledger day.
+   * Recompute & persist the closing CASH balance for the given date.
+   * Opening balances of later days are NOT touched unless this day is closed.
    */
   async recompute(date: Date = dateOnly()) {
     if (isLedgerBlocked(date)) return null;
@@ -123,17 +154,18 @@ export class LedgerService {
       where: { id: ledger.id },
       data: { closingBalance: closingCash },
     });
-    await this.cascadeForward(date);
+    // Only a CLOSED day pushes its closing cash into the next day.
+    if (updated.closedAt) await this.carryForward(date);
     console.log(`[perf] ledger.recompute(${formatDateOnly(date)}) ${Date.now() - __t0}ms`);
     return updated;
   }
 
   /**
-   * Re-chain every existing DailyLedger row after `from`: opening = previous
-   * valid day's closing, closing recomputed from that day's cash movements.
-   * Blocked (pre-start / Sunday) rows are skipped and never created.
+   * Push a closed day's closing cash into the following ledger days.
+   * A day whose predecessor is NOT closed gets opening 0 (openingFor handles it),
+   * so this stops carrying as soon as it hits an open day.
    */
-  async cascadeForward(from: Date) {
+  async carryForward(from: Date) {
     const later = await this.prisma.dailyLedger.findMany({
       where: { date: { gt: from } },
       orderBy: { date: 'asc' },
@@ -152,8 +184,11 @@ export class LedgerService {
         where: { id: row.id },
         data: { openingBalance: opening, closingBalance: closing },
       });
+      // Stop propagating past an open (not carried-forward) day.
+      if (!row.closedAt) break;
     }
   }
+
 
   /** One-time / on-demand repair: re-chain the whole ledger from the start date. */
   async repairAll() {
@@ -183,7 +218,9 @@ export class LedgerService {
       readonlyBlocked: true,
       isSunday: sunday,
       blockedReason: sunday && !isBeforeLedgerStart(day) ? SUNDAY_BLOCKED_ERROR : LEDGER_START_ERROR,
-      ledger: { id: null, date: day, openingBalance: z, closingBalance: z, notes: null },
+      ledger: { id: null, date: day, openingBalance: z, closingBalance: z, closedAt: null, notes: null },
+      dayClosed: false,
+      canCloseDay: false,
       patients: [] as any[],
       totals: {
         total: z, discount: z, net: z, balance: z,
@@ -273,7 +310,8 @@ export class LedgerService {
     if (!new Prisma.Decimal(ledger.closingBalance).equals(closingCashBalance)) {
       this.prisma.dailyLedger
         .update({ where: { id: ledger.id }, data: { closingBalance: closingCashBalance } })
-        .then(() => this.cascadeForward(day))
+        // Only a closed day pushes its cash into the next day.
+        .then(() => (ledger.closedAt ? this.carryForward(day) : undefined))
         .catch((err) => console.error('[ledger] background closingBalance update failed', err));
     }
 
@@ -285,6 +323,9 @@ export class LedgerService {
       readonlyBlocked: false,
       isSunday: false,
       ledger: { ...ledger, openingBalance: openingCashBalance, closingBalance: closingCashBalance },
+      dayClosed: !!ledger.closedAt,
+      // Days without a Cash Taken Away entry need the manual close button.
+      canCloseDay: !ledger.closedAt && handovers.length === 0,
 
       patients,
       totals: {
