@@ -195,8 +195,10 @@ function buildPatient(b: Record<string, unknown>, existing?: DemoPatient): DemoP
   const balanceUpi = Number(b.balanceUpi) || 0;
   const net = Math.max(0, total - discount);
   const balance = net - advanceCash - advanceUpi - balanceCash - balanceUpi;
-  const today = todayIST();
-  const entryDate = existing?.entryDate ?? today;
+  // entryDate is NEVER defaulted to today — the caller must send it explicitly.
+  const requestedEntryDate = b.entryDate ? String(b.entryDate).slice(0, 10) : "";
+  const entryDate = existing?.entryDate ?? requestedEntryDate;
+  if (!entryDate) throw new Error("Patient entry date is required.");
   const ageValue = Number(b.ageValue ?? b.age) || 0;
   const ageUnit = ((b.ageUnit as AgeUnit) ?? "years") as AgeUnit;
   return {
