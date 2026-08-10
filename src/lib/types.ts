@@ -156,7 +156,7 @@ export interface UpsertPatientInput {
   balanceCash?: number;
   balanceUpi?: number;
   balancePaidOn?: string | null;
-  /** Explicit entryDate (YYYY-MM-DD) — allows historical/future entries. Defaults to today on backend. */
+  /** Explicit entryDate (YYYY-MM-DD) — REQUIRED for new patients; never defaulted to today. */
   entryDate?: string | null;
 }
 

@@ -117,6 +117,8 @@ export function PatientFormDialog({ open, onOpenChange, patient, entryDate, pref
       toast.error("Name, mobile, age, and at least one test are required");
       return;
     }
+    // entryDate is never inferred — a new patient must always carry an explicit ledger date.
+    if (!patient && !entryDate) { toast.error("Patient entry date is required."); return; }
     if (advanceDateRequired) { toast.error("Please select Advance Paid On date."); return; }
     if (balanceDateRequired) { toast.error("Please select Balance Paid On date."); return; }
     if (advanceDateInvalid || balanceDateInvalid) {
