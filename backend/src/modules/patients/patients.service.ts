@@ -114,7 +114,9 @@ export class PatientsService {
   async create(input: UpsertPatientInput) {
     if (!input.testIds?.length) throw new BadRequestException('At least one test required');
     if (!input.createdById) throw new BadRequestException('createdById missing — login required');
-    const entryDay = assertLedgerDate(input.entryDate ? dateOnly(new Date(input.entryDate)) : dateOnly());
+    // entryDate is NEVER inferred from the system clock — the caller must send it explicitly.
+    if (!input.entryDate) throw new BadRequestException('Patient entry date is required.');
+    const entryDay = assertLedgerDate(dateOnly(new Date(input.entryDate)));
     await this.ledger.ensureDay(entryDay);
 
     const tests = await this.prisma.testCatalog.findMany({ where: { id: { in: input.testIds } } });
