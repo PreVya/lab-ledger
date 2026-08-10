@@ -100,11 +100,19 @@ function AppointmentsPage() {
         }}
       />
 
-      {convertFrom && (
+      {convertFrom && !convertDate && (
+        <EntryDateDialog
+          appointmentDate={convertFrom.appointmentDate.slice(0, 10)}
+          onCancel={() => setConvertFrom(null)}
+          onContinue={(d) => setConvertDate(d)}
+        />
+      )}
+
+      {convertFrom && convertDate && (
         <PatientFormDialog
-          open={!!convertFrom}
-          onOpenChange={(o) => { if (!o) setConvertFrom(null); }}
-          entryDate={today}
+          open
+          onOpenChange={(o) => { if (!o) { setConvertFrom(null); setConvertDate(null); } }}
+          entryDate={convertDate}
           prefill={{
             name: convertFrom.name, mobile: convertFrom.mobile,
             ageValue: convertFrom.ageValue, ageUnit: convertFrom.ageUnit as AgeUnit,
@@ -117,12 +125,45 @@ function AppointmentsPage() {
               await link.mutateAsync({ appointmentId: convertFrom.id, patientId: patient.id });
               toast.success("Patient linked to appointment");
               setConvertFrom(null);
+              setConvertDate(null);
               refetch();
             } catch (e: any) { toast.error(e?.message ?? "Failed to link"); }
           }}
         />
       )}
     </div>
+  );
+}
+
+const LEDGER_START = "2026-08-01";
+function isSundayISO(iso: string) {
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(Date.UTC(y, (m ?? 1) - 1, d ?? 1)).getUTCDay() === 0;
+}
+
+function EntryDateDialog({ appointmentDate, onCancel, onContinue }: { appointmentDate: string; onCancel: () => void; onContinue: (d: string) => void }) {
+  const [value, setValue] = useState(appointmentDate);
+  const tooEarly = !!value && value < LEDGER_START;
+  const sunday = !!value && isSundayISO(value);
+  const invalid = !value || tooEarly || sunday;
+
+  return (
+    <Dialog open onOpenChange={(o) => { if (!o) onCancel(); }}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader><DialogTitle>Create Patient Entry</DialogTitle></DialogHeader>
+        <div className="space-y-2">
+          <p className="text-sm text-muted-foreground">Select the ledger date for this patient entry.</p>
+          <Label className="text-xs">Entry Date</Label>
+          <Input type="date" min={LEDGER_START} value={value} onChange={(e) => setValue(e.target.value)} autoFocus />
+          {tooEarly && <p className="text-xs text-destructive">Ledger entries are allowed only from 01-Aug-2026 onward.</p>}
+          {sunday && !tooEarly && <p className="text-xs text-destructive">Sunday / Clinic Holiday. Ledger entries are blocked for this date.</p>}
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={onCancel}>Cancel</Button>
+          <Button disabled={invalid} onClick={() => onContinue(value)}>Continue</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
