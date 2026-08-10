@@ -75,7 +75,7 @@ function AppointmentsPage() {
                 <td className="p-2 text-right space-x-1">
                   <Button size="sm" variant="ghost" onClick={() => { setEditing(a); setOpenForm(true); }}>Edit</Button>
                   {!a.linkedPatientId && a.status !== "cancelled" && a.status !== "no_show" && (
-                    <Button size="sm" onClick={() => setConvertFrom(a)}>Create Patient Entry</Button>
+                    <Button size="sm" onClick={() => { setConvertDate(null); setConvertFrom(a); }}>Create Patient Entry</Button>
                   )}
                   {a.linkedPatient && (
                     <span className="text-xs text-muted-foreground">#{a.linkedPatient.registerNumber} · {a.linkedPatient.name}</span>
