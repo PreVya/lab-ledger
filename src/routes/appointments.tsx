@@ -27,6 +27,8 @@ function AppointmentsPage() {
   const [editing, setEditing] = useState<Appointment | null>(null);
   const [openForm, setOpenForm] = useState(false);
   const [convertFrom, setConvertFrom] = useState<Appointment | null>(null);
+  // Entry date is chosen explicitly by the user before the patient form opens.
+  const [convertDate, setConvertDate] = useState<string | null>(null);
 
   const { data = [], refetch } = useAppointments({ date, status: status === "all" ? undefined : status, q });
   const link = useLinkAppointmentPatient();
