@@ -1,60 +1,39 @@
-# Payment Model Fix + Payment Editing + Balance Received UI
+# Payment Model Fix — Transactions, Editing, Clean Views
 
-Three connected fixes, no changes to register numbers, FY, ledger start (01-Aug-2026), opening cash 1020, Close Day, Sunday blocking, appointment conversion, billing, attendance, salary, tests, users, employees, holidays.
+Make the Payment table the single source of truth for money received and kept by the lab. No refunds, no negative rows, no auto-filled dates.
 
-## 1. Payment table becomes canonical
+## What changes for you
 
-Confirmed from the code: the daily ledger already computes cash/UPI/card collections and closing cash from `Payment` rows by payment date, so ledger math does not need redesign. The problem is on the write side.
+1. **Multiple payments per patient.** A patient can be paid in any number of instalments, on any dates, in any modes (cash / UPI / card). Nothing is collapsed into a single "balance paid on" date.
+2. **Payment Transactions section inside the Patient Entry / Edit window.** A real table (Date | Kind | Mode | Amount | Notes | Actions) with Add / Edit / Delete, plus a summary line: Net Amount, Total Paid, Pending (or Overpaid warning). Every row's date is chosen by you — never pre-filled.
+3. **Editing a payment updates that same row.** Changing Cash to UPI just changes the mode. No `-350` correction row is ever created again.
+4. **Old correction artefacts disappear from normal views.** Legacy rows are netted per patient + date + kind + mode; only groups with a positive net show. So `Cash +350 / Cash -350 / UPI +350` displays as UPI 350 only.
+5. **Balance Received table redesigned** with proper separate headings: Patient | Reg No. | FY | Patient Entry Date | Mode | Amount, bold header, right-aligned amounts, heading reads "Balance Received on 11-Aug-2026".
+6. **Overpayment is warned, not refunded.** If the entered amounts exceed the net, a warning shows the excess and you reduce the amount before saving. Cash handed back is simply never recorded.
 
-- `patients.service.update()` currently reconciles the form's four bucket fields against existing payment rows and inserts **negative delta rows** tagged `[form-sync delta]`. That is exactly the source of `Cash ₹-350`. This delta mechanism will be removed.
-- Patient create keeps writing at most one advance row and one balance row (the first payments), each with an explicitly chosen date — no auto-fill from today or entry date.
-- Patient edit will no longer touch payment rows at all. Amount/mode/date corrections happen in the payment history UI.
-- Patient bucket fields (`advanceCash`, `advanceUpi`, `balanceCash`, `balanceUpi`, `advancePaidOn`, `balancePaidOn`) stay only as summary mirrors, recomputed from the payment rows after every payment create/update/delete.
-- `Patient.balance` (pending) = `net - SUM(Payment.amount)`.
+## Untouched
 
-## 2. Payment CRUD endpoints
+Register numbering, FY logic, ledger start 01-Aug-2026, Rs. 1020 opening cash, Close Day & Carry Forward, Sunday blocking, appointment conversion date flow, billing, attendance, salary, test catalogue, users, employees, holidays. No database schema change or migration.
 
-- `POST /api/payments` — requires explicit `date`; remove the `dateOnly()` today fallback so a missing date is rejected. Keeps `assertLedgerDate` (>= 01-Aug-2026, not Sunday).
-- `PUT /api/payments/:id` — updates date, kind, mode, amount, notes **in place** on the same row. No reversal rows. Recomputes the old date's ledger and the new date's ledger when the date changes, and recomputes patient summary fields.
-- `DELETE /api/payments/:id` — hard delete of the row, then recompute that date's ledger and the patient summary.
-- Every mutation recomputes the affected patient buckets from the full set of that patient's payment rows.
+## Technical detail
 
-## 3. Clean up existing bad rows
+**Backend — `payments.service.ts` (canonical)**
+- `record`: require an explicit `date` (remove the `dateOnly()` fallback → 400 if absent), `kind`, `mode`, `amount > 0`; validate with `assertLedgerDate`.
+- New `update(id, dto)`: mutate the same row in place (date/kind/mode/amount/notes). No reversal rows. Recompute the old date and the new date when the date moves.
+- `remove`: unchanged behaviour, but summaries now rebuilt from rows.
+- New private `resyncPatient(patientId)`: recompute `advanceCash/advanceUpi/balanceCash/balanceUpi`, `advancePaidOn/balancePaidOn` (latest date per kind), and `balance = net - SUM(amount)` purely from Payment rows. Called after every create/update/delete. Removes the current incremental `.plus()` mirroring.
+- New `history(patientId)`: returns netted groups (`patientId+date+kind+mode`, keep only net > 0) plus net/totalPaid/pending.
+- `POST /payments/cleanup-deltas`: deletes rows whose `notes = '[form-sync delta]'` together with the matching positive row they cancel (only when the group nets to zero or when the delta is negative), then resyncs affected patients and recomputes affected ledger dates. Genuine instalments on distinct dates/modes are never merged.
 
-Negative payment rows already in the database (e.g. Kiran Vishe's `cash -350`) must disappear from normal views:
-- Ledger summary, Balance Received, and patient payment history filter out rows with `amount <= 0`, so existing artefacts are hidden immediately without touching the historical data.
-- Ledger collection sums keep using all rows so cash totals stay arithmetically correct for legacy pairs; once the user re-edits the row through the new UI, the pair is replaced by a single clean row.
-- A one-shot maintenance endpoint `POST /api/payments/cleanup-deltas` collapses legacy `[form-sync delta]` pairs per patient/kind/mode into one net row and deletes zero rows, then recomputes affected ledger dates. Run once from the UI (Ledger repair area).
+**Backend — `patients.service.ts`**
+- `create`: one Payment row per non-zero component (advanceCash, advanceUpi, balanceCash, balanceUpi) — already the case — plus accept an optional `payments[]` array from the form, each with its own required date.
+- `update`: delete the `[form-sync delta]` block entirely. Patient edit touches demographics/tests/discount only; money is edited through the payments endpoints. After edit, resync the patient summary from rows and recompute affected ledger dates.
 
-## 4. Payment history UI on patient detail
+**Backend — `ledger.service.ts`**
+- `summary()` already derives collections from Payment rows; add net-grouping so legacy negative/positive pairs cancel in the `payments` array returned to the UI. Cash closing formula, close-day and carry-forward logic unchanged.
 
-New `PaymentsPanel` shown in the patient form dialog for existing patients:
-- Summary line: Net Amount / Total Paid / Pending.
-- Table: Date | Kind | Mode | Amount | Notes | Actions (Edit, Delete).
-- `Add Payment` button opens a dialog: Payment Date (required, >= 2026-08-01, not Sunday), Kind, Mode, Amount > 0, Notes optional. Confirms if total paid would exceed net.
-- Edit reuses the same dialog pre-filled and calls `PUT`, so changing Cash to UPI mutates the one row.
-- The registration form's advance/balance fields stay as-is for the first payment only, and remain disabled/read-only for editing once payment rows exist (edits go through the panel).
-
-## 5. Balance Received table UI
-
-- Heading becomes `Balance Received on 11-Aug-2026` (selected date), not "Today (from previous days)".
-- Columns: Patient | Reg No. | FY | Patient Entry Date | Mode | Amount, with `table-fixed`, explicit column widths, `whitespace-nowrap` header cells, bold header row, right-aligned amount, mode rendered as Cash / UPI / Card.
-- Rows with non-positive amounts are excluded.
-
-## Technical notes
-
-Files touched:
-- `backend/src/modules/payments/payments.service.ts` — canonical CRUD, `update`, summary recompute helper, no today fallback.
-- `backend/src/modules/payments/payments.controller.ts` — `PUT /:id`, cleanup endpoint.
-- `backend/src/modules/patients/patients.service.ts` — drop the `[form-sync delta]` block in `update()`.
-- `backend/src/modules/ledger/ledger.service.ts` — filter non-positive rows out of the returned `payments` list only.
-- `src/lib/api.ts`, `src/lib/queries.ts`, `src/lib/types.ts` — payment list/create/update/delete hooks.
-- `src/components/payments-panel.tsx` (new) + `src/components/patient-form-dialog.tsx`.
-- `src/routes/index.tsx` — Balance Received table.
-- `src/lib/demo-mode.ts` — mirror new endpoints for the offline preview.
-
-No Prisma schema change and no migration: the `Payment` table already has every needed column.
-
-## Acceptance
-
-Four payments (100 advance cash, 200 balance UPI, 300 balance cash, 900 balance cash) on four different dates all persist, total paid 1500, pending 0, each shown on its own ledger date. Editing Kiran Vishe's 350 from Cash to UPI leaves one UPI row, removes 350 from cash collection, adds it to UPI, and shows no negative row anywhere.
+**Frontend**
+- `patient-form-dialog.tsx`: new `PaymentTransactions` sub-component (local rows for a new patient, live API-backed rows for an existing one), Add/Edit dialog with required date, kind, mode, amount, notes; validation for date ≥ 2026-08-01, non-Sunday, amount > 0; overpaid warning banner. Legacy quick fields removed from the editable flow.
+- `routes/index.tsx`: rebuild `BalanceReceivedPanel` with the specified columns, bold header row, date in the heading, right-aligned amounts, uppercase mode labels.
+- `queries.ts` / `api.ts` / `types.ts`: add `useUpdatePayment`, `useDeletePayment`, `usePatientPayments`, and payment-history types.
+- `demo-mode.ts`: mirror the new POST/PUT/DELETE payment endpoints and netted history so the offline preview keeps working.
