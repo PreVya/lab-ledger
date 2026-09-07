@@ -224,11 +224,9 @@ export class PatientsService {
     const pay = this.computePayment(tests.map((t) => Number(t.rate)), input);
     const { ageValue, ageUnit, legacyAge } = normalizeAge(input);
 
-    assertLedgerDate(existing.entryDate);
-    const advanceDate = this.resolvePaidOn(input.advancePaidOn) ?? (existing.advancePaidOn ? dateOnly(existing.advancePaidOn) : null);
-    const balanceDate = this.resolvePaidOn(input.balancePaidOn) ?? (existing.balancePaidOn ? dateOnly(existing.balancePaidOn) : null);
-    this.assertPaidDates(pay, advanceDate, balanceDate);
-
+    // entryDate is NEVER read, recomputed, or modified here — it only changes
+    // through the explicit patient edit flow. Patient edit touches demographics,
+    // tests and discount ONLY; money is edited through the payments endpoints.
     const updated = await this.prisma.$transaction(async (tx) => {
       await tx.patientTest.deleteMany({ where: { patientId: id } });
       return tx.patient.update({
@@ -245,54 +243,19 @@ export class PatientsService {
           total: new Prisma.Decimal(pay.total),
           discount: new Prisma.Decimal(pay.discount),
           net: new Prisma.Decimal(pay.net),
-          advanceCash: new Prisma.Decimal(pay.advanceCash),
-          advanceUpi: new Prisma.Decimal(pay.advanceUpi),
-          advancePaidOn: advanceDate,
-          balance: new Prisma.Decimal(pay.balance),
-          balanceCash: new Prisma.Decimal(pay.balanceCash),
-          balanceUpi: new Prisma.Decimal(pay.balanceUpi),
-          balancePaidOn: balanceDate,
           tests: { create: tests.map((t) => ({ testId: t.id, rateAtEntry: t.rate })) },
         } as any,
         include: { tests: { include: { test: true } } },
       });
     });
 
-    const affectedDates = new Set<string>([existing.entryDate.toISOString().slice(0, 10)]);
-    const existingByBucket = await this.prisma.payment.groupBy({
-      by: ['kind', 'mode'],
-      where: { patientId: id },
-      _sum: { amount: true },
-    });
-    const lookup = new Map<string, Prisma.Decimal>();
-    for (const r of existingByBucket) {
-      lookup.set(`${r.kind}:${r.mode}`, r._sum.amount ?? new Prisma.Decimal(0));
-    }
-
-    const deltaRows: Prisma.PaymentCreateManyInput[] = [];
-    for (const b of BUCKETS) {
-      const target = new Prisma.Decimal((pay as any)[b.field] as number);
-      const current = lookup.get(`${b.kind}:${b.mode}`) ?? new Prisma.Decimal(0);
-      const delta = target.minus(current);
-      if (!delta.isZero()) {
-        const d = (b.kind === 'advance' ? advanceDate : balanceDate) as Date;
-        deltaRows.push({
-          patientId: id,
-          date: d,
-          kind: b.kind,
-          mode: b.mode,
-          amount: delta,
-          notes: '[form-sync delta]',
-        });
-        affectedDates.add(d.toISOString().slice(0, 10));
-      }
-    }
-    if (deltaRows.length) await this.prisma.payment.createMany({ data: deltaRows });
-
-    for (const iso of affectedDates) {
-      void this.ledger.recompute(new Date(iso)).catch((err) => console.error('[patients.update] bg recompute failed', err));
-    }
-    return updated;
+    // Rebuild the money summary (advance/balance buckets, paidOn dates, balance)
+    // purely from the existing Payment rows — no delta / correction rows.
+    const resynced = await this.payments.resyncPatient(id);
+    void this.ledger
+      .recompute(dateOnly(existing.entryDate))
+      .catch((err) => console.error('[patients.update] bg recompute failed', err));
+    return { ...(resynced ?? updated), tests: updated.tests };
   }
 
   get(id: string) {
