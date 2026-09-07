@@ -2,10 +2,21 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { Prisma, Sex, PaymentKind, PaymentMode } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { assertLedgerDate, dateOnly, LedgerService } from '../ledger/ledger.service';
+import { PaymentsService } from '../payments/payments.service';
 import { financialYearFor } from './fy';
 import { getRegisterStartNumber } from '../../config/ledger.config';
 
 export type AgeUnit = 'days' | 'months' | 'years';
+
+/** One explicit payment transaction supplied by the Payment Transactions UI. */
+export interface PatientPaymentInput {
+  kind: PaymentKind;
+  mode: PaymentMode;
+  amount: number;
+  /** REQUIRED — never defaulted. */
+  date: string;
+  notes?: string | null;
+}
 
 export interface UpsertPatientInput {
   name: string;
@@ -26,6 +37,12 @@ export interface UpsertPatientInput {
   balancePaidOn?: string | null;
   createdById?: string;
   entryDate?: string | null;
+  /**
+   * Explicit payment transactions (create only). When provided, Payment rows are
+   * created ONLY from this array; when absent, the legacy advance/balance bucket
+   * fields are used. The two sources are never combined in one request.
+   */
+  payments?: PatientPaymentInput[];
 }
 
 type Bucket = { kind: PaymentKind; mode: PaymentMode; field: 'advanceCash' | 'advanceUpi' | 'balanceCash' | 'balanceUpi' };
@@ -46,7 +63,11 @@ function normalizeAge(input: UpsertPatientInput): { ageValue: number; ageUnit: A
 
 @Injectable()
 export class PatientsService {
-  constructor(private prisma: PrismaService, private ledger: LedgerService) {}
+  constructor(
+    private prisma: PrismaService,
+    private ledger: LedgerService,
+    private payments: PaymentsService,
+  ) {}
 
   private computePayment(testRates: number[], input: UpsertPatientInput) {
     const total = testRates.reduce((s, r) => s + Number(r), 0);
