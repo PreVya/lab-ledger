@@ -172,21 +172,42 @@ export class PatientsService {
       tests: { create: tests.map((t) => ({ testId: t.id, rateAtEntry: t.rate })) },
     } as any);
 
+    // Payment rows: EITHER the explicit transactions[] from the Payment Transactions
+    // UI, OR the legacy advance/balance bucket fields — never both.
     const paymentRows: Prisma.PaymentCreateManyInput[] = [];
-    for (const b of BUCKETS) {
-      const amount = (pay as any)[b.field] as number;
-      if (amount > 0) {
+    if (input.payments?.length) {
+      for (const p of input.payments) {
+        const amount = new Prisma.Decimal(p.amount);
+        if (amount.lessThanOrEqualTo(0)) throw new BadRequestException('Payment amount must be greater than 0.');
         paymentRows.push({
           patientId: patient.id,
-          date: (b.kind === 'advance' ? advanceDate : balanceDate) as Date,
-          kind: b.kind,
-          mode: b.mode,
-          amount: new Prisma.Decimal(amount),
+          date: this.resolvePaidOn(p.date) as Date,
+          kind: p.kind,
+          mode: p.mode,
+          amount,
+          notes: p.notes ?? null,
           createdById: input.createdById ?? null,
         });
       }
+      if (paymentRows.length) await this.prisma.payment.createMany({ data: paymentRows });
+      // Rebuild the bucket mirrors purely from the rows just created.
+      await this.payments.resyncPatient(patient.id);
+    } else {
+      for (const b of BUCKETS) {
+        const amount = (pay as any)[b.field] as number;
+        if (amount > 0) {
+          paymentRows.push({
+            patientId: patient.id,
+            date: (b.kind === 'advance' ? advanceDate : balanceDate) as Date,
+            kind: b.kind,
+            mode: b.mode,
+            amount: new Prisma.Decimal(amount),
+            createdById: input.createdById ?? null,
+          });
+        }
+      }
+      if (paymentRows.length) await this.prisma.payment.createMany({ data: paymentRows });
     }
-    if (paymentRows.length) await this.prisma.payment.createMany({ data: paymentRows });
 
     const distinctDates = new Set<string>([entryDay.toISOString().slice(0, 10)]);
     paymentRows.forEach((r) => distinctDates.add((r.date as Date).toISOString().slice(0, 10)));
