@@ -370,7 +370,9 @@ export class LedgerService {
         count: patients.length,
       },
       expenses,
-      payments: paymentsToday,
+      // Netted so legacy correction pairs never surface in the day's list.
+      payments: netPaymentRows(paymentsToday as any),
+
       cashHandovers: handovers,
       cashAdded: cashAddedEntries,
     };

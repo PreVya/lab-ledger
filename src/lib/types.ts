@@ -105,6 +105,27 @@ export interface PaymentRow {
   };
 }
 
+/** Netted payment history + money summary for one patient. */
+export interface PaymentHistoryResponse {
+  patientId: string;
+  net: string;
+  totalPaid: string;
+  pending: string;
+  overpaid: string;
+  payments: PaymentRow[];
+}
+
+/** One payment transaction entered in the Payment Transactions section. */
+export interface PaymentInput {
+  kind: PaymentKind;
+  mode: PaymentMode;
+  amount: number;
+  /** REQUIRED — user-selected date the money was received. */
+  date: string;
+  notes?: string | null;
+}
+
+
 export interface TodayResponse {
   date: string;
   readonlyBlocked?: boolean;
