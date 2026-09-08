@@ -179,7 +179,10 @@ export interface UpsertPatientInput {
   balancePaidOn?: string | null;
   /** Explicit entryDate (YYYY-MM-DD) — REQUIRED for new patients; never defaulted to today. */
   entryDate?: string | null;
+  /** Explicit payment transactions (create only). Never combined with the bucket fields. */
+  payments?: PaymentInput[];
 }
+
 
 export function formatAge(p: Pick<Patient, "age" | "ageValue" | "ageUnit">): string {
   const val = p.ageValue ?? p.age ?? 0;
