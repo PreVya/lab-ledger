@@ -28,7 +28,20 @@ class UpsertPatientDto {
   @IsOptional() @IsNumber() @Min(0) balanceUpi?: number;
   @IsOptional() @IsString() balancePaidOn?: string;
   @IsOptional() @IsString() entryDate?: string;
+  /**
+   * Explicit payment transactions from the Payment Transactions UI (create only).
+   * When present, Payment rows come ONLY from here — never combined with the
+   * legacy advance/balance bucket fields above.
+   */
+  @IsOptional() @IsArray() payments?: Array<{
+    kind: 'advance' | 'balance';
+    mode: 'cash' | 'upi' | 'card' | 'other';
+    amount: number;
+    date: string;
+    notes?: string | null;
+  }>;
 }
+
 
 @UseGuards(JwtAuthGuard)
 @Controller('patients')

@@ -49,6 +49,32 @@ export function formatDateOnly(d: Date): string {
 
 const ZERO = () => new Prisma.Decimal(0);
 
+/**
+ * User-facing netting for payment rows shown in ledger views.
+ * Legacy `[form-sync delta]` pairs (e.g. Cash +350 / Cash -350) cancel out so the
+ * day's list only ever shows real money. Grouped by patient + date + kind + mode.
+ * Kept local (not imported from PaymentsService) to avoid a circular dependency.
+ */
+export function netPaymentRows<T extends { patientId: string; date: Date | string; kind: string; mode: string; amount: any }>(rows: T[]): T[] {
+  const groups = new Map<string, { row: T; total: Prisma.Decimal }>();
+  for (const r of rows) {
+    const iso = typeof r.date === 'string' ? r.date.slice(0, 10) : r.date.toISOString().slice(0, 10);
+    const key = `${r.patientId}|${iso}|${r.kind}|${r.mode}`;
+    const amount = new Prisma.Decimal(r.amount);
+    const hit = groups.get(key);
+    if (hit) {
+      hit.total = hit.total.plus(amount);
+      if (amount.greaterThan(0) && new Prisma.Decimal(hit.row.amount).lessThanOrEqualTo(0)) hit.row = r;
+    } else {
+      groups.set(key, { row: r, total: amount });
+    }
+  }
+  return [...groups.values()]
+    .filter((g) => g.total.greaterThan(0))
+    .map((g) => ({ ...g.row, amount: g.total }));
+}
+
+
 @Injectable()
 export class LedgerService {
   constructor(private prisma: PrismaService) {}
@@ -344,7 +370,9 @@ export class LedgerService {
         count: patients.length,
       },
       expenses,
-      payments: paymentsToday,
+      // Netted so legacy correction pairs never surface in the day's list.
+      payments: netPaymentRows(paymentsToday as any),
+
       cashHandovers: handovers,
       cashAdded: cashAddedEntries,
     };
