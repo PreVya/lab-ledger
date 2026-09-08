@@ -150,7 +150,7 @@ function Register() {
                 patients={data.patients}
                 onEdit={(p) => { setEditing(p); setOpen(true); }}
               />
-              <BalanceReceivedPanel rows={balancePayments} />
+              <BalanceReceivedPanel rows={balancePayments} date={selectedDate} />
             </div>
             <div className="col-span-4 flex flex-col overflow-auto">
               <CashHandoverPanel
