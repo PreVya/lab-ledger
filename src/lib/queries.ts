@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { api } from "./api";
-import type { CashAdded, CashHandover, Expense, Patient, PaymentMode, TestCatalog, TodayResponse, UpsertPatientInput } from "./types";
+import type { CashAdded, CashHandover, Expense, Patient, PaymentHistoryResponse, PaymentInput, PaymentMode, TestCatalog, TodayResponse, UpsertPatientInput } from "./types";
 
 /** Today's IST (Asia/Kolkata) business date as YYYY-MM-DD. */
 export function todayKey(): string {
@@ -14,8 +14,57 @@ export const qk = {
   tests: ["tests"] as const,
   search: (q: string, fy?: string) => ["search", q, fy ?? ""] as const,
   patient: (id: string) => ["patient", id] as const,
+  paymentHistory: (id: string) => ["payment-history", id] as const,
   users: ["users"] as const,
 };
+
+// --- Payment transactions (Payment is the canonical money ledger) --------
+
+export function usePatientPayments(patientId?: string) {
+  return useQuery({
+    queryKey: qk.paymentHistory(patientId ?? ""),
+    queryFn: () => api<PaymentHistoryResponse>(`/payments/history/${patientId}`),
+    enabled: !!patientId,
+  });
+}
+
+function usePaymentInvalidation(patientId?: string) {
+  const qc = useQueryClient();
+  return () => {
+    if (patientId) {
+      qc.invalidateQueries({ queryKey: qk.paymentHistory(patientId) });
+      qc.invalidateQueries({ queryKey: qk.patient(patientId) });
+    }
+    qc.invalidateQueries({ queryKey: ["ledger"] });
+  };
+}
+
+export function useRecordPayment(patientId: string) {
+  const invalidate = usePaymentInvalidation(patientId);
+  return useMutation({
+    mutationFn: (input: PaymentInput) =>
+      api(`/payments`, { method: "POST", body: JSON.stringify({ ...input, patientId }) }),
+    onSuccess: invalidate,
+  });
+}
+
+export function useUpdatePayment(patientId: string) {
+  const invalidate = usePaymentInvalidation(patientId);
+  return useMutation({
+    mutationFn: ({ id, ...input }: PaymentInput & { id: string }) =>
+      api(`/payments/${id}`, { method: "PUT", body: JSON.stringify(input) }),
+    onSuccess: invalidate,
+  });
+}
+
+export function useDeletePayment(patientId: string) {
+  const invalidate = usePaymentInvalidation(patientId);
+  return useMutation({
+    mutationFn: (id: string) => api(`/payments/${id}`, { method: "DELETE" }),
+    onSuccess: invalidate,
+  });
+}
+
 
 // --- Cache helpers ------------------------------------------------------
 
