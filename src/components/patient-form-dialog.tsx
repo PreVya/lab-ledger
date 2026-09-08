@@ -5,9 +5,12 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useTests, useCreatePatient, useUpdatePatient } from "@/lib/queries";
-import type { AgeUnit, Patient, Sex, UpsertPatientInput } from "@/lib/types";
-import { Check, X } from "lucide-react";
+import {
+  useTests, useCreatePatient, useUpdatePatient,
+  usePatientPayments, useRecordPayment, useUpdatePayment, useDeletePayment,
+} from "@/lib/queries";
+import type { AgeUnit, Patient, PaymentInput, PaymentKind, PaymentMode, Sex, UpsertPatientInput } from "@/lib/types";
+import { Check, X, Plus, Pencil, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { BillActions } from "@/components/bill-dialog";
@@ -16,6 +19,7 @@ const num = (v: string) => (v === "" ? 0 : Number(v) || 0);
 
 const LEDGER_START = "2026-08-01";
 const isSundayISO = (d: string) => !!d && new Date(d + "T00:00:00Z").getUTCDay() === 0;
+
 
 interface Props {
   open: boolean;

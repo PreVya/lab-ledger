@@ -253,22 +253,26 @@ function PatientTable({ patients, onEdit }: { patients: Patient[]; onEdit: (p: P
   );
 }
 
-function BalanceReceivedPanel({ rows }: { rows: PaymentRow[] }) {
+function BalanceReceivedPanel({ rows, date }: { rows: PaymentRow[]; date: string }) {
   if (!rows.length) return null;
+  const heading = new Date(date + "T00:00:00Z").toLocaleDateString("en-GB", {
+    day: "2-digit", month: "short", year: "numeric", timeZone: "UTC",
+  });
+  const total = rows.reduce((s, r) => s + Number(r.amount), 0);
   return (
     <div className="border-t">
-      <div className="flex items-center gap-2 border-b bg-amber-50 px-3 py-2 text-sm font-medium text-amber-900">
-        <ArrowRightCircle className="h-4 w-4" /> Balance Received Today (from previous days)
+      <div className="flex items-center gap-2 border-b bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-900">
+        <ArrowRightCircle className="h-4 w-4" /> Balance Received on {heading}
       </div>
       <table className="w-full text-sm">
-        <thead className="bg-secondary/50 text-xs uppercase text-muted-foreground">
+        <thead className="bg-secondary/60 text-xs uppercase tracking-wide">
           <tr>
-            <th className="px-3 py-2 text-left">Patient</th>
-            <th className="px-3 py-2 text-left">Reg #</th>
-            <th className="px-3 py-2 text-left">FY</th>
-            <th className="px-3 py-2 text-left">Original Date</th>
-            <th className="px-3 py-2 text-left">Mode</th>
-            <th className="px-3 py-2 text-right">Amount</th>
+            <th className="border-b px-3 py-2 text-left font-bold">Patient</th>
+            <th className="border-b px-3 py-2 text-left font-bold">Reg No.</th>
+            <th className="border-b px-3 py-2 text-left font-bold">FY</th>
+            <th className="border-b px-3 py-2 text-left font-bold">Patient Entry Date</th>
+            <th className="border-b px-3 py-2 text-left font-bold">Mode</th>
+            <th className="border-b px-3 py-2 text-right font-bold">Amount</th>
           </tr>
         </thead>
         <tbody>
@@ -277,16 +281,27 @@ function BalanceReceivedPanel({ rows }: { rows: PaymentRow[] }) {
               <td className="px-3 py-2 font-medium">{r.patient?.name ?? "—"}</td>
               <td className="px-3 py-2 font-mono">{r.patient?.registerNumber ?? "—"}</td>
               <td className="px-3 py-2 font-mono text-xs text-muted-foreground">{r.patient?.financialYear ?? "—"}</td>
-              <td className="px-3 py-2">{r.patient?.entryDate?.slice(0, 10) ?? "—"}</td>
-              <td className="px-3 py-2 uppercase text-xs">{r.mode}</td>
+              <td className="px-3 py-2 tabular-nums">
+                {r.patient?.entryDate
+                  ? new Date(r.patient.entryDate.slice(0, 10) + "T00:00:00Z").toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" })
+                  : "—"}
+              </td>
+              <td className="px-3 py-2 text-xs font-medium uppercase">{r.mode}</td>
               <td className="px-3 py-2 text-right tabular-nums">{money(r.amount)}</td>
             </tr>
           ))}
         </tbody>
+        <tfoot>
+          <tr className="bg-secondary/40">
+            <td className="px-3 py-2 font-bold" colSpan={5}>Total</td>
+            <td className="px-3 py-2 text-right font-bold tabular-nums">{money(total)}</td>
+          </tr>
+        </tfoot>
       </table>
     </div>
   );
 }
+
 
 function CashHandoverPanel({ date, handovers, total, readOnly }: { date: string; handovers: CashHandover[]; total: string; readOnly?: boolean }) {
   const create = useCreateCashHandover(date);
