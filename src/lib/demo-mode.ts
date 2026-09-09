@@ -129,7 +129,7 @@ function summary(date: string) {
   const ledger = ledgerFor(date);
   const patients = store.patients.filter(p => p.entryDate === date).sort((a, b) => a.registerNumber - b.registerNumber);
   const expenses = store.expenses.filter(e => e.date === date);
-  const payments = store.payments.filter(p => p.date === date);
+  const payments = netRows(store.payments.filter(p => p.date === date));
   const handovers = store.handovers.filter(h => h.date === date);
   const cashAddedEntries = store.cashAdded.filter(c => c.date === date);
 
