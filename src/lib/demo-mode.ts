@@ -77,7 +77,7 @@ function isSundayStr(d: string) {
 
 /** Net cash movement for a single date. */
 function cashDeltaFor(date: string) {
-  const cash = store.payments.filter(p => p.date === date && p.mode === "cash").reduce((s, p) => s + Number(p.amount), 0);
+  const cash = netRows(store.payments.filter(p => p.date === date && p.mode === "cash")).reduce((s, p) => s + Number(p.amount), 0);
   const cashExpenses = store.expenses.filter(e => e.date === date && e.mode === "cash").reduce((s, e) => s + Number(e.amount), 0);
   const takenAway = store.handovers.filter(h => h.date === date).reduce((s, h) => s + Number(h.amount), 0);
   const added = store.cashAdded.filter(c => c.date === date).reduce((s, c) => s + Number(c.amount), 0);
@@ -129,7 +129,7 @@ function summary(date: string) {
   const ledger = ledgerFor(date);
   const patients = store.patients.filter(p => p.entryDate === date).sort((a, b) => a.registerNumber - b.registerNumber);
   const expenses = store.expenses.filter(e => e.date === date);
-  const payments = store.payments.filter(p => p.date === date);
+  const payments = netRows(store.payments.filter(p => p.date === date));
   const handovers = store.handovers.filter(h => h.date === date);
   const cashAddedEntries = store.cashAdded.filter(c => c.date === date);
 
@@ -223,8 +223,74 @@ function buildPatient(b: Record<string, unknown>, existing?: DemoPatient): DemoP
   };
 }
 
-function syncPaymentsFor(patient: DemoPatient) {
-  // Remove existing payments for this patient; re-create from buckets.
+function patientStub(patient: DemoPatient) {
+  return {
+    id: patient.id, name: patient.name, mobile: patient.mobile,
+    registerNumber: patient.registerNumber, dailySerial: patient.dailySerial,
+    entryDate: patient.entryDate, financialYear: patient.financialYear,
+  };
+}
+
+/** Net legacy positive/negative pairs by patient+date+kind+mode; keep positives only. */
+function netRows(rows: PaymentRow[]): PaymentRow[] {
+  const groups = new Map<string, { row: PaymentRow; sum: number }>();
+  for (const r of rows) {
+    const key = [r.patientId, r.date, r.kind, r.mode].join("|");
+    const g = groups.get(key);
+    if (g) g.sum += Number(r.amount);
+    else groups.set(key, { row: r, sum: Number(r.amount) });
+  }
+  return [...groups.values()]
+    .filter(g => g.sum > 0)
+    .map(g => ({ ...g.row, amount: String(g.sum) }));
+}
+
+/** Rebuild the patient's bucket mirrors + balance purely from Payment rows. */
+function resyncPatientFromRows(patient: DemoPatient) {
+  const rows = netRows(store.payments.filter(p => p.patientId === patient.id));
+  let advanceCash = 0, advanceUpi = 0, balanceCash = 0, balanceUpi = 0;
+  let advancePaidOn: string | null = null, balancePaidOn: string | null = null;
+  for (const r of rows) {
+    const a = Number(r.amount);
+    if (r.kind === "advance") {
+      if (r.mode === "cash") advanceCash += a; else advanceUpi += a;
+      if (!advancePaidOn || r.date > advancePaidOn) advancePaidOn = r.date;
+    } else {
+      if (r.mode === "cash") balanceCash += a; else balanceUpi += a;
+      if (!balancePaidOn || r.date > balancePaidOn) balancePaidOn = r.date;
+    }
+  }
+  patient.advanceCash = String(advanceCash);
+  patient.advanceUpi = String(advanceUpi);
+  patient.balanceCash = String(balanceCash);
+  patient.balanceUpi = String(balanceUpi);
+  patient.advancePaidOn = advancePaidOn;
+  patient.balancePaidOn = balancePaidOn;
+  patient.balance = String(Number(patient.net) - (advanceCash + advanceUpi + balanceCash + balanceUpi));
+}
+
+/** Create rows from an explicit payments[] array (create flow only). */
+function createPaymentsFromInput(patient: DemoPatient, payments: Array<Record<string, unknown>>) {
+  for (const p of payments) {
+    const amt = Number(p.amount) || 0;
+    if (amt <= 0) continue;
+    const date = String(p.date || "").slice(0, 10);
+    if (!date) throw new Error("Please select a date for every payment.");
+    store.payments.push({
+      id: uid(), patientId: patient.id, date,
+      kind: (p.kind as PaymentRow["kind"]) ?? "advance",
+      mode: (p.mode as PaymentMode) ?? "cash",
+      amount: String(amt),
+      notes: (p.notes as string) ?? null,
+      createdAt: new Date().toISOString(),
+      patient: patientStub(patient),
+    });
+  }
+  resyncPatientFromRows(patient);
+}
+
+/** Legacy fallback: create rows from the advance/balance bucket fields. */
+function createPaymentsFromBuckets(patient: DemoPatient) {
   store.payments = store.payments.filter(p => p.patientId !== patient.id);
   const buckets: Array<{ amt: number; kind: "advance" | "balance"; mode: PaymentMode; date: string | null }> = [
     { amt: Number(patient.advanceCash), kind: "advance", mode: "cash", date: patient.advancePaidOn },
@@ -234,20 +300,17 @@ function syncPaymentsFor(patient: DemoPatient) {
   ];
   for (const b of buckets) {
     if (b.amt > 0) {
-      const date = (b.date || patient.entryDate).slice(0, 10);
       store.payments.push({
-        id: uid(), patientId: patient.id, date,
+        id: uid(), patientId: patient.id, date: (b.date || patient.entryDate).slice(0, 10),
         kind: b.kind, mode: b.mode, amount: String(b.amt),
         notes: null, createdAt: new Date().toISOString(),
-        patient: {
-          id: patient.id, name: patient.name, mobile: patient.mobile,
-          registerNumber: patient.registerNumber, dailySerial: patient.dailySerial,
-          entryDate: patient.entryDate, financialYear: patient.financialYear,
-        },
+        patient: patientStub(patient),
       });
     }
   }
+  resyncPatientFromRows(patient);
 }
+
 
 export function demoHandle(path: string, init: RequestInit = {}): unknown {
   const method = (init.method || "GET").toUpperCase();
@@ -287,7 +350,9 @@ export function demoHandle(path: string, init: RequestInit = {}): unknown {
   if (path === "/patients" && method === "POST") {
     const p = buildPatient(body);
     store.patients.push(p);
-    syncPaymentsFor(p);
+    // Payment rows come from EITHER payments[] OR the legacy buckets — never both.
+    if (Array.isArray(body.payments) && body.payments.length) createPaymentsFromInput(p, body.payments);
+    else createPaymentsFromBuckets(p);
     return p;
   }
 
@@ -298,9 +363,11 @@ export function demoHandle(path: string, init: RequestInit = {}): unknown {
     if (idx === -1) return null;
     const updated = buildPatient(body, store.patients[idx]);
     store.patients[idx] = updated;
-    syncPaymentsFor(updated);
+    // Editing a patient never creates or corrects money rows — only resync.
+    resyncPatientFromRows(updated);
     return updated;
   }
+
   if (patientIdMatch && method === "GET") {
     return store.patients.find(p => p.id === patientIdMatch[1]) || null;
   }
@@ -372,26 +439,76 @@ export function demoHandle(path: string, init: RequestInit = {}): unknown {
     return { ok: true };
   }
 
-  // Payments record (kept minimal for demo)
+  // ---- Payment transactions (Payment rows are the single source of truth) ----
+  const historyMatch = path.match(/^\/payments\/history\/([^/?]+)$/);
+  if (historyMatch && method === "GET") {
+    const patientId = historyMatch[1];
+    const patient = store.patients.find(p => p.id === patientId);
+    const rows = netRows(store.payments.filter(p => p.patientId === patientId))
+      .sort((a, b) => a.date.localeCompare(b.date));
+    const net = Number(patient?.net ?? 0);
+    const totalPaid = rows.reduce((s, r) => s + Number(r.amount), 0);
+    return {
+      patientId,
+      net: String(net),
+      totalPaid: String(totalPaid),
+      pending: String(Math.max(0, net - totalPaid)),
+      overpaid: String(Math.max(0, totalPaid - net)),
+      payments: rows,
+    };
+  }
+
+  const byPatientMatch = path.match(/^\/payments\/patient\/([^/?]+)$/);
+  if (byPatientMatch && method === "GET") {
+    return netRows(store.payments.filter(p => p.patientId === byPatientMatch[1]))
+      .sort((a, b) => a.date.localeCompare(b.date));
+  }
+
   if (path === "/payments" && method === "POST") {
     const patient = store.patients.find(p => p.id === body.patientId);
     if (!patient) throw new Error("Patient not found");
-    const date = (body.date || todayIST()).slice(0, 10);
+    const date = String(body.date || "").slice(0, 10);
+    if (!date) throw new Error("Please select the payment date.");
     const amt = Number(body.amount) || 0;
-    const field = body.kind === "advance"
-      ? (body.mode === "cash" ? "advanceCash" : "advanceUpi")
-      : (body.mode === "cash" ? "balanceCash" : "balanceUpi");
-    (patient as any)[field] = String(Number((patient as any)[field]) + amt);
-    if (body.kind === "advance") patient.advancePaidOn = date; else patient.balancePaidOn = date;
-    const collected = Number(patient.advanceCash) + Number(patient.advanceUpi) + Number(patient.balanceCash) + Number(patient.balanceUpi);
-    patient.balance = String(Number(patient.net) - collected);
-    store.payments.push({
-      id: uid(), patientId: patient.id, date, kind: body.kind, mode: body.mode, amount: String(amt),
+    if (amt <= 0) throw new Error("Payment amount must be greater than 0.");
+    const row: PaymentRow = {
+      id: uid(), patientId: patient.id, date,
+      kind: body.kind, mode: body.mode, amount: String(amt),
       notes: body.notes ?? null, createdAt: new Date().toISOString(),
-      patient: { id: patient.id, name: patient.name, mobile: patient.mobile, registerNumber: patient.registerNumber, dailySerial: patient.dailySerial, entryDate: patient.entryDate, financialYear: patient.financialYear },
-    });
-    return { patient };
+      patient: patientStub(patient),
+    };
+    store.payments.push(row);
+    resyncPatientFromRows(patient);
+    return row;
   }
+
+  const paymentIdMatch = path.match(/^\/payments\/([^/?]+)$/);
+  if (paymentIdMatch && method === "PUT") {
+    const row = store.payments.find(p => p.id === paymentIdMatch[1]);
+    if (!row) throw new Error("Payment not found");
+    // Edit the SAME row in place — no negative correction rows are ever created.
+    if (body.date) row.date = String(body.date).slice(0, 10);
+    if (body.kind) row.kind = body.kind;
+    if (body.mode) row.mode = body.mode;
+    if (body.amount !== undefined) {
+      const amt = Number(body.amount) || 0;
+      if (amt <= 0) throw new Error("Payment amount must be greater than 0.");
+      row.amount = String(amt);
+    }
+    if (body.notes !== undefined) row.notes = body.notes ?? null;
+    const patient = store.patients.find(p => p.id === row.patientId);
+    if (patient) resyncPatientFromRows(patient);
+    return row;
+  }
+
+  if (paymentIdMatch && method === "DELETE") {
+    const row = store.payments.find(p => p.id === paymentIdMatch[1]);
+    store.payments = store.payments.filter(p => p.id !== paymentIdMatch[1]);
+    const patient = row && store.patients.find(p => p.id === row.patientId);
+    if (patient) resyncPatientFromRows(patient);
+    return { ok: true };
+  }
+
 
   // ---- Phase 3: bills (manual generation only) ----
   if (path.startsWith("/bills")) {
