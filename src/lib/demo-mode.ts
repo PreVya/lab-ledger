@@ -77,7 +77,7 @@ function isSundayStr(d: string) {
 
 /** Net cash movement for a single date. */
 function cashDeltaFor(date: string) {
-  const cash = store.payments.filter(p => p.date === date && p.mode === "cash").reduce((s, p) => s + Number(p.amount), 0);
+  const cash = netRows(store.payments.filter(p => p.date === date && p.mode === "cash")).reduce((s, p) => s + Number(p.amount), 0);
   const cashExpenses = store.expenses.filter(e => e.date === date && e.mode === "cash").reduce((s, e) => s + Number(e.amount), 0);
   const takenAway = store.handovers.filter(h => h.date === date).reduce((s, h) => s + Number(h.amount), 0);
   const added = store.cashAdded.filter(c => c.date === date).reduce((s, c) => s + Number(c.amount), 0);
