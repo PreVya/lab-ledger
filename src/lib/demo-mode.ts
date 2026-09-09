@@ -223,8 +223,74 @@ function buildPatient(b: Record<string, unknown>, existing?: DemoPatient): DemoP
   };
 }
 
-function syncPaymentsFor(patient: DemoPatient) {
-  // Remove existing payments for this patient; re-create from buckets.
+function patientStub(patient: DemoPatient) {
+  return {
+    id: patient.id, name: patient.name, mobile: patient.mobile,
+    registerNumber: patient.registerNumber, dailySerial: patient.dailySerial,
+    entryDate: patient.entryDate, financialYear: patient.financialYear,
+  };
+}
+
+/** Net legacy positive/negative pairs by patient+date+kind+mode; keep positives only. */
+function netRows(rows: PaymentRow[]): PaymentRow[] {
+  const groups = new Map<string, { row: PaymentRow; sum: number }>();
+  for (const r of rows) {
+    const key = [r.patientId, r.date, r.kind, r.mode].join("|");
+    const g = groups.get(key);
+    if (g) g.sum += Number(r.amount);
+    else groups.set(key, { row: r, sum: Number(r.amount) });
+  }
+  return [...groups.values()]
+    .filter(g => g.sum > 0)
+    .map(g => ({ ...g.row, amount: String(g.sum) }));
+}
+
+/** Rebuild the patient's bucket mirrors + balance purely from Payment rows. */
+function resyncPatientFromRows(patient: DemoPatient) {
+  const rows = netRows(store.payments.filter(p => p.patientId === patient.id));
+  let advanceCash = 0, advanceUpi = 0, balanceCash = 0, balanceUpi = 0;
+  let advancePaidOn: string | null = null, balancePaidOn: string | null = null;
+  for (const r of rows) {
+    const a = Number(r.amount);
+    if (r.kind === "advance") {
+      if (r.mode === "cash") advanceCash += a; else advanceUpi += a;
+      if (!advancePaidOn || r.date > advancePaidOn) advancePaidOn = r.date;
+    } else {
+      if (r.mode === "cash") balanceCash += a; else balanceUpi += a;
+      if (!balancePaidOn || r.date > balancePaidOn) balancePaidOn = r.date;
+    }
+  }
+  patient.advanceCash = String(advanceCash);
+  patient.advanceUpi = String(advanceUpi);
+  patient.balanceCash = String(balanceCash);
+  patient.balanceUpi = String(balanceUpi);
+  patient.advancePaidOn = advancePaidOn;
+  patient.balancePaidOn = balancePaidOn;
+  patient.balance = String(Number(patient.net) - (advanceCash + advanceUpi + balanceCash + balanceUpi));
+}
+
+/** Create rows from an explicit payments[] array (create flow only). */
+function createPaymentsFromInput(patient: DemoPatient, payments: Array<Record<string, unknown>>) {
+  for (const p of payments) {
+    const amt = Number(p.amount) || 0;
+    if (amt <= 0) continue;
+    const date = String(p.date || "").slice(0, 10);
+    if (!date) throw new Error("Please select a date for every payment.");
+    store.payments.push({
+      id: uid(), patientId: patient.id, date,
+      kind: (p.kind as PaymentRow["kind"]) ?? "advance",
+      mode: (p.mode as PaymentMode) ?? "cash",
+      amount: String(amt),
+      notes: (p.notes as string) ?? null,
+      createdAt: new Date().toISOString(),
+      patient: patientStub(patient),
+    });
+  }
+  resyncPatientFromRows(patient);
+}
+
+/** Legacy fallback: create rows from the advance/balance bucket fields. */
+function createPaymentsFromBuckets(patient: DemoPatient) {
   store.payments = store.payments.filter(p => p.patientId !== patient.id);
   const buckets: Array<{ amt: number; kind: "advance" | "balance"; mode: PaymentMode; date: string | null }> = [
     { amt: Number(patient.advanceCash), kind: "advance", mode: "cash", date: patient.advancePaidOn },
@@ -234,20 +300,17 @@ function syncPaymentsFor(patient: DemoPatient) {
   ];
   for (const b of buckets) {
     if (b.amt > 0) {
-      const date = (b.date || patient.entryDate).slice(0, 10);
       store.payments.push({
-        id: uid(), patientId: patient.id, date,
+        id: uid(), patientId: patient.id, date: (b.date || patient.entryDate).slice(0, 10),
         kind: b.kind, mode: b.mode, amount: String(b.amt),
         notes: null, createdAt: new Date().toISOString(),
-        patient: {
-          id: patient.id, name: patient.name, mobile: patient.mobile,
-          registerNumber: patient.registerNumber, dailySerial: patient.dailySerial,
-          entryDate: patient.entryDate, financialYear: patient.financialYear,
-        },
+        patient: patientStub(patient),
       });
     }
   }
+  resyncPatientFromRows(patient);
 }
+
 
 export function demoHandle(path: string, init: RequestInit = {}): unknown {
   const method = (init.method || "GET").toUpperCase();
