@@ -350,7 +350,9 @@ export function demoHandle(path: string, init: RequestInit = {}): unknown {
   if (path === "/patients" && method === "POST") {
     const p = buildPatient(body);
     store.patients.push(p);
-    syncPaymentsFor(p);
+    // Payment rows come from EITHER payments[] OR the legacy buckets — never both.
+    if (Array.isArray(body.payments) && body.payments.length) createPaymentsFromInput(p, body.payments);
+    else createPaymentsFromBuckets(p);
     return p;
   }
 
@@ -361,9 +363,11 @@ export function demoHandle(path: string, init: RequestInit = {}): unknown {
     if (idx === -1) return null;
     const updated = buildPatient(body, store.patients[idx]);
     store.patients[idx] = updated;
-    syncPaymentsFor(updated);
+    // Editing a patient never creates or corrects money rows — only resync.
+    resyncPatientFromRows(updated);
     return updated;
   }
+
   if (patientIdMatch && method === "GET") {
     return store.patients.find(p => p.id === patientIdMatch[1]) || null;
   }
