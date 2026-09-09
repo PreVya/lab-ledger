@@ -439,26 +439,76 @@ export function demoHandle(path: string, init: RequestInit = {}): unknown {
     return { ok: true };
   }
 
-  // Payments record (kept minimal for demo)
+  // ---- Payment transactions (Payment rows are the single source of truth) ----
+  const historyMatch = path.match(/^\/payments\/history\/([^/?]+)$/);
+  if (historyMatch && method === "GET") {
+    const patientId = historyMatch[1];
+    const patient = store.patients.find(p => p.id === patientId);
+    const rows = netRows(store.payments.filter(p => p.patientId === patientId))
+      .sort((a, b) => a.date.localeCompare(b.date));
+    const net = Number(patient?.net ?? 0);
+    const totalPaid = rows.reduce((s, r) => s + Number(r.amount), 0);
+    return {
+      patientId,
+      net: String(net),
+      totalPaid: String(totalPaid),
+      pending: String(Math.max(0, net - totalPaid)),
+      overpaid: String(Math.max(0, totalPaid - net)),
+      payments: rows,
+    };
+  }
+
+  const byPatientMatch = path.match(/^\/payments\/patient\/([^/?]+)$/);
+  if (byPatientMatch && method === "GET") {
+    return netRows(store.payments.filter(p => p.patientId === byPatientMatch[1]))
+      .sort((a, b) => a.date.localeCompare(b.date));
+  }
+
   if (path === "/payments" && method === "POST") {
     const patient = store.patients.find(p => p.id === body.patientId);
     if (!patient) throw new Error("Patient not found");
-    const date = (body.date || todayIST()).slice(0, 10);
+    const date = String(body.date || "").slice(0, 10);
+    if (!date) throw new Error("Please select the payment date.");
     const amt = Number(body.amount) || 0;
-    const field = body.kind === "advance"
-      ? (body.mode === "cash" ? "advanceCash" : "advanceUpi")
-      : (body.mode === "cash" ? "balanceCash" : "balanceUpi");
-    (patient as any)[field] = String(Number((patient as any)[field]) + amt);
-    if (body.kind === "advance") patient.advancePaidOn = date; else patient.balancePaidOn = date;
-    const collected = Number(patient.advanceCash) + Number(patient.advanceUpi) + Number(patient.balanceCash) + Number(patient.balanceUpi);
-    patient.balance = String(Number(patient.net) - collected);
-    store.payments.push({
-      id: uid(), patientId: patient.id, date, kind: body.kind, mode: body.mode, amount: String(amt),
+    if (amt <= 0) throw new Error("Payment amount must be greater than 0.");
+    const row: PaymentRow = {
+      id: uid(), patientId: patient.id, date,
+      kind: body.kind, mode: body.mode, amount: String(amt),
       notes: body.notes ?? null, createdAt: new Date().toISOString(),
-      patient: { id: patient.id, name: patient.name, mobile: patient.mobile, registerNumber: patient.registerNumber, dailySerial: patient.dailySerial, entryDate: patient.entryDate, financialYear: patient.financialYear },
-    });
-    return { patient };
+      patient: patientStub(patient),
+    };
+    store.payments.push(row);
+    resyncPatientFromRows(patient);
+    return row;
   }
+
+  const paymentIdMatch = path.match(/^\/payments\/([^/?]+)$/);
+  if (paymentIdMatch && method === "PUT") {
+    const row = store.payments.find(p => p.id === paymentIdMatch[1]);
+    if (!row) throw new Error("Payment not found");
+    // Edit the SAME row in place — no negative correction rows are ever created.
+    if (body.date) row.date = String(body.date).slice(0, 10);
+    if (body.kind) row.kind = body.kind;
+    if (body.mode) row.mode = body.mode;
+    if (body.amount !== undefined) {
+      const amt = Number(body.amount) || 0;
+      if (amt <= 0) throw new Error("Payment amount must be greater than 0.");
+      row.amount = String(amt);
+    }
+    if (body.notes !== undefined) row.notes = body.notes ?? null;
+    const patient = store.patients.find(p => p.id === row.patientId);
+    if (patient) resyncPatientFromRows(patient);
+    return row;
+  }
+
+  if (paymentIdMatch && method === "DELETE") {
+    const row = store.payments.find(p => p.id === paymentIdMatch[1]);
+    store.payments = store.payments.filter(p => p.id !== paymentIdMatch[1]);
+    const patient = row && store.patients.find(p => p.id === row.patientId);
+    if (patient) resyncPatientFromRows(patient);
+    return { ok: true };
+  }
+
 
   // ---- Phase 3: bills (manual generation only) ----
   if (path.startsWith("/bills")) {
