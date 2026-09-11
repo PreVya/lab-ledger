@@ -354,6 +354,13 @@ export function demoHandle(path: string, init: RequestInit = {}): unknown {
       .sort((a, b) => b.entryDate.localeCompare(a.entryDate) || b.registerNumber - a.registerNumber);
   }
 
+  if (path.startsWith("/patients/latest-register") && method === "GET") {
+    const url = new URL("http://x" + path);
+    const fy = url.searchParams.get("fy") || "";
+    const nums = store.patients.filter(p => p.financialYear === fy).map(p => p.registerNumber);
+    return { financialYear: fy, registerNumber: nums.length ? Math.max(...nums) : null };
+  }
+
   if (path === "/patients" && method === "POST") {
     const p = buildPatient(body);
     store.patients.push(p);
@@ -377,6 +384,20 @@ export function demoHandle(path: string, init: RequestInit = {}): unknown {
 
   if (patientIdMatch && method === "GET") {
     return store.patients.find(p => p.id === patientIdMatch[1]) || null;
+  }
+
+  if (patientIdMatch && method === "DELETE") {
+    const id = patientIdMatch[1];
+    const target = store.patients.find(p => p.id === id);
+    if (!target) throw new Error("Patient not found.");
+    const hasNewer = store.patients.some(
+      p => p.financialYear === target.financialYear && p.registerNumber > target.registerNumber,
+    );
+    if (hasNewer) throw new Error("Only the latest patient entry can be deleted.");
+    store.patients = store.patients.filter(p => p.id !== id);
+    store.payments = store.payments.filter(p => p.patientId !== id);
+    store.bills = store.bills.filter((b: any) => b.patientId !== id);
+    return { ok: true };
   }
 
   if (path.startsWith("/ledger") && method === "GET") {
