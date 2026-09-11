@@ -5,7 +5,9 @@ import {
   useLedger, useCreateExpense, useDeleteExpense, todayKey,
   useCreateCashHandover, useDeleteCashHandover,
   useCreateCashAdded, useDeleteCashAdded, useCloseDay,
+  useLatestRegister, useDeletePatient,
 } from "@/lib/queries";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Trash2, AlertCircle, CalendarDays, HandCoins, ArrowRightCircle, PlusCircle } from "lucide-react";
@@ -199,6 +201,21 @@ function Stat({ label, value, accent }: { label: string; value: string; accent?:
 }
 
 function PatientTable({ patients, onEdit }: { patients: Patient[]; onEdit: (p: Patient) => void }) {
+  const fy = patients[0]?.financialYear;
+  const { data: latest } = useLatestRegister(fy);
+  const del = useDeletePatient();
+
+  const isLatest = (p: Patient) =>
+    !!latest && latest.financialYear === p.financialYear && latest.registerNumber === p.registerNumber;
+
+  const handleDelete = (p: Patient) => {
+    if (!window.confirm(`Delete Reg No. ${p.registerNumber} — ${p.name}? This cannot be undone.`)) return;
+    del.mutate(p.id, {
+      onSuccess: () => toast.success("Patient entry deleted"),
+      onError: (e: any) => toast.error(e?.message || "Only the latest patient entry can be deleted."),
+    });
+  };
+
   return (
     <div className="overflow-auto">
       <div className="sticky top-0 z-10 border-b bg-secondary px-3 py-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -216,11 +233,12 @@ function PatientTable({ patients, onEdit }: { patients: Patient[]; onEdit: (p: P
             <th className="px-3 py-2 text-right">Net</th>
             <th className="px-3 py-2 text-right">Paid</th>
             <th className="px-3 py-2 text-right">Balance</th>
+            <th className="px-3 py-2 text-right"></th>
           </tr>
         </thead>
         <tbody>
           {patients.length === 0 && (
-            <tr><td colSpan={9} className="p-6 text-center text-muted-foreground">
+            <tr><td colSpan={10} className="p-6 text-center text-muted-foreground">
               No entries yet. Click <span className="font-medium">Add Patient</span> to add the first one.
             </td></tr>
           )}
@@ -243,6 +261,18 @@ function PatientTable({ patients, onEdit }: { patients: Patient[]; onEdit: (p: P
                 <td className="px-3 py-2 text-right tabular-nums">{money(paid)}</td>
                 <td className={`px-3 py-2 text-right tabular-nums ${Number(p.balance) > 0 ? "text-destructive font-medium" : ""}`}>
                   {money(p.balance)}
+                </td>
+                <td className="px-2 py-2 text-right" onClick={(e) => e.stopPropagation()}>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-destructive hover:bg-destructive/10 disabled:opacity-30"
+                    disabled={!isLatest(p) || del.isPending}
+                    title={isLatest(p) ? "Delete this entry" : "Only the latest patient entry can be deleted."}
+                    onClick={() => handleDelete(p)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </td>
               </tr>
             );
