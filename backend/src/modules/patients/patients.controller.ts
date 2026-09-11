@@ -65,6 +65,17 @@ export class PatientsController {
   @Get('search')
   search(@Query('q') q: string, @Query('fy') fy?: string) { return this.patients.search(q ?? '', fy); }
 
+  /** Highest register number in a financial year — drives the delete-latest-only rule in the UI. */
+  @Get('latest-register')
+  latestRegister(@Query('fy') fy: string) {
+    if (!fy) throw new BadRequestException('fy is required');
+    return this.patients.latestRegister(fy);
+  }
+
   @Get(':id')
   get(@Param('id') id: string) { return this.patients.get(id); }
+
+  /** Hard delete — rejected unless this is the latest register entry of its FY. */
+  @Delete(':id')
+  remove(@Param('id') id: string) { return this.patients.remove(id); }
 }
