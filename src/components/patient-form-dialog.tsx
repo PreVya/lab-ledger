@@ -76,8 +76,11 @@ export function PatientFormDialog({ open, onOpenChange, patient, entryDate, pref
   const create = useCreatePatient();
   const update = useUpdatePatient(patient?.id ?? "");
 
+  const [salutation, setSalutation] = useState<Salutation | null>(null);
   const [name, setName] = useState("");
   const [mobile, setMobile] = useState("");
+  const [whatsappReportRequired, setWhatsappReportRequired] = useState(false);
+  const [outsourcedReportReady, setOutsourcedReportReady] = useState(false);
   const [ageValue, setAgeValue] = useState("");
   const [ageUnit, setAgeUnit] = useState<AgeUnit>("years");
   const [sex, setSex] = useState<Sex>("M");
@@ -95,7 +98,11 @@ export function PatientFormDialog({ open, onOpenChange, patient, entryDate, pref
   useEffect(() => {
     if (!open) return;
     if (patient) {
-      setName(patient.name); setMobile(patient.mobile);
+      const parsed = splitSalutation(patient.name);
+      setSalutation(parsed.salutation); setName(parsed.rest);
+      setWhatsappReportRequired(!!patient.whatsappReportRequired);
+      setOutsourcedReportReady(!!patient.outsourcedReportReady);
+      setMobile(patient.mobile);
       setAgeValue(String(patient.ageValue ?? patient.age ?? ""));
       setAgeUnit((patient.ageUnit ?? "years") as AgeUnit);
       setSex(patient.sex); setReferredDoctor(patient.referredDoctor ?? "");
@@ -104,7 +111,10 @@ export function PatientFormDialog({ open, onOpenChange, patient, entryDate, pref
       setDiscount(patient.discount);
       setDraftPayments([]);
     } else {
-      setName(prefill?.name ?? ""); setMobile(prefill?.mobile ?? "");
+      const parsed = splitSalutation(prefill?.name ?? "");
+      setSalutation(parsed.salutation); setName(parsed.rest);
+      setWhatsappReportRequired(false); setOutsourcedReportReady(false);
+      setMobile(prefill?.mobile ?? "");
       setAgeValue(prefill?.ageValue != null ? String(prefill.ageValue) : "");
       setAgeUnit((prefill?.ageUnit ?? "years") as AgeUnit);
       setSex((prefill?.sex ?? "M") as Sex); setReferredDoctor(prefill?.referredDoctor ?? "");
