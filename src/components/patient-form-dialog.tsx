@@ -154,11 +154,13 @@ export function PatientFormDialog({ open, onOpenChange, patient, entryDate, pref
     if (!patient && !entryDate) { toast.error("Patient entry date is required."); return; }
 
     const input: UpsertPatientInput = {
-      name: name.trim(), mobile: mobile.trim(),
+      name: combineName(salutation, name), mobile: mobile.trim(),
       ageValue: Number(ageValue), ageUnit,
       sex,
       referredDoctor: referredDoctor.trim() || undefined,
       notes: notes.trim() || undefined,
+      whatsappReportRequired,
+      outsourcedReportReady,
       testIds: selectedTests,
       discount: num(discount),
       entryDate: !patient && entryDate ? entryDate : undefined,
