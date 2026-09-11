@@ -184,7 +184,7 @@ export function PatientFormDialog({ open, onOpenChange, patient, entryDate, pref
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[92vh] overflow-y-auto">
+      <DialogContent className="max-w-[92vw] max-h-[92vh] overflow-y-auto xl:max-w-6xl">
         <DialogHeader>
           <DialogTitle>{patient ? `Edit Patient #${patient.registerNumber ?? patient.dailySerial}${patient.financialYear ? ` · FY ${patient.financialYear}` : ""}` : `New Patient Entry${entryDate ? ` — ${fmtDate(entryDate)}` : ""}`}</DialogTitle>
         </DialogHeader>
