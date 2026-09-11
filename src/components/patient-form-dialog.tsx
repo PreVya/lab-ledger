@@ -184,13 +184,14 @@ export function PatientFormDialog({ open, onOpenChange, patient, entryDate, pref
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[92vh] overflow-y-auto">
+      <DialogContent className="max-w-[92vw] max-h-[92vh] overflow-y-auto xl:max-w-6xl">
         <DialogHeader>
           <DialogTitle>{patient ? `Edit Patient #${patient.registerNumber ?? patient.dailySerial}${patient.financialYear ? ` · FY ${patient.financialYear}` : ""}` : `New Patient Entry${entryDate ? ` — ${fmtDate(entryDate)}` : ""}`}</DialogTitle>
         </DialogHeader>
 
-        <div className="grid grid-cols-12 gap-4">
-          <div className="col-span-7 space-y-4">
+        {/* Top row: patient details (left) + compact Billing card (right, auto height) */}
+        <div className="grid grid-cols-12 items-start gap-4">
+          <div className="col-span-7">
             <div className="grid grid-cols-6 gap-3">
               <Field label="Title" className="col-span-1">
                 <Select
@@ -241,70 +242,10 @@ export function PatientFormDialog({ open, onOpenChange, patient, entryDate, pref
               </Field>
             </div>
 
-            {/* Manual tracking flags — stored only, nothing is sent automatically. */}
-            <div className="grid grid-cols-2 gap-3">
-              <FlagToggle
-                icon={<MessageCircle className="h-4 w-4" />}
-                label="Send report on WhatsApp"
-                hint="Patient wants the report on WhatsApp"
-                checked={whatsappReportRequired}
-                onChange={setWhatsappReportRequired}
-                activeClass="border-emerald-400 bg-emerald-50 text-emerald-900"
-              />
-              <FlagToggle
-                icon={<FileCheck2 className="h-4 w-4" />}
-                label="Outsourced report ready"
-                hint="Report received from the outsourced lab / printed"
-                checked={outsourcedReportReady}
-                onChange={setOutsourcedReportReady}
-                activeClass="border-amber-400 bg-amber-50 text-amber-900"
-              />
-            </div>
-
-            <div className="rounded-md border">
-              <div className="flex items-center justify-between border-b bg-secondary/40 px-3 py-2">
-                <div className="text-sm font-medium">Tests ({selectedTests.length})</div>
-                <Input value={testFilter} onChange={e => setTestFilter(e.target.value)} placeholder="Filter by name or lab..." className="h-7 w-56" />
-              </div>
-              <div className="max-h-64 overflow-auto">
-                {filteredTests.map(t => {
-                  const sel = selectedTests.includes(t.id);
-                  const provider = t.outsourced ? (t.outsourcedLab || "Outsourced") : "In-house";
-                  return (
-                    <button
-                      type="button"
-                      key={t.id}
-                      onClick={() => toggleTest(t.id)}
-                      className={cn(
-                        "flex w-full items-center justify-between border-b px-3 py-1.5 text-left text-sm hover:bg-secondary/50",
-                        sel && "bg-accent/40",
-                      )}
-                    >
-                      <span className="flex items-center gap-2">
-                        <span className={cn("flex h-4 w-4 items-center justify-center rounded border", sel && "border-primary bg-primary text-primary-foreground")}>
-                          {sel && <Check className="h-3 w-3" />}
-                        </span>
-                        <span className="font-medium">{t.name}</span>
-                        <span className={cn(
-                          "rounded px-1.5 py-0.5 text-[10px] uppercase",
-                          t.outsourced ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800",
-                        )}>{provider}</span>
-                        {t.outsourced && (
-                          <span className="rounded bg-secondary px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
-                            Code: {t.testCode ? t.testCode : <span className="italic">Not added</span>}
-                          </span>
-                        )}
-                      </span>
-                      <span className="tabular-nums">₹{Number(t.rate).toFixed(2)}</span>
-                    </button>
-                  );
-                })}
-                {filteredTests.length === 0 && <div className="p-4 text-sm text-muted-foreground">No tests match.</div>}
-              </div>
-            </div>
           </div>
 
-          <div className="col-span-5 space-y-3 rounded-md border bg-secondary/30 p-4">
+          {/* Compact Billing card — content height only, no stretching */}
+          <div className="col-span-5 h-auto self-start space-y-2 rounded-md border bg-secondary/30 p-4">
             <div className="text-sm font-semibold">Billing</div>
             <Row label="Total"><Money value={total} /></Row>
             <Row label="Discount">
@@ -314,12 +255,77 @@ export function PatientFormDialog({ open, onOpenChange, patient, entryDate, pref
           </div>
         </div>
 
-        <PaymentTransactions
-          patient={patient ?? null}
-          net={net}
-          draftPayments={draftPayments}
-          setDraftPayments={setDraftPayments}
-        />
+        {/* Manual tracking flags — stored only, nothing is sent automatically. */}
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          <FlagToggle
+            icon={<MessageCircle className="h-4 w-4" />}
+            label="Send report on WhatsApp"
+            hint="Patient wants the report on WhatsApp"
+            checked={whatsappReportRequired}
+            onChange={setWhatsappReportRequired}
+            activeClass="border-emerald-400 bg-emerald-50 text-emerald-900"
+          />
+          <FlagToggle
+            icon={<FileCheck2 className="h-4 w-4" />}
+            label="Outsourced report ready"
+            hint="Report received from the outsourced lab / printed"
+            checked={outsourcedReportReady}
+            onChange={setOutsourcedReportReady}
+            activeClass="border-amber-400 bg-amber-50 text-amber-900"
+          />
+        </div>
+
+        {/* Tests section — full modal width */}
+        <div className="mt-4 rounded-md border">
+          <div className="flex items-center justify-between border-b bg-secondary/40 px-3 py-2">
+            <div className="text-sm font-medium">Tests ({selectedTests.length})</div>
+            <Input value={testFilter} onChange={e => setTestFilter(e.target.value)} placeholder="Filter by name or lab..." className="h-7 w-72" />
+          </div>
+          <div className="max-h-72 overflow-auto">
+            {filteredTests.map(t => {
+              const sel = selectedTests.includes(t.id);
+              const provider = t.outsourced ? (t.outsourcedLab || "Outsourced") : "In-house";
+              return (
+                <button
+                  type="button"
+                  key={t.id}
+                  onClick={() => toggleTest(t.id)}
+                  className={cn(
+                    "flex w-full items-center justify-between border-b px-3 py-1.5 text-left text-sm hover:bg-secondary/50",
+                    sel && "bg-accent/40",
+                  )}
+                >
+                  <span className="flex items-center gap-2">
+                    <span className={cn("flex h-4 w-4 items-center justify-center rounded border", sel && "border-primary bg-primary text-primary-foreground")}>
+                      {sel && <Check className="h-3 w-3" />}
+                    </span>
+                    <span className="font-medium">{t.name}</span>
+                    <span className={cn(
+                      "rounded px-1.5 py-0.5 text-[10px] uppercase",
+                      t.outsourced ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800",
+                    )}>{provider}</span>
+                    {t.outsourced && (
+                      <span className="rounded bg-secondary px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
+                        Code: {t.testCode ? t.testCode : <span className="italic">Not added</span>}
+                      </span>
+                    )}
+                  </span>
+                  <span className="tabular-nums">₹{Number(t.rate).toFixed(2)}</span>
+                </button>
+              );
+            })}
+            {filteredTests.length === 0 && <div className="p-4 text-sm text-muted-foreground">No tests match.</div>}
+          </div>
+        </div>
+
+        <div className="mt-4">
+          <PaymentTransactions
+            patient={patient ?? null}
+            net={net}
+            draftPayments={draftPayments}
+            setDraftPayments={setDraftPayments}
+          />
+        </div>
 
         <DialogFooter className="sm:justify-between">
           <div>{patient?.id && <BillActions patientId={patient.id} />}</div>
