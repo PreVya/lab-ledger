@@ -37,6 +37,9 @@ export interface UpsertPatientInput {
   balancePaidOn?: string | null;
   createdById?: string;
   entryDate?: string | null;
+  /** Manual tracking flags — no automation attached. */
+  whatsappReportRequired?: boolean;
+  outsourcedReportReady?: boolean;
   /**
    * Explicit payment transactions (create only). When provided, Payment rows are
    * created ONLY from this array; when absent, the legacy advance/balance bucket
@@ -158,6 +161,8 @@ export class PatientsService {
       sex: input.sex,
       referredDoctor: input.referredDoctor ?? null,
       notes: input.notes ?? null,
+      whatsappReportRequired: !!input.whatsappReportRequired,
+      outsourcedReportReady: !!input.outsourcedReportReady,
       createdById: input.createdById,
       total: new Prisma.Decimal(pay.total),
       discount: new Prisma.Decimal(pay.discount),
@@ -240,6 +245,8 @@ export class PatientsService {
           sex: input.sex,
           referredDoctor: input.referredDoctor ?? null,
           notes: input.notes ?? null,
+          whatsappReportRequired: !!input.whatsappReportRequired,
+          outsourcedReportReady: !!input.outsourcedReportReady,
           total: new Prisma.Decimal(pay.total),
           discount: new Prisma.Decimal(pay.discount),
           net: new Prisma.Decimal(pay.net),
@@ -263,6 +270,49 @@ export class PatientsService {
       where: { id },
       include: { tests: { include: { test: true } }, payments: { orderBy: { createdAt: 'asc' } } },
     });
+  }
+
+  /** Highest registerNumber currently used in a financial year (null when empty). */
+  async latestRegister(fy: string): Promise<{ financialYear: string; registerNumber: number | null }> {
+    const last = await this.prisma.patient.findFirst({
+      where: { financialYear: fy },
+      orderBy: { registerNumber: 'desc' },
+      select: { registerNumber: true },
+    });
+    return { financialYear: fy, registerNumber: last?.registerNumber ?? null };
+  }
+
+  /**
+   * Hard delete — ONLY allowed for the latest register entry of its financial year.
+   * Register numbers are never shifted/renumbered after a delete.
+   */
+  async remove(id: string) {
+    const patient = await this.prisma.patient.findUnique({
+      where: { id },
+      select: { id: true, entryDate: true, financialYear: true, registerNumber: true },
+    });
+    if (!patient) throw new NotFoundException();
+
+    const newer = await this.prisma.patient.findFirst({
+      where: { financialYear: patient.financialYear, registerNumber: { gt: patient.registerNumber } },
+      select: { id: true },
+    });
+    if (newer) throw new BadRequestException('Only the latest patient entry can be deleted.');
+
+    const payments = await this.prisma.payment.findMany({
+      where: { patientId: id },
+      select: { date: true },
+    });
+    const dates = new Set<string>([dateOnly(patient.entryDate).toISOString().slice(0, 10)]);
+    payments.forEach((p) => dates.add(dateOnly(p.date).toISOString().slice(0, 10)));
+
+    // PatientTest / Payment / Bill rows cascade on delete; appointments detach (SetNull).
+    await this.prisma.patient.delete({ where: { id } });
+
+    for (const iso of dates) {
+      void this.ledger.recompute(new Date(iso)).catch((err) => console.error('[patients.remove] bg recompute failed', err));
+    }
+    return { ok: true, id, financialYear: patient.financialYear, registerNumber: patient.registerNumber };
   }
 
   search(q: string, fy?: string) {

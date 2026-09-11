@@ -36,6 +36,9 @@ export interface Patient {
   sex: Sex;
   referredDoctor?: string | null;
   notes?: string | null;
+  /** Manual tracking flags — no automation attached. */
+  whatsappReportRequired?: boolean;
+  outsourcedReportReady?: boolean;
   createdById?: string | null;
   total: string;
   discount: string;
@@ -169,6 +172,8 @@ export interface UpsertPatientInput {
   sex: Sex;
   referredDoctor?: string;
   notes?: string;
+  whatsappReportRequired?: boolean;
+  outsourcedReportReady?: boolean;
   testIds: string[];
   discount?: number;
   advanceCash?: number;

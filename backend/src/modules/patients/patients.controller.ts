@@ -1,6 +1,6 @@
-import { BadRequestException, Body, Controller, Get, Param, Post, Put, Query, UseGuards } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, Param, Post, Put, Query, UseGuards } from '@nestjs/common';
 import {
-  ArrayMinSize, IsArray, IsEnum, IsIn, IsInt, IsNumber, IsOptional, IsString, Min, MinLength,
+  ArrayMinSize, IsArray, IsBoolean, IsEnum, IsIn, IsInt, IsNumber, IsOptional, IsString, Min, MinLength,
 } from 'class-validator';
 import { Role, Sex } from '@prisma/client';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -28,6 +28,9 @@ class UpsertPatientDto {
   @IsOptional() @IsNumber() @Min(0) balanceUpi?: number;
   @IsOptional() @IsString() balancePaidOn?: string;
   @IsOptional() @IsString() entryDate?: string;
+  /** Manual tracking flags — stored only, no automation attached. */
+  @IsOptional() @IsBoolean() whatsappReportRequired?: boolean;
+  @IsOptional() @IsBoolean() outsourcedReportReady?: boolean;
   /**
    * Explicit payment transactions from the Payment Transactions UI (create only).
    * When present, Payment rows come ONLY from here — never combined with the
@@ -62,6 +65,17 @@ export class PatientsController {
   @Get('search')
   search(@Query('q') q: string, @Query('fy') fy?: string) { return this.patients.search(q ?? '', fy); }
 
+  /** Highest register number in a financial year — drives the delete-latest-only rule in the UI. */
+  @Get('latest-register')
+  latestRegister(@Query('fy') fy: string) {
+    if (!fy) throw new BadRequestException('fy is required');
+    return this.patients.latestRegister(fy);
+  }
+
   @Get(':id')
   get(@Param('id') id: string) { return this.patients.get(id); }
+
+  /** Hard delete — rejected unless this is the latest register entry of its FY. */
+  @Delete(':id')
+  remove(@Param('id') id: string) { return this.patients.remove(id); }
 }

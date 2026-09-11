@@ -10,12 +10,36 @@ import {
   usePatientPayments, useRecordPayment, useUpdatePayment, useDeletePayment,
 } from "@/lib/queries";
 import type { AgeUnit, Patient, PaymentInput, PaymentKind, PaymentMode, PaymentRow, Sex, UpsertPatientInput } from "@/lib/types";
-import { Check, X, Plus, Pencil, Trash2, AlertTriangle } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Check, X, Plus, Pencil, Trash2, AlertTriangle, MessageCircle, FileCheck2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { BillActions } from "@/components/bill-dialog";
 
 const num = (v: string) => (v === "" ? 0 : Number(v) || 0);
+
+/** Salutations are NOT stored separately — they are prefixed onto the patient name. */
+const SALUTATIONS = ["Mast.", "Mr.", "Miss.", "Mrs."] as const;
+type Salutation = (typeof SALUTATIONS)[number];
+const NO_SALUTATION = "none";
+
+/** Split a stored name into { salutation, rest } when it already starts with one. */
+function splitSalutation(full: string): { salutation: Salutation | null; rest: string } {
+  const trimmed = full.trim();
+  for (const s of SALUTATIONS) {
+    const bare = s.replace(".", "");
+    const re = new RegExp(`^${bare}\\.?\\s+`, "i");
+    if (re.test(trimmed)) return { salutation: s, rest: trimmed.replace(re, "").trim() };
+  }
+  return { salutation: null, rest: trimmed };
+}
+
+/** Combine salutation + typed name without ever duplicating the prefix. */
+function combineName(salutation: Salutation | null, typed: string): string {
+  const { rest } = splitSalutation(typed);
+  const base = rest || typed.trim();
+  return salutation ? `${salutation} ${base}`.trim() : base;
+}
 
 const LEDGER_START = "2026-08-01";
 const isSundayISO = (d: string) => !!d && new Date(d + "T00:00:00Z").getUTCDay() === 0;
@@ -52,8 +76,11 @@ export function PatientFormDialog({ open, onOpenChange, patient, entryDate, pref
   const create = useCreatePatient();
   const update = useUpdatePatient(patient?.id ?? "");
 
+  const [salutation, setSalutation] = useState<Salutation | null>(null);
   const [name, setName] = useState("");
   const [mobile, setMobile] = useState("");
+  const [whatsappReportRequired, setWhatsappReportRequired] = useState(false);
+  const [outsourcedReportReady, setOutsourcedReportReady] = useState(false);
   const [ageValue, setAgeValue] = useState("");
   const [ageUnit, setAgeUnit] = useState<AgeUnit>("years");
   const [sex, setSex] = useState<Sex>("M");
@@ -71,7 +98,11 @@ export function PatientFormDialog({ open, onOpenChange, patient, entryDate, pref
   useEffect(() => {
     if (!open) return;
     if (patient) {
-      setName(patient.name); setMobile(patient.mobile);
+      const parsed = splitSalutation(patient.name);
+      setSalutation(parsed.salutation); setName(parsed.rest);
+      setWhatsappReportRequired(!!patient.whatsappReportRequired);
+      setOutsourcedReportReady(!!patient.outsourcedReportReady);
+      setMobile(patient.mobile);
       setAgeValue(String(patient.ageValue ?? patient.age ?? ""));
       setAgeUnit((patient.ageUnit ?? "years") as AgeUnit);
       setSex(patient.sex); setReferredDoctor(patient.referredDoctor ?? "");
@@ -80,7 +111,10 @@ export function PatientFormDialog({ open, onOpenChange, patient, entryDate, pref
       setDiscount(patient.discount);
       setDraftPayments([]);
     } else {
-      setName(prefill?.name ?? ""); setMobile(prefill?.mobile ?? "");
+      const parsed = splitSalutation(prefill?.name ?? "");
+      setSalutation(parsed.salutation); setName(parsed.rest);
+      setWhatsappReportRequired(false); setOutsourcedReportReady(false);
+      setMobile(prefill?.mobile ?? "");
       setAgeValue(prefill?.ageValue != null ? String(prefill.ageValue) : "");
       setAgeUnit((prefill?.ageUnit ?? "years") as AgeUnit);
       setSex((prefill?.sex ?? "M") as Sex); setReferredDoctor(prefill?.referredDoctor ?? "");
@@ -120,11 +154,13 @@ export function PatientFormDialog({ open, onOpenChange, patient, entryDate, pref
     if (!patient && !entryDate) { toast.error("Patient entry date is required."); return; }
 
     const input: UpsertPatientInput = {
-      name: name.trim(), mobile: mobile.trim(),
+      name: combineName(salutation, name), mobile: mobile.trim(),
       ageValue: Number(ageValue), ageUnit,
       sex,
       referredDoctor: referredDoctor.trim() || undefined,
       notes: notes.trim() || undefined,
+      whatsappReportRequired,
+      outsourcedReportReady,
       testIds: selectedTests,
       discount: num(discount),
       entryDate: !patient && entryDate ? entryDate : undefined,
@@ -156,10 +192,22 @@ export function PatientFormDialog({ open, onOpenChange, patient, entryDate, pref
         <div className="grid grid-cols-12 gap-4">
           <div className="col-span-7 space-y-4">
             <div className="grid grid-cols-6 gap-3">
+              <Field label="Title" className="col-span-1">
+                <Select
+                  value={salutation ?? NO_SALUTATION}
+                  onValueChange={v => setSalutation(v === NO_SALUTATION ? null : (v as Salutation))}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NO_SALUTATION}>—</SelectItem>
+                    {SALUTATIONS.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </Field>
               <Field label="Name" className="col-span-3">
                 <Input ref={nameRef} value={name} onChange={e => setName(e.target.value)} />
               </Field>
-              <Field label="Mobile" className="col-span-3">
+              <Field label="Mobile" className="col-span-2">
                 <Input value={mobile} onChange={e => setMobile(e.target.value)} inputMode="tel" />
               </Field>
               <Field label="Age" className="col-span-2">
@@ -191,6 +239,26 @@ export function PatientFormDialog({ open, onOpenChange, patient, entryDate, pref
               <Field label="Notes" className="col-span-6">
                 <Textarea rows={2} value={notes} onChange={e => setNotes(e.target.value)} />
               </Field>
+            </div>
+
+            {/* Manual tracking flags — stored only, nothing is sent automatically. */}
+            <div className="grid grid-cols-2 gap-3">
+              <FlagToggle
+                icon={<MessageCircle className="h-4 w-4" />}
+                label="Send report on WhatsApp"
+                hint="Patient wants the report on WhatsApp"
+                checked={whatsappReportRequired}
+                onChange={setWhatsappReportRequired}
+                activeClass="border-emerald-400 bg-emerald-50 text-emerald-900"
+              />
+              <FlagToggle
+                icon={<FileCheck2 className="h-4 w-4" />}
+                label="Outsourced report ready"
+                hint="Report received from the outsourced lab / printed"
+                checked={outsourcedReportReady}
+                onChange={setOutsourcedReportReady}
+                activeClass="border-amber-400 bg-amber-50 text-amber-900"
+              />
             </div>
 
             <div className="rounded-md border">
@@ -504,6 +572,35 @@ function PaymentEditorDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function FlagToggle({
+  icon, label, hint, checked, onChange, activeClass,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  hint: string;
+  checked: boolean;
+  onChange: (v: boolean) => void;
+  activeClass: string;
+}) {
+  return (
+    <label
+      className={cn(
+        "flex cursor-pointer items-center justify-between gap-3 rounded-md border px-3 py-2 transition-colors",
+        checked ? activeClass : "bg-background text-muted-foreground",
+      )}
+    >
+      <span className="flex items-center gap-2">
+        {icon}
+        <span className="text-sm">
+          <span className="block font-medium leading-tight">{label}</span>
+          <span className="block text-[11px] opacity-80">{hint}</span>
+        </span>
+      </span>
+      <Switch checked={checked} onCheckedChange={onChange} />
+    </label>
   );
 }
 

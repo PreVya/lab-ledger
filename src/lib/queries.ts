@@ -120,6 +120,28 @@ export function useUpdatePatient(id: string) {
   });
 }
 
+/** Highest register number used in a financial year (drives delete-latest-only). */
+export function useLatestRegister(fy?: string) {
+  return useQuery({
+    queryKey: ["latest-register", fy ?? ""],
+    queryFn: () => api<{ financialYear: string; registerNumber: number | null }>(`/patients/latest-register?fy=${fy}`),
+    enabled: !!fy,
+  });
+}
+
+/** Hard delete — backend rejects anything but the latest register entry of its FY. */
+export function useDeletePatient() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api(`/patients/${id}`, { method: "DELETE" }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["ledger"] });
+      qc.invalidateQueries({ queryKey: ["latest-register"] });
+      qc.invalidateQueries({ queryKey: ["search"] });
+    },
+  });
+}
+
 export function useSearch(q: string, fy?: string) {
   return useQuery({
     queryKey: qk.search(q, fy),
