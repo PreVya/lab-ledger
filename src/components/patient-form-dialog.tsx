@@ -575,6 +575,35 @@ function PaymentEditorDialog({
   );
 }
 
+function FlagToggle({
+  icon, label, hint, checked, onChange, activeClass,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  hint: string;
+  checked: boolean;
+  onChange: (v: boolean) => void;
+  activeClass: string;
+}) {
+  return (
+    <label
+      className={cn(
+        "flex cursor-pointer items-center justify-between gap-3 rounded-md border px-3 py-2 transition-colors",
+        checked ? activeClass : "bg-background text-muted-foreground",
+      )}
+    >
+      <span className="flex items-center gap-2">
+        {icon}
+        <span className="text-sm">
+          <span className="block font-medium leading-tight">{label}</span>
+          <span className="block text-[11px] opacity-80">{hint}</span>
+        </span>
+      </span>
+      <Switch checked={checked} onCheckedChange={onChange} />
+    </label>
+  );
+}
+
 function Field({ label, children, className }: { label: string; children: React.ReactNode; className?: string }) {
   return (
     <div className={cn("space-y-1", className)}>
