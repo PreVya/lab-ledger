@@ -1,6 +1,6 @@
-import { BadRequestException, Body, Controller, Get, Param, Post, Put, Query, UseGuards } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, Param, Post, Put, Query, UseGuards } from '@nestjs/common';
 import {
-  ArrayMinSize, IsArray, IsEnum, IsIn, IsInt, IsNumber, IsOptional, IsString, Min, MinLength,
+  ArrayMinSize, IsArray, IsBoolean, IsEnum, IsIn, IsInt, IsNumber, IsOptional, IsString, Min, MinLength,
 } from 'class-validator';
 import { Role, Sex } from '@prisma/client';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -28,6 +28,9 @@ class UpsertPatientDto {
   @IsOptional() @IsNumber() @Min(0) balanceUpi?: number;
   @IsOptional() @IsString() balancePaidOn?: string;
   @IsOptional() @IsString() entryDate?: string;
+  /** Manual tracking flags — stored only, no automation attached. */
+  @IsOptional() @IsBoolean() whatsappReportRequired?: boolean;
+  @IsOptional() @IsBoolean() outsourcedReportReady?: boolean;
   /**
    * Explicit payment transactions from the Payment Transactions UI (create only).
    * When present, Payment rows come ONLY from here — never combined with the
