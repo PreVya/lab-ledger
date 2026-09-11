@@ -28,6 +28,7 @@ interface DemoPatient {
   entryDate: string; name: string; mobile: string;
   age: number; ageValue: number; ageUnit: AgeUnit; sex: Sex;
   referredDoctor: string | null; notes: string | null; createdById: string | null;
+  whatsappReportRequired: boolean; outsourcedReportReady: boolean;
   total: string; discount: string; net: string;
   advanceCash: string; advanceUpi: string; advancePaidOn: string | null;
   balance: string; balanceCash: string; balanceUpi: string; balancePaidOn: string | null;
@@ -212,6 +213,12 @@ function buildPatient(b: Record<string, unknown>, existing?: DemoPatient): DemoP
     sex: (b.sex as Sex) ?? "M",
     referredDoctor: (b.referredDoctor as string) ?? null,
     notes: (b.notes as string) ?? null,
+    whatsappReportRequired: b.whatsappReportRequired !== undefined
+      ? !!b.whatsappReportRequired
+      : (existing?.whatsappReportRequired ?? false),
+    outsourcedReportReady: b.outsourcedReportReady !== undefined
+      ? !!b.outsourcedReportReady
+      : (existing?.outsourcedReportReady ?? false),
     createdById: existing?.createdById ?? store.currentUserId,
     total: String(total), discount: String(discount), net: String(net),
     advanceCash: String(advanceCash), advanceUpi: String(advanceUpi),
