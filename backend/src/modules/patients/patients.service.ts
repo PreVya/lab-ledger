@@ -37,6 +37,9 @@ export interface UpsertPatientInput {
   balancePaidOn?: string | null;
   createdById?: string;
   entryDate?: string | null;
+  /** Manual tracking flags — no automation attached. */
+  whatsappReportRequired?: boolean;
+  outsourcedReportReady?: boolean;
   /**
    * Explicit payment transactions (create only). When provided, Payment rows are
    * created ONLY from this array; when absent, the legacy advance/balance bucket
