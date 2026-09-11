@@ -189,8 +189,9 @@ export function PatientFormDialog({ open, onOpenChange, patient, entryDate, pref
           <DialogTitle>{patient ? `Edit Patient #${patient.registerNumber ?? patient.dailySerial}${patient.financialYear ? ` · FY ${patient.financialYear}` : ""}` : `New Patient Entry${entryDate ? ` — ${fmtDate(entryDate)}` : ""}`}</DialogTitle>
         </DialogHeader>
 
-        <div className="grid grid-cols-12 gap-4">
-          <div className="col-span-7 space-y-4">
+        {/* Top row: patient details (left) + compact Billing card (right, auto height) */}
+        <div className="grid grid-cols-12 items-start gap-4">
+          <div className="col-span-7">
             <div className="grid grid-cols-6 gap-3">
               <Field label="Title" className="col-span-1">
                 <Select
