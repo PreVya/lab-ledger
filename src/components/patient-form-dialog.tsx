@@ -10,12 +10,36 @@ import {
   usePatientPayments, useRecordPayment, useUpdatePayment, useDeletePayment,
 } from "@/lib/queries";
 import type { AgeUnit, Patient, PaymentInput, PaymentKind, PaymentMode, PaymentRow, Sex, UpsertPatientInput } from "@/lib/types";
-import { Check, X, Plus, Pencil, Trash2, AlertTriangle } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Check, X, Plus, Pencil, Trash2, AlertTriangle, MessageCircle, FileCheck2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { BillActions } from "@/components/bill-dialog";
 
 const num = (v: string) => (v === "" ? 0 : Number(v) || 0);
+
+/** Salutations are NOT stored separately — they are prefixed onto the patient name. */
+const SALUTATIONS = ["Mast.", "Mr.", "Miss.", "Mrs."] as const;
+type Salutation = (typeof SALUTATIONS)[number];
+const NO_SALUTATION = "none";
+
+/** Split a stored name into { salutation, rest } when it already starts with one. */
+function splitSalutation(full: string): { salutation: Salutation | null; rest: string } {
+  const trimmed = full.trim();
+  for (const s of SALUTATIONS) {
+    const bare = s.replace(".", "");
+    const re = new RegExp(`^${bare}\\.?\\s+`, "i");
+    if (re.test(trimmed)) return { salutation: s, rest: trimmed.replace(re, "").trim() };
+  }
+  return { salutation: null, rest: trimmed };
+}
+
+/** Combine salutation + typed name without ever duplicating the prefix. */
+function combineName(salutation: Salutation | null, typed: string): string {
+  const { rest } = splitSalutation(typed);
+  const base = rest || typed.trim();
+  return salutation ? `${salutation} ${base}`.trim() : base;
+}
 
 const LEDGER_START = "2026-08-01";
 const isSundayISO = (d: string) => !!d && new Date(d + "T00:00:00Z").getUTCDay() === 0;
