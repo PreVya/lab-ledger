@@ -76,6 +76,11 @@ model Patient {
   referredDoctor  String?
   notes           String?
 
+  // Manual tracking flags (Phase 1.95). No automation is attached to these yet.
+  whatsappReportRequired Boolean @default(false)
+  outsourcedReportReady  Boolean @default(false)
+
+
   total           Decimal       @db.Decimal(10, 2) @default(0)
   discount        Decimal       @db.Decimal(10, 2) @default(0)
   net             Decimal       @db.Decimal(10, 2) @default(0)
