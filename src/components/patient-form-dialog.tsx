@@ -318,12 +318,14 @@ export function PatientFormDialog({ open, onOpenChange, patient, entryDate, pref
           </div>
         </div>
 
-        <PaymentTransactions
-          patient={patient ?? null}
-          net={net}
-          draftPayments={draftPayments}
-          setDraftPayments={setDraftPayments}
-        />
+        <div className="mt-4">
+          <PaymentTransactions
+            patient={patient ?? null}
+            net={net}
+            draftPayments={draftPayments}
+            setDraftPayments={setDraftPayments}
+          />
+        </div>
 
         <DialogFooter className="sm:justify-between">
           <div>{patient?.id && <BillActions patientId={patient.id} />}</div>
