@@ -192,10 +192,22 @@ export function PatientFormDialog({ open, onOpenChange, patient, entryDate, pref
         <div className="grid grid-cols-12 gap-4">
           <div className="col-span-7 space-y-4">
             <div className="grid grid-cols-6 gap-3">
+              <Field label="Title" className="col-span-1">
+                <Select
+                  value={salutation ?? NO_SALUTATION}
+                  onValueChange={v => setSalutation(v === NO_SALUTATION ? null : (v as Salutation))}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NO_SALUTATION}>—</SelectItem>
+                    {SALUTATIONS.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </Field>
               <Field label="Name" className="col-span-3">
                 <Input ref={nameRef} value={name} onChange={e => setName(e.target.value)} />
               </Field>
-              <Field label="Mobile" className="col-span-3">
+              <Field label="Mobile" className="col-span-2">
                 <Input value={mobile} onChange={e => setMobile(e.target.value)} inputMode="tel" />
               </Field>
               <Field label="Age" className="col-span-2">
@@ -227,6 +239,26 @@ export function PatientFormDialog({ open, onOpenChange, patient, entryDate, pref
               <Field label="Notes" className="col-span-6">
                 <Textarea rows={2} value={notes} onChange={e => setNotes(e.target.value)} />
               </Field>
+            </div>
+
+            {/* Manual tracking flags — stored only, nothing is sent automatically. */}
+            <div className="grid grid-cols-2 gap-3">
+              <FlagToggle
+                icon={<MessageCircle className="h-4 w-4" />}
+                label="Send report on WhatsApp"
+                hint="Patient wants the report on WhatsApp"
+                checked={whatsappReportRequired}
+                onChange={setWhatsappReportRequired}
+                activeClass="border-emerald-400 bg-emerald-50 text-emerald-900"
+              />
+              <FlagToggle
+                icon={<FileCheck2 className="h-4 w-4" />}
+                label="Outsourced report ready"
+                hint="Report received from the outsourced lab / printed"
+                checked={outsourcedReportReady}
+                onChange={setOutsourcedReportReady}
+                activeClass="border-amber-400 bg-amber-50 text-amber-900"
+              />
             </div>
 
             <div className="rounded-md border">
