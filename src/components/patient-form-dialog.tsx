@@ -9,7 +9,7 @@ import {
   useTests, useCreatePatient, useUpdatePatient,
   usePatientPayments, useRecordPayment, useUpdatePayment, useDeletePayment,
 } from "@/lib/queries";
-import type { AgeUnit, Patient, PaymentInput, PaymentKind, PaymentMode, PaymentRow, Sex, UpsertPatientInput } from "@/lib/types";
+import type { AgeUnit, Patient, PaymentInput, PaymentKind, PaymentMode, PaymentRow, Sex, TestCatalog, UpsertPatientInput } from "@/lib/types";
 import { Switch } from "@/components/ui/switch";
 import { Check, X, Plus, Pencil, Trash2, AlertTriangle, MessageCircle, FileCheck2 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -87,7 +87,7 @@ export function PatientFormDialog({ open, onOpenChange, patient, entryDate, pref
   const [referredDoctor, setReferredDoctor] = useState("");
   const [notes, setNotes] = useState("");
   const [selectedTests, setSelectedTests] = useState<string[]>([]);
-  const [testFilter, setTestFilter] = useState("");
+  const [testSearches, setTestSearches] = useState<Record<string, string>>({});
   const [discount, setDiscount] = useState("");
 
   /** Payment transactions for a patient that has not been saved yet. */
@@ -122,6 +122,7 @@ export function PatientFormDialog({ open, onOpenChange, patient, entryDate, pref
       setSelectedTests([]); setDiscount("");
       setDraftPayments([]);
     }
+    setTestSearches({});
     setTimeout(() => nameRef.current?.focus(), 50);
   }, [open, patient, entryDate]);
 
@@ -131,15 +132,30 @@ export function PatientFormDialog({ open, onOpenChange, patient, entryDate, pref
   );
   const net = Math.max(0, total - num(discount));
 
-  const filteredTests = useMemo(() => {
-    const q = testFilter.toLowerCase();
-    return tests.filter(t => t.active && (
-      !q ||
-      t.name.toLowerCase().includes(q) ||
-      (t.outsourcedLab ?? "").toLowerCase().includes(q) ||
-      (t.testCode ?? "").toLowerCase().includes(q)
-    ));
-  }, [tests, testFilter]);
+  const testGroups = useMemo(() => {
+    const activeTests = tests.filter(t => t.active);
+    const groups: Array<{ key: string; label: string; tests: TestCatalog[]; outsourced: boolean }> = [];
+    const inHouse = activeTests.filter(t => !t.outsourced);
+    if (inHouse.length) groups.push({ key: "in-house", label: "In-House", tests: inHouse, outsourced: false });
+
+    const outsourcedGroups = new Map<string, { label: string; tests: TestCatalog[] }>();
+    for (const test of activeTests.filter(t => t.outsourced)) {
+      const label = test.outsourcedLab?.trim() || "Outsourced";
+      const key = label.toLocaleLowerCase();
+      const existing = outsourcedGroups.get(key);
+      if (existing) existing.tests.push(test);
+      else outsourcedGroups.set(key, { label, tests: [test] });
+    }
+    for (const [key, group] of Array.from(outsourcedGroups.entries()).sort((a, b) => a[1].label.localeCompare(b[1].label))) {
+      groups.push({ key: `lab:${key}`, label: group.label, tests: group.tests, outsourced: true });
+    }
+    return groups;
+  }, [tests]);
+
+  const selectedTestRows = useMemo(
+    () => selectedTests.map(id => tests.find(test => test.id === id)).filter((test): test is TestCatalog => !!test),
+    [selectedTests, tests],
+  );
 
   function toggleTest(id: string) {
     setSelectedTests(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
@@ -275,48 +291,76 @@ export function PatientFormDialog({ open, onOpenChange, patient, entryDate, pref
           />
         </div>
 
-        {/* Tests section — full modal width */}
-        <div className="mt-4 rounded-md border">
-          <div className="flex items-center justify-between border-b bg-secondary/40 px-3 py-2">
-            <div className="text-sm font-medium">Tests ({selectedTests.length})</div>
-            <Input value={testFilter} onChange={e => setTestFilter(e.target.value)} placeholder="Filter by name or lab..." className="h-7 w-72" />
+        {/* Category-wise test selection + an always-current selection review. */}
+        <section className="mt-4" aria-labelledby="test-selection-heading">
+          <div className="mb-2 flex items-center justify-between">
+            <h2 id="test-selection-heading" className="text-sm font-semibold">Test Selection</h2>
+            <span className="text-xs text-muted-foreground">{selectedTests.length} selected</span>
           </div>
-          <div className="max-h-72 overflow-auto">
-            {filteredTests.map(t => {
-              const sel = selectedTests.includes(t.id);
-              const provider = t.outsourced ? (t.outsourcedLab || "Outsourced") : "In-house";
-              return (
-                <button
-                  type="button"
-                  key={t.id}
-                  onClick={() => toggleTest(t.id)}
-                  className={cn(
-                    "flex w-full items-center justify-between border-b px-3 py-1.5 text-left text-sm hover:bg-secondary/50",
-                    sel && "bg-accent/40",
-                  )}
-                >
-                  <span className="flex items-center gap-2">
-                    <span className={cn("flex h-4 w-4 items-center justify-center rounded border", sel && "border-primary bg-primary text-primary-foreground")}>
-                      {sel && <Check className="h-3 w-3" />}
-                    </span>
-                    <span className="font-medium">{t.name}</span>
-                    <span className={cn(
-                      "rounded px-1.5 py-0.5 text-[10px] uppercase",
-                      t.outsourced ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800",
-                    )}>{provider}</span>
-                    {t.outsourced && (
-                      <span className="rounded bg-secondary px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
-                        Code: {t.testCode ? t.testCode : <span className="italic">Not added</span>}
-                      </span>
-                    )}
-                  </span>
-                  <span className="tabular-nums">₹{Number(t.rate).toFixed(2)}</span>
-                </button>
-              );
-            })}
-            {filteredTests.length === 0 && <div className="p-4 text-sm text-muted-foreground">No tests match.</div>}
+          <div className="grid items-start gap-4 md:grid-cols-12">
+            <div className="space-y-3 md:col-span-8">
+              {testGroups.map(group => (
+                <TestGroup
+                  key={group.key}
+                  groupKey={group.key}
+                  label={group.label}
+                  outsourced={group.outsourced}
+                  tests={group.tests}
+                  query={testSearches[group.key] ?? ""}
+                  onQueryChange={query => setTestSearches(current => ({ ...current, [group.key]: query }))}
+                  selectedTests={selectedTests}
+                  onToggle={toggleTest}
+                />
+              ))}
+              {testGroups.length === 0 && (
+                <div className="rounded-md border px-4 py-8 text-center text-sm text-muted-foreground">No active tests are available.</div>
+              )}
+            </div>
+
+            <div className="overflow-hidden rounded-md border md:sticky md:top-0 md:col-span-4">
+              <div className="flex items-center justify-between border-b bg-secondary/40 px-3 py-2">
+                <div className="text-sm font-semibold">Selected Tests</div>
+                <span className="text-xs tabular-nums text-muted-foreground">{selectedTestRows.length}</span>
+              </div>
+              <div className="max-h-80 overflow-y-auto">
+                {selectedTestRows.map(test => {
+                  const category = test.outsourced ? (test.outsourcedLab?.trim() || "Outsourced") : "In-House";
+                  return (
+                    <div key={test.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-b px-3 py-2 last:border-b-0">
+                      <div className="min-w-0">
+                        <div className="truncate text-sm font-medium" title={test.name}>{test.name}</div>
+                        <div className="mt-0.5 flex items-center justify-between gap-3 text-xs text-muted-foreground">
+                          <span className="truncate">{category}</span>
+                          <span className="shrink-0 tabular-nums">₹{Number(test.rate).toFixed(2)}</span>
+                        </div>
+                      </div>
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className="h-7 w-7 shrink-0 text-destructive"
+                        title={`Remove ${test.name}`}
+                        aria-label={`Remove ${test.name}`}
+                        onClick={() => toggleTest(test.id)}
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  );
+                })}
+                {selectedTestRows.length === 0 && (
+                  <div className="px-4 py-8 text-center text-sm text-muted-foreground">No tests selected yet.</div>
+                )}
+              </div>
+              {selectedTestRows.length > 0 && (
+                <div className="flex items-center justify-between border-t bg-secondary/20 px-3 py-2 text-sm">
+                  <span className="font-medium">Tests total</span>
+                  <strong className="tabular-nums">₹{total.toFixed(2)}</strong>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        </section>
 
         <div className="mt-4">
           <PaymentTransactions
@@ -340,6 +384,80 @@ export function PatientFormDialog({ open, onOpenChange, patient, entryDate, pref
         <KeyboardShortcuts onSave={handleSave} />
       </DialogContent>
     </Dialog>
+  );
+}
+
+function TestGroup({
+  groupKey, label, outsourced, tests, query, onQueryChange, selectedTests, onToggle,
+}: {
+  groupKey: string;
+  label: string;
+  outsourced: boolean;
+  tests: TestCatalog[];
+  query: string;
+  onQueryChange: (query: string) => void;
+  selectedTests: string[];
+  onToggle: (id: string) => void;
+}) {
+  const normalizedQuery = query.trim().toLocaleLowerCase();
+  const filtered = tests.filter(test => !normalizedQuery || [test.name, test.testCode, test.outsourcedLab]
+    .some(value => value?.toLocaleLowerCase().includes(normalizedQuery)));
+  const selectedCount = tests.filter(test => selectedTests.includes(test.id)).length;
+
+  return (
+    <div className="overflow-hidden rounded-md border">
+      <div className="flex flex-col gap-2 border-b bg-secondary/40 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-2">
+          <h3 className="text-sm font-semibold">{label} Tests</h3>
+          <span className="text-xs tabular-nums text-muted-foreground">
+            {selectedCount ? `${selectedCount} selected · ` : ""}{tests.length} available
+          </span>
+        </div>
+        <Input
+          value={query}
+          onChange={event => onQueryChange(event.target.value)}
+          placeholder={`Search in ${label} tests...`}
+          aria-label={`Search in ${label} tests`}
+          className="h-8 w-full sm:w-72"
+        />
+      </div>
+      <div className="max-h-56 overflow-y-auto">
+        {filtered.map(test => {
+          const selected = selectedTests.includes(test.id);
+          const category = outsourced ? (test.outsourcedLab?.trim() || "Outsourced") : "In-House";
+          return (
+            <Button
+              type="button"
+              variant="ghost"
+              key={test.id}
+              onClick={() => onToggle(test.id)}
+              className={cn(
+                "grid h-auto min-h-10 w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-none border-b px-3 py-2 text-left last:border-b-0 hover:bg-secondary/50",
+                selected && "bg-accent/40",
+              )}
+            >
+              <span className={cn("flex h-4 w-4 shrink-0 items-center justify-center rounded border", selected && "border-primary bg-primary text-primary-foreground")}>
+                {selected && <Check className="h-3 w-3" />}
+              </span>
+              <span className="flex min-w-0 flex-wrap items-center gap-2">
+                <span className="min-w-0 text-sm font-medium whitespace-normal">{test.name}</span>
+                <span className={cn(
+                  "shrink-0 rounded px-1.5 py-0.5 text-[10px] uppercase",
+                  outsourced ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800",
+                )}>{category}</span>
+                {outsourced && test.testCode && (
+                  <span className="shrink-0 rounded bg-secondary px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">{test.testCode}</span>
+                )}
+              </span>
+              <span className="shrink-0 text-sm font-medium tabular-nums">₹{Number(test.rate).toFixed(2)}</span>
+            </Button>
+          );
+        })}
+        {filtered.length === 0 && (
+          <div className="px-4 py-6 text-center text-sm text-muted-foreground">No tests match this search.</div>
+        )}
+      </div>
+    </div>
   );
 }
 
