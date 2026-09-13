@@ -297,8 +297,8 @@ export function PatientFormDialog({ open, onOpenChange, patient, entryDate, pref
             <h2 id="test-selection-heading" className="text-sm font-semibold">Test Selection</h2>
             <span className="text-xs text-muted-foreground">{selectedTests.length} selected</span>
           </div>
-          <div className="grid items-start gap-4 xl:grid-cols-12">
-            <div className="space-y-3 xl:col-span-8">
+          <div className="grid items-start gap-4 md:grid-cols-12">
+            <div className="space-y-3 md:col-span-8">
               {testGroups.map(group => (
                 <TestGroup
                   key={group.key}
@@ -317,7 +317,7 @@ export function PatientFormDialog({ open, onOpenChange, patient, entryDate, pref
               )}
             </div>
 
-            <div className="overflow-hidden rounded-md border xl:sticky xl:top-0 xl:col-span-4">
+            <div className="overflow-hidden rounded-md border md:sticky md:top-0 md:col-span-4">
               <div className="flex items-center justify-between border-b bg-secondary/40 px-3 py-2">
                 <div className="text-sm font-semibold">Selected Tests</div>
                 <span className="text-xs tabular-nums text-muted-foreground">{selectedTestRows.length}</span>
