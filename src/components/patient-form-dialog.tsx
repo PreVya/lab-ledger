@@ -19,7 +19,7 @@ import { BillActions } from "@/components/bill-dialog";
 const num = (v: string) => (v === "" ? 0 : Number(v) || 0);
 
 /** Salutations are NOT stored separately — they are prefixed onto the patient name. */
-const SALUTATIONS = ["Mast.", "Mr.", "Miss.", "Mrs."] as const;
+const SALUTATIONS = ["Mast.", "Mr.", "Miss.", "Mrs.","B/O","Dr."] as const;
 type Salutation = (typeof SALUTATIONS)[number];
 const NO_SALUTATION = "none";
 
