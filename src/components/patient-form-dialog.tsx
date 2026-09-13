@@ -11,7 +11,7 @@ import {
 } from "@/lib/queries";
 import type { AgeUnit, Patient, PaymentInput, PaymentKind, PaymentMode, PaymentRow, Sex, TestCatalog, UpsertPatientInput } from "@/lib/types";
 import { Switch } from "@/components/ui/switch";
-import { Check, X, Plus, Pencil, Trash2, AlertTriangle, MessageCircle, FileCheck2 } from "lucide-react";
+import { Check, X, Plus, Pencil, Trash2, AlertTriangle, MessageCircle, FileCheck2, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { BillActions } from "@/components/bill-dialog";
@@ -200,184 +200,148 @@ export function PatientFormDialog({ open, onOpenChange, patient, entryDate, pref
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[92vw] max-h-[92vh] overflow-y-auto xl:max-w-6xl">
-        <DialogHeader>
-          <DialogTitle>{patient ? `Edit Patient #${patient.registerNumber ?? patient.dailySerial}${patient.financialYear ? ` · FY ${patient.financialYear}` : ""}` : `New Patient Entry${entryDate ? ` — ${fmtDate(entryDate)}` : ""}`}</DialogTitle>
+      <DialogContent className="flex h-[90vh] max-h-[90vh] w-[94vw] max-w-[94vw] flex-col gap-0 overflow-hidden p-0 xl:max-w-[1400px]">
+        <DialogHeader className="shrink-0 border-b bg-background px-6 py-3 pr-14">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <DialogTitle>{patient ? `Edit Patient #${patient.registerNumber ?? patient.dailySerial}${patient.financialYear ? ` · FY ${patient.financialYear}` : ""}` : "New Patient Entry"}</DialogTitle>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {patient ? `${patient.name} · ${fmtDate(patient.entryDate)}` : entryDate ? `Entry date · ${fmtDate(entryDate)}` : "Entry date required"}
+              </p>
+            </div>
+            <div className="text-right">
+              <span className="block text-[10px] font-semibold uppercase text-muted-foreground">Net payable</span>
+              <strong className="text-xl tabular-nums text-primary">₹{net.toFixed(2)}</strong>
+            </div>
+          </div>
         </DialogHeader>
 
-        {/* Top row: patient details (left) + compact Billing card (right, auto height) */}
-        <div className="grid grid-cols-12 items-start gap-4">
-          <div className="col-span-7">
-            <div className="grid grid-cols-6 gap-3">
-              <Field label="Title" className="col-span-1">
-                <Select
-                  value={salutation ?? NO_SALUTATION}
-                  onValueChange={v => setSalutation(v === NO_SALUTATION ? null : (v as Salutation))}
-                >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={NO_SALUTATION}>—</SelectItem>
-                    {SALUTATIONS.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </Field>
-              <Field label="Name" className="col-span-3">
-                <Input ref={nameRef} value={name} onChange={e => setName(e.target.value)} />
-              </Field>
-              <Field label="Mobile" className="col-span-2">
-                <Input value={mobile} onChange={e => setMobile(e.target.value)} inputMode="tel" />
-              </Field>
-              <Field label="Age" className="col-span-2">
-                <div className="flex gap-1">
-                  <Input value={ageValue} onChange={e => setAgeValue(e.target.value.replace(/\D/g, ""))} inputMode="numeric" className="w-16" />
-                  <Select value={ageUnit} onValueChange={v => setAgeUnit(v as AgeUnit)}>
-                    <SelectTrigger className="flex-1"><SelectValue /></SelectTrigger>
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto lg:flex-row lg:overflow-hidden">
+          {/* Patient registration rail */}
+          <aside className="shrink-0 border-b bg-background p-4 lg:w-72 lg:overflow-y-auto lg:border-b-0 lg:border-r xl:w-80">
+            <h2 className="mb-4 border-b pb-2 text-xs font-semibold uppercase text-muted-foreground">Registration details</h2>
+            <div className="space-y-3">
+              <div className="grid grid-cols-3 gap-2">
+                <Field label="Title">
+                  <Select value={salutation ?? NO_SALUTATION} onValueChange={v => setSalutation(v === NO_SALUTATION ? null : (v as Salutation))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="days">Days</SelectItem>
-                      <SelectItem value="months">Months</SelectItem>
-                      <SelectItem value="years">Years</SelectItem>
+                      <SelectItem value={NO_SALUTATION}>—</SelectItem>
+                      {SALUTATIONS.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                     </SelectContent>
                   </Select>
-                </div>
+                </Field>
+                <Field label="Name" className="col-span-2">
+                  <Input ref={nameRef} value={name} onChange={e => setName(e.target.value)} />
+                </Field>
+              </div>
+              <Field label="Mobile">
+                <Input value={mobile} onChange={e => setMobile(e.target.value)} inputMode="tel" />
               </Field>
-              <Field label="Sex" className="col-span-2">
-                <Select value={sex} onValueChange={v => setSex(v as Sex)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="M">Male</SelectItem>
-                    <SelectItem value="F">Female</SelectItem>
-                    <SelectItem value="O">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-              </Field>
-              <Field label="Referred Doctor" className="col-span-2">
+              <div className="grid grid-cols-2 gap-2">
+                <Field label="Age">
+                  <div className="flex">
+                    <Input value={ageValue} onChange={e => setAgeValue(e.target.value.replace(/\D/g, ""))} inputMode="numeric" className="w-16 rounded-r-none" />
+                    <Select value={ageUnit} onValueChange={v => setAgeUnit(v as AgeUnit)}>
+                      <SelectTrigger className="min-w-0 flex-1 rounded-l-none border-l-0 px-2"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="days">Days</SelectItem>
+                        <SelectItem value="months">Months</SelectItem>
+                        <SelectItem value="years">Years</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </Field>
+                <Field label="Sex">
+                  <Select value={sex} onValueChange={v => setSex(v as Sex)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="M">Male</SelectItem>
+                      <SelectItem value="F">Female</SelectItem>
+                      <SelectItem value="O">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </Field>
+              </div>
+              <Field label="Referred Doctor">
                 <Input value={referredDoctor} onChange={e => setReferredDoctor(e.target.value)} />
               </Field>
-              <Field label="Notes" className="col-span-6">
-                <Textarea rows={2} value={notes} onChange={e => setNotes(e.target.value)} />
+              <Field label="Notes">
+                <Textarea rows={3} value={notes} onChange={e => setNotes(e.target.value)} />
               </Field>
-            </div>
-
-          </div>
-
-          {/* Compact Billing card — content height only, no stretching */}
-          <div className="col-span-5 h-auto self-start space-y-2 rounded-md border bg-secondary/30 p-4">
-            <div className="text-sm font-semibold">Billing</div>
-            <Row label="Total"><Money value={total} /></Row>
-            <Row label="Discount">
-              <Input value={discount} onChange={e => setDiscount(e.target.value)} className="h-8 text-right" inputMode="decimal" />
-            </Row>
-            <Row label="Net" emphasis><Money value={net} /></Row>
-          </div>
-        </div>
-
-        {/* Manual tracking flags — stored only, nothing is sent automatically. */}
-        <div className="mt-4 grid grid-cols-2 gap-3">
-          <FlagToggle
-            icon={<MessageCircle className="h-4 w-4" />}
-            label="Send report on WhatsApp"
-            hint="Patient wants the report on WhatsApp"
-            checked={whatsappReportRequired}
-            onChange={setWhatsappReportRequired}
-            activeClass="border-emerald-400 bg-emerald-50 text-emerald-900"
-          />
-          <FlagToggle
-            icon={<FileCheck2 className="h-4 w-4" />}
-            label="Outsourced report ready"
-            hint="Report received from the outsourced lab / printed"
-            checked={outsourcedReportReady}
-            onChange={setOutsourcedReportReady}
-            activeClass="border-amber-400 bg-amber-50 text-amber-900"
-          />
-        </div>
-
-        {/* Category-wise test selection + an always-current selection review. */}
-        <section className="mt-4" aria-labelledby="test-selection-heading">
-          <div className="mb-2 flex items-center justify-between">
-            <h2 id="test-selection-heading" className="text-sm font-semibold">Test Selection</h2>
-            <span className="text-xs text-muted-foreground">{selectedTests.length} selected</span>
-          </div>
-          <div className="grid items-start gap-4 md:grid-cols-12">
-            <div className="space-y-3 md:col-span-8">
-              {testGroups.map(group => (
-                <TestGroup
-                  key={group.key}
-                  groupKey={group.key}
-                  label={group.label}
-                  outsourced={group.outsourced}
-                  tests={group.tests}
-                  query={testSearches[group.key] ?? ""}
-                  onQueryChange={query => setTestSearches(current => ({ ...current, [group.key]: query }))}
-                  selectedTests={selectedTests}
-                  onToggle={toggleTest}
-                />
-              ))}
-              {testGroups.length === 0 && (
-                <div className="rounded-md border px-4 py-8 text-center text-sm text-muted-foreground">No active tests are available.</div>
-              )}
-            </div>
-
-            <div className="overflow-hidden rounded-md border md:sticky md:top-0 md:col-span-4">
-              <div className="flex items-center justify-between border-b bg-secondary/40 px-3 py-2">
-                <div className="text-sm font-semibold">Selected Tests</div>
-                <span className="text-xs tabular-nums text-muted-foreground">{selectedTestRows.length}</span>
+              <div className="space-y-2 pt-1">
+                <FlagToggle icon={<MessageCircle className="h-4 w-4" />} label="WhatsApp report" hint="Report requested on WhatsApp" checked={whatsappReportRequired} onChange={setWhatsappReportRequired} />
+                <FlagToggle icon={<FileCheck2 className="h-4 w-4" />} label="Outsourced report ready" hint="Report received or printed" checked={outsourcedReportReady} onChange={setOutsourcedReportReady} />
               </div>
-              <div className="max-h-80 overflow-y-auto">
+            </div>
+          </aside>
+
+          {/* Category compartments */}
+          <main className="min-w-0 flex-1 bg-muted/30 p-3 lg:overflow-y-auto xl:p-4" aria-labelledby="test-selection-heading">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 id="test-selection-heading" className="text-xs font-semibold uppercase text-muted-foreground">Test selection</h2>
+              <span className="text-xs font-medium tabular-nums text-primary">{selectedTests.length} selected</span>
+            </div>
+            <div className="grid items-start gap-3 xl:grid-cols-2">
+              {testGroups.map(group => (
+                <TestGroup key={group.key} groupKey={group.key} label={group.label} outsourced={group.outsourced} tests={group.tests} query={testSearches[group.key] ?? ""} onQueryChange={query => setTestSearches(current => ({ ...current, [group.key]: query }))} selectedTests={selectedTests} onToggle={toggleTest} />
+              ))}
+              {testGroups.length === 0 && <div className="rounded-md border bg-background px-4 py-8 text-center text-sm text-muted-foreground xl:col-span-2">No active tests are available.</div>}
+            </div>
+          </main>
+
+          {/* Persistent selected-tests and billing rail */}
+          <aside className="flex shrink-0 flex-col border-t bg-background lg:w-72 lg:border-l lg:border-t-0 xl:w-80">
+            <div className="flex items-center justify-between border-b px-4 py-3">
+              <h2 className="text-xs font-semibold uppercase">Selected tests</h2>
+              <span className="rounded bg-secondary px-2 py-0.5 text-xs font-semibold tabular-nums">{selectedTestRows.length}</span>
+            </div>
+            <div className="min-h-32 flex-1 overflow-y-auto p-3">
+              <div className="space-y-2">
                 {selectedTestRows.map(test => {
                   const category = test.outsourced ? (test.outsourcedLab?.trim() || "Outsourced") : "In-House";
                   return (
-                    <div key={test.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-b px-3 py-2 last:border-b-0">
+                    <div key={test.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2 rounded-md border bg-card p-3 shadow-sm">
                       <div className="min-w-0">
-                        <div className="truncate text-sm font-medium" title={test.name}>{test.name}</div>
-                        <div className="mt-0.5 flex items-center justify-between gap-3 text-xs text-muted-foreground">
-                          <span className="truncate">{category}</span>
-                          <span className="shrink-0 tabular-nums">₹{Number(test.rate).toFixed(2)}</span>
+                        <div className="text-sm font-semibold leading-tight" title={test.name}>{test.name}</div>
+                        <div className="mt-2 flex items-end justify-between gap-2 text-xs text-muted-foreground">
+                          <span className="truncate uppercase">{category}</span>
+                          <span className="shrink-0 font-semibold tabular-nums text-foreground">₹{Number(test.rate).toFixed(2)}</span>
                         </div>
                       </div>
-                      <Button
-                        type="button"
-                        size="icon"
-                        variant="ghost"
-                        className="h-7 w-7 shrink-0 text-destructive"
-                        title={`Remove ${test.name}`}
-                        aria-label={`Remove ${test.name}`}
-                        onClick={() => toggleTest(test.id)}
-                      >
+                      <Button type="button" size="icon" variant="ghost" className="h-6 w-6 text-destructive" title={`Remove ${test.name}`} aria-label={`Remove ${test.name}`} onClick={() => toggleTest(test.id)}>
                         <X className="h-3.5 w-3.5" />
                       </Button>
                     </div>
                   );
                 })}
-                {selectedTestRows.length === 0 && (
-                  <div className="px-4 py-8 text-center text-sm text-muted-foreground">No tests selected yet.</div>
-                )}
+                {selectedTestRows.length === 0 && <div className="flex min-h-40 items-center justify-center rounded-md border border-dashed px-4 text-center text-sm text-muted-foreground">Selected tests will appear here.</div>}
               </div>
-              {selectedTestRows.length > 0 && (
-                <div className="flex items-center justify-between border-t bg-secondary/20 px-3 py-2 text-sm">
-                  <span className="font-medium">Tests total</span>
-                  <strong className="tabular-nums">₹{total.toFixed(2)}</strong>
-                </div>
-              )}
             </div>
-          </div>
-        </section>
-
-        <div className="mt-4">
-          <PaymentTransactions
-            patient={patient ?? null}
-            net={net}
-            draftPayments={draftPayments}
-            setDraftPayments={setDraftPayments}
-          />
+            <div className="shrink-0 border-t bg-secondary/40 p-4">
+              <h3 className="mb-3 text-xs font-semibold uppercase text-muted-foreground">Billing</h3>
+              <div className="space-y-2">
+                <Row label="Tests total"><Money value={total} /></Row>
+                <Row label="Discount"><Input value={discount} onChange={e => setDiscount(e.target.value)} className="h-8 w-28 text-right" inputMode="decimal" /></Row>
+                <div className="flex items-end justify-between border-t pt-3">
+                  <span className="text-xs font-semibold uppercase text-muted-foreground">Net payable</span>
+                  <strong className="text-xl tabular-nums text-primary">₹{net.toFixed(2)}</strong>
+                </div>
+              </div>
+            </div>
+          </aside>
         </div>
 
-        <DialogFooter className="sm:justify-between">
+        {/* Payment transactions stay full width below the main workspace. */}
+        <div className="max-h-[30vh] shrink-0 overflow-y-auto border-t bg-background p-3">
+          <PaymentTransactions patient={patient ?? null} net={net} draftPayments={draftPayments} setDraftPayments={setDraftPayments} />
+        </div>
+
+        <DialogFooter className="shrink-0 border-t bg-muted/30 px-4 py-3 sm:justify-between">
           <div>{patient?.id && <BillActions patientId={patient.id} />}</div>
           <div className="flex items-center gap-2">
             <Button variant="ghost" onClick={() => onOpenChange(false)}><X className="mr-1 h-4 w-4" />Cancel</Button>
-            <Button onClick={handleSave} disabled={create.isPending || update.isPending}>
-              {patient ? "Update" : "Save"} (Ctrl+S)
-            </Button>
+            <Button onClick={handleSave} disabled={create.isPending || update.isPending}>{patient ? "Update" : "Save"} (Ctrl+S)</Button>
           </div>
         </DialogFooter>
 
@@ -405,23 +369,20 @@ function TestGroup({
   const selectedCount = tests.filter(test => selectedTests.includes(test.id)).length;
 
   return (
-    <div className="overflow-hidden rounded-md border">
-      <div className="flex flex-col gap-2 border-b bg-secondary/40 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex min-h-56 flex-col overflow-hidden rounded-md border bg-background shadow-sm">
+      <div className="border-b bg-secondary/40 px-3 py-2">
         <div className="flex items-center gap-2">
-          <h3 className="text-sm font-semibold">{label} Tests</h3>
+          <h3 className="text-xs font-semibold uppercase">{label} Tests</h3>
           <span className="text-xs tabular-nums text-muted-foreground">
             {selectedCount ? `${selectedCount} selected · ` : ""}{tests.length} available
           </span>
         </div>
-        <Input
-          value={query}
-          onChange={event => onQueryChange(event.target.value)}
-          placeholder={`Search in ${label} tests...`}
-          aria-label={`Search in ${label} tests`}
-          className="h-8 w-full sm:w-72"
-        />
+        <div className="relative mt-2">
+          <Search className="pointer-events-none absolute left-2.5 top-2 h-3.5 w-3.5 text-muted-foreground" />
+          <Input value={query} onChange={event => onQueryChange(event.target.value)} placeholder={`Search ${label}...`} aria-label={`Search in ${label} tests`} className="h-8 pl-8" />
+        </div>
       </div>
-      <div className="max-h-56 overflow-y-auto">
+      <div className="min-h-0 flex-1 overflow-y-auto">
         {filtered.map(test => {
           const selected = selectedTests.includes(test.id);
           const category = outsourced ? (test.outsourcedLab?.trim() || "Outsourced") : "In-House";
@@ -700,20 +661,19 @@ function PaymentEditorDialog({
 }
 
 function FlagToggle({
-  icon, label, hint, checked, onChange, activeClass,
+  icon, label, hint, checked, onChange,
 }: {
   icon: React.ReactNode;
   label: string;
   hint: string;
   checked: boolean;
   onChange: (v: boolean) => void;
-  activeClass: string;
 }) {
   return (
     <label
       className={cn(
         "flex cursor-pointer items-center justify-between gap-3 rounded-md border px-3 py-2 transition-colors",
-        checked ? activeClass : "bg-background text-muted-foreground",
+        checked ? "border-primary/40 bg-accent text-accent-foreground" : "bg-background text-muted-foreground",
       )}
     >
       <span className="flex items-center gap-2">
