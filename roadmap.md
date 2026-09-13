@@ -6,4 +6,5 @@
 - [x] Salutation dropdown (Mast./Mr./Miss./Mrs.) merged into patient name
 - [x] Latest-entry-only hard delete (backend guard + endpoint + ledger delete icon + demo mode)
 - [x] Category-wise patient test selection with independent searches and selected-tests review
+- [x] Patient test workspace refinement with one active category, spacious review, and preserved bill actions
 - [x] Patient Entry/Edit dashboard split layout with balanced details, tests, selection, billing, and payments
