@@ -209,8 +209,8 @@ export function PatientFormDialog({ open, onOpenChange, patient, entryDate, pref
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex h-[90vh] max-h-[90vh] w-[94vw] max-w-[94vw] flex-col gap-0 overflow-hidden p-0 xl:max-w-[1400px]">
-        <DialogHeader className="shrink-0 border-b bg-background px-6 py-3 pr-14">
+      <DialogContent className="flex h-[96vh] max-h-[96vh] w-[98vw] max-w-[98vw] flex-col gap-0 overflow-hidden p-0">
+        <DialogHeader className="shrink-0 border-b bg-background px-5 py-2.5 pr-14">
           <div className="flex items-center justify-between gap-4">
             <div>
               <DialogTitle>{patient ? `Edit Patient #${patient.registerNumber ?? patient.dailySerial}${patient.financialYear ? ` · FY ${patient.financialYear}` : ""}` : "New Patient Entry"}</DialogTitle>
@@ -225,15 +225,15 @@ export function PatientFormDialog({ open, onOpenChange, patient, entryDate, pref
           </div>
         </DialogHeader>
 
-        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto lg:flex-row lg:overflow-hidden">
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto md:grid md:grid-cols-[minmax(260px,27fr)_minmax(360px,46fr)_minmax(280px,27fr)] md:overflow-hidden">
           {/* Patient registration rail */}
-          <aside className="shrink-0 border-b bg-background p-4 lg:w-72 lg:overflow-y-auto lg:border-b-0 lg:border-r xl:w-80">
-            <h2 className="mb-4 border-b pb-2 text-xs font-semibold uppercase text-muted-foreground">Registration details</h2>
-            <div className="space-y-3">
+          <aside className="min-w-0 shrink-0 border-b bg-background p-3 md:overflow-visible md:border-b-0 md:border-r lg:p-4">
+            <h2 className="mb-2 border-b pb-1.5 text-xs font-semibold uppercase text-muted-foreground">Registration details</h2>
+            <div className="space-y-2">
               <div className="grid grid-cols-3 gap-2">
                 <Field label="Title">
                   <Select value={salutation ?? NO_SALUTATION} onValueChange={v => setSalutation(v === NO_SALUTATION ? null : (v as Salutation))}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value={NO_SALUTATION}>—</SelectItem>
                       {SALUTATIONS.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
@@ -241,18 +241,18 @@ export function PatientFormDialog({ open, onOpenChange, patient, entryDate, pref
                   </Select>
                 </Field>
                 <Field label="Name" className="col-span-2">
-                  <Input ref={nameRef} value={name} onChange={e => setName(e.target.value)} />
+                  <Input ref={nameRef} value={name} onChange={e => setName(e.target.value)} className="h-8" />
                 </Field>
               </div>
               <Field label="Mobile">
-                <Input value={mobile} onChange={e => setMobile(e.target.value)} inputMode="tel" />
+                <Input value={mobile} onChange={e => setMobile(e.target.value)} inputMode="tel" className="h-8" />
               </Field>
               <div className="grid grid-cols-2 gap-2">
                 <Field label="Age">
                   <div className="flex">
-                    <Input value={ageValue} onChange={e => setAgeValue(e.target.value.replace(/\D/g, ""))} inputMode="numeric" className="w-16 rounded-r-none" />
+                    <Input value={ageValue} onChange={e => setAgeValue(e.target.value.replace(/\D/g, ""))} inputMode="numeric" className="h-8 w-16 rounded-r-none" />
                     <Select value={ageUnit} onValueChange={v => setAgeUnit(v as AgeUnit)}>
-                      <SelectTrigger className="min-w-0 flex-1 rounded-l-none border-l-0 px-2"><SelectValue /></SelectTrigger>
+                      <SelectTrigger className="h-8 min-w-0 flex-1 rounded-l-none border-l-0 px-2"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="days">Days</SelectItem>
                         <SelectItem value="months">Months</SelectItem>
@@ -263,7 +263,7 @@ export function PatientFormDialog({ open, onOpenChange, patient, entryDate, pref
                 </Field>
                 <Field label="Sex">
                   <Select value={sex} onValueChange={v => setSex(v as Sex)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="M">Male</SelectItem>
                       <SelectItem value="F">Female</SelectItem>
@@ -273,12 +273,12 @@ export function PatientFormDialog({ open, onOpenChange, patient, entryDate, pref
                 </Field>
               </div>
               <Field label="Referred Doctor">
-                <Input value={referredDoctor} onChange={e => setReferredDoctor(e.target.value)} />
+                <Input value={referredDoctor} onChange={e => setReferredDoctor(e.target.value)} className="h-8" />
               </Field>
               <Field label="Notes">
-                <Textarea rows={3} value={notes} onChange={e => setNotes(e.target.value)} />
+                <Textarea rows={2} value={notes} onChange={e => setNotes(e.target.value)} className="min-h-14 resize-none" />
               </Field>
-              <div className="space-y-2 pt-1">
+              <div className="space-y-1.5 pt-0.5">
                 <FlagToggle icon={<MessageCircle className="h-4 w-4" />} label="WhatsApp report" hint="Report requested on WhatsApp" checked={whatsappReportRequired} onChange={setWhatsappReportRequired} />
                 <FlagToggle icon={<FileCheck2 className="h-4 w-4" />} label="Outsourced report ready" hint="Report received or printed" checked={outsourcedReportReady} onChange={setOutsourcedReportReady} />
               </div>
@@ -286,8 +286,8 @@ export function PatientFormDialog({ open, onOpenChange, patient, entryDate, pref
           </aside>
 
           {/* One active category at a time keeps catalogue browsing calm and predictable. */}
-          <main className="flex min-h-[34rem] min-w-0 flex-1 flex-col bg-muted/30 p-4 lg:min-h-0 lg:overflow-hidden xl:p-5" aria-labelledby="test-selection-heading">
-            <div className="mb-4 flex shrink-0 items-center justify-between gap-4">
+          <main className="flex min-h-[34rem] min-w-0 flex-col bg-muted/30 p-3 md:min-h-0 md:overflow-hidden lg:p-4" aria-labelledby="test-selection-heading">
+            <div className="mb-2 flex shrink-0 items-center justify-between gap-4">
               <h2 id="test-selection-heading" className="text-xs font-semibold uppercase text-muted-foreground">Test selection</h2>
               <span className="text-xs font-semibold tabular-nums text-primary">{selectedTests.length} selected</span>
             </div>
@@ -336,20 +336,20 @@ export function PatientFormDialog({ open, onOpenChange, patient, entryDate, pref
           </main>
 
           {/* Persistent selected-tests and billing rail */}
-          <aside className="flex min-h-[32rem] shrink-0 flex-col border-t bg-background lg:min-h-0 lg:w-80 lg:border-l lg:border-t-0 xl:w-96">
-            <div className="flex shrink-0 items-center justify-between border-b px-5 py-4">
+          <aside className="flex min-h-[32rem] min-w-0 shrink-0 flex-col border-t bg-background md:min-h-0 md:border-l md:border-t-0">
+            <div className="flex shrink-0 items-center justify-between border-b px-4 py-2.5">
               <h2 className="text-xs font-semibold uppercase">Selected tests</h2>
               <span className="rounded bg-secondary px-2 py-0.5 text-xs font-semibold tabular-nums">{selectedTestRows.length}</span>
             </div>
-            <div className="min-h-0 flex-1 overflow-y-auto p-4">
-              <div className="space-y-3">
+            <div className="min-h-0 flex-1 overflow-y-auto p-3">
+              <div className="space-y-2">
                 {selectedTestRows.map(test => {
                   const category = test.outsourced ? (test.outsourcedLab?.trim() || "Outsourced") : "In-House";
                   return (
-                    <div key={test.id} className="grid min-h-20 grid-cols-[minmax(0,1fr)_auto] items-start gap-3 rounded-md border bg-card p-3.5 shadow-sm">
+                    <div key={test.id} className="grid min-h-14 grid-cols-[minmax(0,1fr)_auto] items-start gap-2 rounded-md border bg-card p-2.5 shadow-sm">
                       <div className="min-w-0">
                         <div className="text-sm font-semibold leading-snug" title={test.name}>{test.name}</div>
-                        <div className="mt-3 flex items-end justify-between gap-3 text-xs text-muted-foreground">
+                        <div className="mt-1.5 flex items-end justify-between gap-3 text-xs text-muted-foreground">
                           <span className="truncate uppercase">{category}</span>
                           <span className="shrink-0 font-semibold tabular-nums text-foreground">₹{Number(test.rate).toFixed(2)}</span>
                         </div>
@@ -360,17 +360,17 @@ export function PatientFormDialog({ open, onOpenChange, patient, entryDate, pref
                     </div>
                   );
                 })}
-                {selectedTestRows.length === 0 && <div className="flex min-h-52 items-center justify-center rounded-md border border-dashed px-6 text-center text-sm text-muted-foreground">Selected tests from every category will appear here.</div>}
+                {selectedTestRows.length === 0 && <div className="flex min-h-32 items-center justify-center rounded-md border border-dashed px-5 text-center text-sm text-muted-foreground">Selected tests from every category will appear here.</div>}
               </div>
             </div>
-            <div className="shrink-0 border-t bg-secondary/40 p-5">
-              <h3 className="mb-3 text-xs font-semibold uppercase text-muted-foreground">Billing</h3>
-              <div className="space-y-2">
+            <div className="shrink-0 border-t bg-secondary/40 px-4 py-2.5">
+              <h3 className="mb-1.5 text-xs font-semibold uppercase text-muted-foreground">Billing</h3>
+              <div className="space-y-1">
                 <Row label="Tests total"><Money value={total} /></Row>
-                <Row label="Discount"><Input value={discount} onChange={e => setDiscount(e.target.value)} className="h-8 w-28 text-right" inputMode="decimal" /></Row>
-                <div className="flex items-end justify-between border-t pt-3">
+                <Row label="Discount"><Input value={discount} onChange={e => setDiscount(e.target.value)} className="h-7 w-24 text-right" inputMode="decimal" /></Row>
+                <div className="flex items-end justify-between border-t pt-1.5">
                   <span className="text-xs font-semibold uppercase text-muted-foreground">Net payable</span>
-                  <strong className="text-xl tabular-nums text-primary">₹{net.toFixed(2)}</strong>
+                  <strong className="text-lg tabular-nums text-primary">₹{net.toFixed(2)}</strong>
                 </div>
               </div>
             </div>
@@ -378,11 +378,11 @@ export function PatientFormDialog({ open, onOpenChange, patient, entryDate, pref
         </div>
 
         {/* Payment transactions stay full width below the main workspace. */}
-        <div className="max-h-[28vh] shrink-0 overflow-y-auto border-t bg-background p-4">
+        <div className="max-h-[22vh] shrink-0 overflow-y-auto border-t bg-background p-3">
           <PaymentTransactions patient={patient ?? null} net={net} draftPayments={draftPayments} setDraftPayments={setDraftPayments} />
         </div>
 
-        <DialogFooter className="shrink-0 flex-wrap border-t bg-muted/30 px-4 py-3 sm:justify-between">
+        <DialogFooter className="shrink-0 flex-wrap border-t bg-muted/30 px-4 py-2 sm:justify-between">
           <div className="shrink-0">{patient?.id && <BillActions patientId={patient.id} />}</div>
           <div className="flex items-center gap-2">
             <Button variant="ghost" onClick={() => onOpenChange(false)}><X className="mr-1 h-4 w-4" />Cancel</Button>
@@ -716,7 +716,7 @@ function FlagToggle({
   return (
     <label
       className={cn(
-        "flex cursor-pointer items-center justify-between gap-3 rounded-md border px-3 py-2 transition-colors",
+        "flex cursor-pointer items-center justify-between gap-2 rounded-md border px-2.5 py-1.5 transition-colors",
         checked ? "border-primary/40 bg-accent text-accent-foreground" : "bg-background text-muted-foreground",
       )}
     >
@@ -724,7 +724,7 @@ function FlagToggle({
         {icon}
         <span className="text-sm">
           <span className="block font-medium leading-tight">{label}</span>
-          <span className="block text-[11px] opacity-80">{hint}</span>
+          <span className="block text-[10px] leading-tight opacity-80">{hint}</span>
         </span>
       </span>
       <Switch checked={checked} onCheckedChange={onChange} />
