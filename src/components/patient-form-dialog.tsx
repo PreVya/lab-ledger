@@ -227,7 +227,7 @@ export function PatientFormDialog({ open, onOpenChange, patient, entryDate, pref
 
         <div className="grid min-h-0 grid-cols-[minmax(290px,27fr)_minmax(400px,46fr)_minmax(310px,27fr)] overflow-hidden">
           {/* Patient registration rail */}
-          <aside className="min-h-0 min-w-0 border-r bg-background p-3">
+          <aside className="min-h-0 min-w-0 border-r bg-background px-3 py-2.5">
             <h2 className="mb-1.5 border-b pb-1 text-xs font-semibold uppercase text-muted-foreground">Registration details</h2>
             <div className="space-y-1.5">
               <div className="grid grid-cols-3 gap-2">
@@ -276,7 +276,7 @@ export function PatientFormDialog({ open, onOpenChange, patient, entryDate, pref
                 <Input value={referredDoctor} onChange={e => setReferredDoctor(e.target.value)} className="h-8" />
               </Field>
               <Field label="Notes">
-                <Textarea rows={2} value={notes} onChange={e => setNotes(e.target.value)} className="h-12 min-h-12 resize-none" />
+                <Textarea rows={1} value={notes} onChange={e => setNotes(e.target.value)} className="h-10 min-h-10 resize-none" />
               </Field>
               <div className="space-y-1 pt-0.5">
                 <FlagToggle icon={<MessageCircle className="h-4 w-4" />} label="WhatsApp report" hint="Report requested on WhatsApp" checked={whatsappReportRequired} onChange={setWhatsappReportRequired} />
@@ -341,8 +341,8 @@ export function PatientFormDialog({ open, onOpenChange, patient, entryDate, pref
               <h2 className="text-xs font-semibold uppercase">Selected tests</h2>
               <span className="rounded bg-secondary px-2 py-0.5 text-xs font-semibold tabular-nums">{selectedTestRows.length}</span>
             </div>
-            <div className="min-h-0 flex-1 overflow-hidden p-3">
-              <div className="space-y-2">
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3" aria-label="Selected tests list">
+              <div className="space-y-2 pr-1">
                 {selectedTestRows.map(test => {
                   const category = test.outsourced ? (test.outsourcedLab?.trim() || "Outsourced") : "In-House";
                   return (
@@ -382,9 +382,9 @@ export function PatientFormDialog({ open, onOpenChange, patient, entryDate, pref
           <PaymentTransactions patient={patient ?? null} net={net} draftPayments={draftPayments} setDraftPayments={setDraftPayments} />
         </div>
 
-        <DialogFooter className="min-h-12 flex-wrap items-center border-t bg-muted/30 px-4 py-2 sm:justify-between">
-          <div className="flex min-h-8 shrink-0 items-center">{patient?.id && <BillActions patientId={patient.id} />}</div>
-          <div className="flex items-center gap-2">
+        <DialogFooter className="grid min-h-12 shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-4 overflow-visible border-t bg-muted/30 px-4 py-2">
+          <div className="flex min-h-8 min-w-0 items-center overflow-visible">{patient?.id && <BillActions patientId={patient.id} />}</div>
+          <div className="flex shrink-0 items-center gap-2">
             <Button variant="ghost" onClick={() => onOpenChange(false)}><X className="mr-1 h-4 w-4" />Cancel</Button>
             <Button onClick={handleSave} disabled={create.isPending || update.isPending}>{patient ? "Update" : "Save"} (Ctrl+S)</Button>
           </div>
@@ -716,13 +716,13 @@ function FlagToggle({
   return (
     <label
       className={cn(
-        "flex cursor-pointer items-center justify-between gap-2 rounded-md border px-2.5 py-1.5 transition-colors",
+        "flex min-h-10 cursor-pointer items-center justify-between gap-2 rounded-md border px-2.5 py-1 transition-colors",
         checked ? "border-primary/40 bg-accent text-accent-foreground" : "bg-background text-muted-foreground",
       )}
     >
       <span className="flex items-center gap-2">
         {icon}
-        <span className="text-sm">
+        <span className="min-w-0 text-sm">
           <span className="block font-medium leading-tight">{label}</span>
           <span className="block text-[10px] leading-tight opacity-80">{hint}</span>
         </span>

@@ -10,3 +10,4 @@
 - [x] Patient Entry/Edit dashboard split layout with balanced details, tests, selection, billing, and payments
 - [x] Patient Entry/Edit sizing refinement with visible registration flags, taller selected tests, and compact billing
 - [x] Patient Entry/Edit regression fix with strict workspace, payments, and footer layout flow
+- [x] Patient Entry/Edit visibility fix for selected-test scrolling, both report toggles, and bill actions
