@@ -209,7 +209,7 @@ export function PatientFormDialog({ open, onOpenChange, patient, entryDate, pref
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex h-[96vh] max-h-[96vh] w-[98vw] max-w-[98vw] flex-col gap-0 overflow-hidden p-0">
+      <DialogContent className="grid h-[98vh] max-h-[98vh] w-[98vw] max-w-[98vw] grid-rows-[auto_minmax(0,1fr)_auto_auto] gap-0 overflow-hidden p-0">
         <DialogHeader className="shrink-0 border-b bg-background px-5 py-2.5 pr-14">
           <div className="flex items-center justify-between gap-4">
             <div>
@@ -225,11 +225,11 @@ export function PatientFormDialog({ open, onOpenChange, patient, entryDate, pref
           </div>
         </DialogHeader>
 
-        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto md:grid md:grid-cols-[minmax(260px,27fr)_minmax(360px,46fr)_minmax(280px,27fr)] md:overflow-hidden">
+        <div className="grid min-h-0 grid-cols-[minmax(290px,27fr)_minmax(400px,46fr)_minmax(310px,27fr)] overflow-hidden">
           {/* Patient registration rail */}
-          <aside className="min-w-0 shrink-0 border-b bg-background p-3 md:overflow-visible md:border-b-0 md:border-r lg:p-4">
-            <h2 className="mb-2 border-b pb-1.5 text-xs font-semibold uppercase text-muted-foreground">Registration details</h2>
-            <div className="space-y-2">
+          <aside className="min-h-0 min-w-0 border-r bg-background p-3">
+            <h2 className="mb-1.5 border-b pb-1 text-xs font-semibold uppercase text-muted-foreground">Registration details</h2>
+            <div className="space-y-1.5">
               <div className="grid grid-cols-3 gap-2">
                 <Field label="Title">
                   <Select value={salutation ?? NO_SALUTATION} onValueChange={v => setSalutation(v === NO_SALUTATION ? null : (v as Salutation))}>
@@ -276,9 +276,9 @@ export function PatientFormDialog({ open, onOpenChange, patient, entryDate, pref
                 <Input value={referredDoctor} onChange={e => setReferredDoctor(e.target.value)} className="h-8" />
               </Field>
               <Field label="Notes">
-                <Textarea rows={2} value={notes} onChange={e => setNotes(e.target.value)} className="min-h-14 resize-none" />
+                <Textarea rows={2} value={notes} onChange={e => setNotes(e.target.value)} className="h-12 min-h-12 resize-none" />
               </Field>
-              <div className="space-y-1.5 pt-0.5">
+              <div className="space-y-1 pt-0.5">
                 <FlagToggle icon={<MessageCircle className="h-4 w-4" />} label="WhatsApp report" hint="Report requested on WhatsApp" checked={whatsappReportRequired} onChange={setWhatsappReportRequired} />
                 <FlagToggle icon={<FileCheck2 className="h-4 w-4" />} label="Outsourced report ready" hint="Report received or printed" checked={outsourcedReportReady} onChange={setOutsourcedReportReady} />
               </div>
@@ -286,7 +286,7 @@ export function PatientFormDialog({ open, onOpenChange, patient, entryDate, pref
           </aside>
 
           {/* One active category at a time keeps catalogue browsing calm and predictable. */}
-          <main className="flex min-h-[34rem] min-w-0 flex-col bg-muted/30 p-3 md:min-h-0 md:overflow-hidden lg:p-4" aria-labelledby="test-selection-heading">
+          <main className="flex min-h-0 min-w-0 flex-col overflow-hidden bg-muted/30 p-3" aria-labelledby="test-selection-heading">
             <div className="mb-2 flex shrink-0 items-center justify-between gap-4">
               <h2 id="test-selection-heading" className="text-xs font-semibold uppercase text-muted-foreground">Test selection</h2>
               <span className="text-xs font-semibold tabular-nums text-primary">{selectedTests.length} selected</span>
@@ -336,7 +336,7 @@ export function PatientFormDialog({ open, onOpenChange, patient, entryDate, pref
           </main>
 
           {/* Persistent selected-tests and billing rail */}
-          <aside className="flex min-h-[32rem] min-w-0 shrink-0 flex-col border-t bg-background md:min-h-0 md:border-l md:border-t-0">
+          <aside className="flex min-h-0 min-w-0 flex-col border-l bg-background">
             <div className="flex shrink-0 items-center justify-between border-b px-4 py-2.5">
               <h2 className="text-xs font-semibold uppercase">Selected tests</h2>
               <span className="rounded bg-secondary px-2 py-0.5 text-xs font-semibold tabular-nums">{selectedTestRows.length}</span>
@@ -378,12 +378,12 @@ export function PatientFormDialog({ open, onOpenChange, patient, entryDate, pref
         </div>
 
         {/* Payment transactions stay full width below the main workspace. */}
-        <div className="max-h-[22vh] shrink-0 overflow-y-auto border-t bg-background p-3">
+        <div className="border-t bg-background px-3 py-2">
           <PaymentTransactions patient={patient ?? null} net={net} draftPayments={draftPayments} setDraftPayments={setDraftPayments} />
         </div>
 
-        <DialogFooter className="shrink-0 flex-wrap border-t bg-muted/30 px-4 py-2 sm:justify-between">
-          <div className="shrink-0">{patient?.id && <BillActions patientId={patient.id} />}</div>
+        <DialogFooter className="min-h-12 flex-wrap items-center border-t bg-muted/30 px-4 py-2 sm:justify-between">
+          <div className="flex min-h-8 shrink-0 items-center">{patient?.id && <BillActions patientId={patient.id} />}</div>
           <div className="flex items-center gap-2">
             <Button variant="ghost" onClick={() => onOpenChange(false)}><X className="mr-1 h-4 w-4" />Cancel</Button>
             <Button onClick={handleSave} disabled={create.isPending || update.isPending}>{patient ? "Update" : "Save"} (Ctrl+S)</Button>
