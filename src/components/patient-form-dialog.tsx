@@ -341,7 +341,7 @@ export function PatientFormDialog({ open, onOpenChange, patient, entryDate, pref
               <h2 className="text-xs font-semibold uppercase">Selected tests</h2>
               <span className="rounded bg-secondary px-2 py-0.5 text-xs font-semibold tabular-nums">{selectedTestRows.length}</span>
             </div>
-            <div className="min-h-0 flex-1 overflow-y-auto p-3">
+            <div className="min-h-0 flex-1 overflow-hidden p-3">
               <div className="space-y-2">
                 {selectedTestRows.map(test => {
                   const category = test.outsourced ? (test.outsourcedLab?.trim() || "Outsourced") : "In-House";
