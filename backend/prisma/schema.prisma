@@ -348,6 +348,7 @@ model Employee {
 
   attendance         Attendance[]
   salaryAdvances     SalaryAdvance[]
+  teaCoffeeEntries   TeaCoffeeEntry[]
 
   @@index([active])
 }
@@ -395,4 +396,69 @@ model SalaryAdvance {
   updatedAt   DateTime @updatedAt
 
   @@index([employeeId, date])
+}
+
+// ============================================================================
+// PHASE 4 — Tea / Coffee module
+// Daily entries are consumption tracking ONLY (no ledger impact). The monthly
+// bill, when marked paid, creates exactly ONE cash Expense row dated on the
+// actual paidDate — which may fall in a later month than billMonth.
+// ============================================================================
+
+enum TeaCoffeeItem {
+  tea
+  coffee
+}
+
+enum TeaCoffeeBillStatus {
+  unpaid
+  paid
+}
+
+model TeaCoffeeRate {
+  id            String        @id @default(uuid())
+  item          TeaCoffeeItem @unique
+  rate          Decimal       @db.Decimal(10, 2)
+  active        Boolean       @default(true)
+  effectiveFrom DateTime      @db.Date
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+model TeaCoffeeEntry {
+  id          String        @id @default(uuid())
+  date        DateTime      @db.Date
+  employeeId  String
+  employee    Employee      @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  item        TeaCoffeeItem
+  quantity    Int           @default(1)
+  /// Snapshot of the rate at entry time — later rate changes never alter history.
+  rateAtTime  Decimal       @db.Decimal(10, 2)
+  amount      Decimal       @db.Decimal(10, 2)
+  createdById String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([date])
+  @@index([employeeId])
+}
+
+model TeaCoffeeMonthlyBill {
+  /// billMonth is the CONSUMPTION month (YYYY-MM). paidDate is the actual cash
+  /// payment date and may belong to a different month — the ledger follows paidDate.
+  id           String              @id @default(uuid())
+  billMonth    String              @unique
+  teaCount     Int                 @default(0)
+  coffeeCount  Int                 @default(0)
+  teaAmount    Decimal             @db.Decimal(10, 2) @default(0)
+  coffeeAmount Decimal             @db.Decimal(10, 2) @default(0)
+  totalAmount  Decimal             @db.Decimal(10, 2) @default(0)
+  status       TeaCoffeeBillStatus @default(unpaid)
+  paidDate     DateTime?           @db.Date
+  paidAmount   Decimal?            @db.Decimal(10, 2)
+  /// Links to the single Expense row created on payment. Never duplicated.
+  expenseId    String?             @unique
+  notes        String?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
 }
