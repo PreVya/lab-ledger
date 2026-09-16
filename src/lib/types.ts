@@ -338,3 +338,50 @@ export interface Bill {
   updatedAt: string;
   items: BillItem[];
 }
+
+// -------- Phase 4: Tea / Coffee --------
+export type TeaCoffeeItem = "tea" | "coffee";
+
+export interface TeaCoffeeRate {
+  id: string;
+  item: TeaCoffeeItem;
+  rate: string;
+  active: boolean;
+  effectiveFrom: string;
+}
+
+export interface TeaCoffeeEntry {
+  id: string;
+  date: string;
+  employeeId: string;
+  item: TeaCoffeeItem;
+  quantity: number;
+  rateAtTime: string;
+  amount: string;
+  createdById: string | null;
+  employee?: { id: string; name: string; designation: string | null };
+}
+
+export interface TeaCoffeeDayResponse {
+  date: string;
+  entries: TeaCoffeeEntry[];
+  totals: { teaQty: number; coffeeQty: number; totalAmount: string };
+}
+
+export interface TeaCoffeeMonthlyBill {
+  id: string | null;
+  billMonth: string;
+  billMonthLabel: string;
+  teaCount: number;
+  coffeeCount: number;
+  teaAmount: string;
+  coffeeAmount: string;
+  totalAmount: string;
+  liveTotalAmount: string;
+  status: "unpaid" | "paid";
+  paidDate: string | null;
+  paidAmount: string | null;
+  notes: string | null;
+  expenseId: string | null;
+  expense: { id: string; date: string; description: string; amount: string; mode: PaymentMode } | null;
+}

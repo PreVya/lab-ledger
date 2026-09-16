@@ -486,3 +486,79 @@ export function useMarkBillPrinted() {
     },
   });
 }
+
+// ============= Phase 4: Tea / Coffee =============
+import type { TeaCoffeeDayResponse, TeaCoffeeItem, TeaCoffeeMonthlyBill, TeaCoffeeRate } from "./types";
+
+export const qkTea = {
+  rates: ["tea-coffee-rates"] as const,
+  day: (date: string) => ["tea-coffee-entries", date] as const,
+  month: (month: string) => ["tea-coffee-bill", month] as const,
+};
+
+export function useTeaCoffeeRates() {
+  return useQuery({ queryKey: qkTea.rates, queryFn: () => api<TeaCoffeeRate[]>("/tea-coffee/rates"), staleTime: 60_000 });
+}
+
+export function useTeaCoffeeDay(date: string) {
+  return useQuery({
+    queryKey: qkTea.day(date),
+    queryFn: () => api<TeaCoffeeDayResponse>(`/tea-coffee/entries?date=${date}`),
+  });
+}
+
+/** Daily entries are consumption tracking only — they never touch the ledger. */
+export function useCreateTeaCoffeeEntry(date: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { employeeId: string; item: TeaCoffeeItem; quantity: number; date: string }) =>
+      api("/tea-coffee/entries", { method: "POST", body: JSON.stringify(input) }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qkTea.day(date) });
+      qc.invalidateQueries({ queryKey: ["tea-coffee-bill"] });
+    },
+  });
+}
+
+export function useUpdateTeaCoffeeEntry(date: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...input }: { id: string; employeeId?: string; item?: TeaCoffeeItem; quantity?: number; date?: string }) =>
+      api(`/tea-coffee/entries/${id}`, { method: "PUT", body: JSON.stringify(input) }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qkTea.day(date) });
+      qc.invalidateQueries({ queryKey: ["tea-coffee-bill"] });
+    },
+  });
+}
+
+export function useDeleteTeaCoffeeEntry(date: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api(`/tea-coffee/entries/${id}`, { method: "DELETE" }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qkTea.day(date) });
+      qc.invalidateQueries({ queryKey: ["tea-coffee-bill"] });
+    },
+  });
+}
+
+export function useTeaCoffeeMonthlyBill(month: string) {
+  return useQuery({
+    queryKey: qkTea.month(month),
+    queryFn: () => api<TeaCoffeeMonthlyBill>(`/tea-coffee/monthly-bill?month=${month}`),
+  });
+}
+
+/** Creates exactly one cash Expense row on the actual paid date. */
+export function useMarkTeaCoffeeBillPaid() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { billMonth: string; paidDate: string; paidAmount: number; notes?: string }) =>
+      api<TeaCoffeeMonthlyBill>("/tea-coffee/monthly-bill/mark-paid", { method: "POST", body: JSON.stringify(input) }),
+    onSuccess: (bill) => {
+      qc.invalidateQueries({ queryKey: qkTea.month(bill.billMonth) });
+      qc.invalidateQueries({ queryKey: ["ledger"] });
+    },
+  });
+}
