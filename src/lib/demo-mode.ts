@@ -65,14 +65,12 @@ const store = {
     { id: "e2", name: "Gayatri", mobile: null, designation: "Technician", monthlySalary: "0", active: true, alwaysPresent: true, linkedUserId: null, aadhaarDocumentId: null, aadhaarDocument: null, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
   ] as any[],
   teaRates: [
-    { id: "r1", item: "tea", rate: "10", active: true, effectiveFrom: LEDGER_START_FOR_RATES },
-    { id: "r2", item: "coffee", rate: "20", active: true, effectiveFrom: LEDGER_START_FOR_RATES },
+    { id: "r1", item: "tea", rate: "10", active: true, effectiveFrom: "2026-08-01" },
+    { id: "r2", item: "coffee", rate: "20", active: true, effectiveFrom: "2026-08-01" },
   ] as any[],
   teaEntries: [] as any[],
   teaBills: [] as any[],
 };
-
-const LEDGER_START_FOR_RATES = "2026-08-01";
 
 function uid() { return Math.random().toString(36).slice(2, 10); }
 function fyFor(d: string) {
