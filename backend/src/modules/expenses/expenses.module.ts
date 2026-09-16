@@ -7,5 +7,6 @@ import { LedgerModule } from '../ledger/ledger.module';
   imports: [LedgerModule],
   controllers: [ExpensesController],
   providers: [ExpensesService],
+  exports: [ExpensesService],
 })
 export class ExpensesModule {}

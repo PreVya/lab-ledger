@@ -17,6 +17,7 @@ import { SalaryModule } from './modules/salary/salary.module';
 import { StorageModule } from './modules/storage/storage.module';
 import { HolidaysModule } from './modules/holidays/holidays.module';
 import { BillsModule } from './modules/bills/bills.module';
+import { TeaCoffeeModule } from './modules/tea-coffee/tea-coffee.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { BillsModule } from './modules/bills/bills.module';
     StorageModule,
     HolidaysModule,
     BillsModule,
+    TeaCoffeeModule,
   ],
 })
 export class AppModule {}
