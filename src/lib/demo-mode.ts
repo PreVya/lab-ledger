@@ -59,7 +59,20 @@ const store = {
   serial: 0,
   reg: 0,
   currentUserId: "demo-admin",
+  // -------- Phase 4: tea / coffee (demo parity) --------
+  employees: [
+    { id: "e1", name: "Prerana", mobile: null, designation: "Receptionist", monthlySalary: "0", active: true, alwaysPresent: true, linkedUserId: null, aadhaarDocumentId: null, aadhaarDocument: null, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+    { id: "e2", name: "Gayatri", mobile: null, designation: "Technician", monthlySalary: "0", active: true, alwaysPresent: true, linkedUserId: null, aadhaarDocumentId: null, aadhaarDocument: null, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+  ] as any[],
+  teaRates: [
+    { id: "r1", item: "tea", rate: "10", active: true, effectiveFrom: LEDGER_START_FOR_RATES },
+    { id: "r2", item: "coffee", rate: "20", active: true, effectiveFrom: LEDGER_START_FOR_RATES },
+  ] as any[],
+  teaEntries: [] as any[],
+  teaBills: [] as any[],
 };
+
+const LEDGER_START_FOR_RATES = "2026-08-01";
 
 function uid() { return Math.random().toString(36).slice(2, 10); }
 function fyFor(d: string) {
@@ -601,6 +614,138 @@ export function demoHandle(path: string, init: RequestInit = {}): unknown {
           && (!q || b.patientNameSnapshot.toLowerCase().includes(q))
           && (!bn || String(b.billNumber) === bn))
         .sort((a, b) => b.billNumber - a.billNumber);
+    }
+  }
+
+    // ---- Phase 4: tea / coffee ----
+  if (path === "/employees" && method === "GET") return store.employees.filter((e: any) => e.active);
+
+  if (path.startsWith("/tea-coffee")) {
+    const url = new URL("http://x" + path);
+    const clean = url.pathname;
+    const monthLabel = (m: string) => {
+      const names = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+      const [y, mm] = m.split("-").map(Number);
+      return `${names[mm - 1]} ${y}`;
+    };
+    const rateFor = (item: string) => Number(store.teaRates.find((r: any) => r.item === item)?.rate ?? 0);
+
+    if (clean === "/tea-coffee/rates" && method === "GET") return store.teaRates;
+    if (clean === "/tea-coffee/rates" && method === "PUT") {
+      const r = store.teaRates.find((x: any) => x.item === body.item);
+      if (r) r.rate = String(Number(body.rate) || 0);
+      return r;
+    }
+
+    if (clean === "/tea-coffee/entries" && method === "GET") {
+      const date = url.searchParams.get("date") || todayIST();
+      const entries = store.teaEntries.filter((e: any) => e.date === date);
+      return {
+        date,
+        entries,
+        totals: {
+          teaQty: entries.filter((e: any) => e.item === "tea").reduce((s: number, e: any) => s + e.quantity, 0),
+          coffeeQty: entries.filter((e: any) => e.item === "coffee").reduce((s: number, e: any) => s + e.quantity, 0),
+          totalAmount: entries.reduce((s: number, e: any) => s + Number(e.amount), 0).toFixed(2),
+        },
+      };
+    }
+
+    if (clean === "/tea-coffee/entries" && method === "POST") {
+      const employee = store.employees.find((e: any) => e.id === body.employeeId);
+      if (!employee) throw new Error("Employee not found");
+      const quantity = Math.max(1, Number(body.quantity) || 1);
+      const rate = rateFor(body.item);
+      const row = {
+        id: uid(), date: (body.date || todayIST()).slice(0, 10), employeeId: body.employeeId,
+        item: body.item, quantity, rateAtTime: String(rate), amount: String(rate * quantity),
+        createdById: store.currentUserId,
+        employee: { id: employee.id, name: employee.name, designation: employee.designation },
+      };
+      store.teaEntries.push(row);
+      return row;
+    }
+
+    const teaEntryMatch = clean.match(/^\/tea-coffee\/entries\/([^/?]+)$/);
+    if (teaEntryMatch && method === "PUT") {
+      const row = store.teaEntries.find((e: any) => e.id === teaEntryMatch[1]);
+      if (!row) throw new Error("Entry not found");
+      if (body.employeeId) {
+        const emp = store.employees.find((e: any) => e.id === body.employeeId);
+        row.employeeId = body.employeeId;
+        row.employee = emp ? { id: emp.id, name: emp.name, designation: emp.designation } : row.employee;
+      }
+      if (body.item) row.item = body.item;
+      if (body.date) row.date = String(body.date).slice(0, 10);
+      if (body.quantity != null) row.quantity = Math.max(1, Number(body.quantity) || 1);
+      row.rateAtTime = String(rateFor(row.item));
+      row.amount = String(Number(row.rateAtTime) * row.quantity);
+      return row;
+    }
+    if (teaEntryMatch && method === "DELETE") {
+      store.teaEntries = store.teaEntries.filter((e: any) => e.id !== teaEntryMatch[1]);
+      return { ok: true };
+    }
+
+    const billFor = (month: string) => {
+      const rows = store.teaEntries.filter((e: any) => e.date.slice(0, 7) === month);
+      const teaCount = rows.filter((e: any) => e.item === "tea").reduce((s: number, e: any) => s + e.quantity, 0);
+      const coffeeCount = rows.filter((e: any) => e.item === "coffee").reduce((s: number, e: any) => s + e.quantity, 0);
+      const teaAmount = rows.filter((e: any) => e.item === "tea").reduce((s: number, e: any) => s + Number(e.amount), 0);
+      const coffeeAmount = rows.filter((e: any) => e.item === "coffee").reduce((s: number, e: any) => s + Number(e.amount), 0);
+      const stored = store.teaBills.find((b: any) => b.billMonth === month);
+      const paid = stored?.status === "paid";
+      const expense = stored?.expenseId ? store.expenses.find(e => e.id === stored.expenseId) ?? null : null;
+      return {
+        id: stored?.id ?? null,
+        billMonth: month,
+        billMonthLabel: monthLabel(month),
+        teaCount: paid ? stored.teaCount : teaCount,
+        coffeeCount: paid ? stored.coffeeCount : coffeeCount,
+        teaAmount: (paid ? Number(stored.teaAmount) : teaAmount).toFixed(2),
+        coffeeAmount: (paid ? Number(stored.coffeeAmount) : coffeeAmount).toFixed(2),
+        totalAmount: (paid ? Number(stored.totalAmount) : teaAmount + coffeeAmount).toFixed(2),
+        liveTotalAmount: (teaAmount + coffeeAmount).toFixed(2),
+        status: stored?.status ?? "unpaid",
+        paidDate: stored?.paidDate ?? null,
+        paidAmount: stored?.paidAmount ?? null,
+        notes: stored?.notes ?? null,
+        expenseId: stored?.expenseId ?? null,
+        expense: expense ? { id: expense.id, date: expense.date, description: expense.description, amount: expense.amount, mode: expense.mode } : null,
+      };
+    };
+
+    if (clean === "/tea-coffee/monthly-bill" && method === "GET") {
+      return billFor(url.searchParams.get("month") || todayIST().slice(0, 7));
+    }
+
+    if (clean === "/tea-coffee/monthly-bill/mark-paid" && method === "POST") {
+      const month = String(body.billMonth);
+      const current = billFor(month);
+      if (current.status === "paid") throw new Error(`Tea/Coffee bill for ${current.billMonthLabel} is already paid.`);
+      const paidDate = String(body.paidDate || "").slice(0, 10);
+      if (!paidDate) throw new Error("Paid date is required.");
+      if (paidDate < LEDGER_START) throw new Error("Ledger entries are allowed only from 01-Aug-2026 onward.");
+      if (isSundayStr(paidDate)) throw new Error("Sunday / Clinic Holiday. Ledger entries are blocked for this date.");
+      const amount = Number(body.paidAmount ?? current.liveTotalAmount);
+      if (!(amount > 0)) throw new Error("Paid amount must be greater than 0.");
+      const bill: any = {
+        id: uid(), billMonth: month,
+        teaCount: current.teaCount, coffeeCount: current.coffeeCount,
+        teaAmount: current.teaAmount, coffeeAmount: current.coffeeAmount,
+        totalAmount: current.liveTotalAmount,
+        status: "paid", paidDate, paidAmount: amount.toFixed(2),
+        notes: body.notes ?? null, expenseId: null,
+      };
+      const expense: DemoExpense = {
+        id: uid(), date: paidDate,
+        description: `Tea/Coffee bill for month ${current.billMonthLabel} with bill id ${bill.id}`,
+        amount: amount.toFixed(2), mode: "cash", createdAt: new Date().toISOString(),
+      };
+      store.expenses.push(expense);
+      bill.expenseId = expense.id;
+      store.teaBills.push(bill);
+      return billFor(month);
     }
   }
 
