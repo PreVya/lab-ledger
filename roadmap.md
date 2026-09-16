@@ -11,3 +11,5 @@
 - [x] Patient Entry/Edit sizing refinement with visible registration flags, taller selected tests, and compact billing
 - [x] Patient Entry/Edit regression fix with strict workspace, payments, and footer layout flow
 - [x] Patient Entry/Edit visibility fix for selected-test scrolling, both report toggles, and bill actions
+
+- [x] Phase 4 — Tea/Coffee module: rates (tea Rs.10, coffee Rs.20), daily consumption entries (no ledger impact), monthly bill with snapshot on payment, Mark as Paid creates exactly one cash Expense on the real paid date (may fall in a later month), duplicate-payment protection, Tea/Coffee nav tab. Migration: phase_4_tea_coffee_module (run `yarn prisma migrate deploy` in backend/).
