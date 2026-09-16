@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as UsersRouteImport } from './routes/users'
 import { Route as TestsRouteImport } from './routes/tests'
+import { Route as TeaCoffeeRouteImport } from './routes/tea-coffee'
 import { Route as SearchRouteImport } from './routes/search'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as BillsRouteImport } from './routes/bills'
@@ -26,6 +27,11 @@ const UsersRoute = UsersRouteImport.update({
 const TestsRoute = TestsRouteImport.update({
   id: '/tests',
   path: '/tests',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TeaCoffeeRoute = TeaCoffeeRouteImport.update({
+  id: '/tea-coffee',
+  path: '/tea-coffee',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SearchRoute = SearchRouteImport.update({
@@ -66,6 +72,7 @@ export interface FileRoutesByFullPath {
   '/bills': typeof BillsRoute
   '/login': typeof LoginRoute
   '/search': typeof SearchRoute
+  '/tea-coffee': typeof TeaCoffeeRoute
   '/tests': typeof TestsRoute
   '/users': typeof UsersRoute
 }
@@ -76,6 +83,7 @@ export interface FileRoutesByTo {
   '/bills': typeof BillsRoute
   '/login': typeof LoginRoute
   '/search': typeof SearchRoute
+  '/tea-coffee': typeof TeaCoffeeRoute
   '/tests': typeof TestsRoute
   '/users': typeof UsersRoute
 }
@@ -87,6 +95,7 @@ export interface FileRoutesById {
   '/bills': typeof BillsRoute
   '/login': typeof LoginRoute
   '/search': typeof SearchRoute
+  '/tea-coffee': typeof TeaCoffeeRoute
   '/tests': typeof TestsRoute
   '/users': typeof UsersRoute
 }
@@ -99,6 +108,7 @@ export interface FileRouteTypes {
     | '/bills'
     | '/login'
     | '/search'
+    | '/tea-coffee'
     | '/tests'
     | '/users'
   fileRoutesByTo: FileRoutesByTo
@@ -109,6 +119,7 @@ export interface FileRouteTypes {
     | '/bills'
     | '/login'
     | '/search'
+    | '/tea-coffee'
     | '/tests'
     | '/users'
   id:
@@ -119,6 +130,7 @@ export interface FileRouteTypes {
     | '/bills'
     | '/login'
     | '/search'
+    | '/tea-coffee'
     | '/tests'
     | '/users'
   fileRoutesById: FileRoutesById
@@ -130,6 +142,7 @@ export interface RootRouteChildren {
   BillsRoute: typeof BillsRoute
   LoginRoute: typeof LoginRoute
   SearchRoute: typeof SearchRoute
+  TeaCoffeeRoute: typeof TeaCoffeeRoute
   TestsRoute: typeof TestsRoute
   UsersRoute: typeof UsersRoute
 }
@@ -148,6 +161,13 @@ declare module '@tanstack/react-router' {
       path: '/tests'
       fullPath: '/tests'
       preLoaderRoute: typeof TestsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tea-coffee': {
+      id: '/tea-coffee'
+      path: '/tea-coffee'
+      fullPath: '/tea-coffee'
+      preLoaderRoute: typeof TeaCoffeeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/search': {
@@ -202,6 +222,7 @@ const rootRouteChildren: RootRouteChildren = {
   BillsRoute: BillsRoute,
   LoginRoute: LoginRoute,
   SearchRoute: SearchRoute,
+  TeaCoffeeRoute: TeaCoffeeRoute,
   TestsRoute: TestsRoute,
   UsersRoute: UsersRoute,
 }
