@@ -385,3 +385,38 @@ export interface TeaCoffeeMonthlyBill {
   expenseId: string | null;
   expense: { id: string; date: string; description: string; amount: string; mode: PaymentMode } | null;
 }
+
+// ============= Phase 4: Analytics (first 8 reports) =============
+
+export interface AnalyticsPeriodRow {
+  key: string;
+  label: string;
+  cash: number;
+  upi: number;
+  card: number;
+  other: number;
+  advance: number;
+  balance: number;
+  net: number;
+}
+
+export interface AnalyticsSummary {
+  fromDate: string;
+  toDate: string;
+  netCollection: number;
+  cashCollection: number;
+  upiCollection: number;
+  cardCollection: number;
+  otherCollection: number;
+  totalPatientBusiness: number;
+  totalDiscount: number;
+  advanceReceived: number;
+  balanceReceived: number;
+  collectionGap: number;
+  patientCount: number;
+  paymentModeSplit: Array<{ mode: string; amount: number; percent: number }>;
+  advanceBalanceSplit: Array<{ kind: string; amount: number; percent: number }>;
+  dailyCollectionRows: AnalyticsPeriodRow[];
+  weeklyCollectionRows: AnalyticsPeriodRow[];
+  monthlyCollectionRows: AnalyticsPeriodRow[];
+}

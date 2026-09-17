@@ -562,3 +562,14 @@ export function useMarkTeaCoffeeBillPaid() {
     },
   });
 }
+
+// ============= Phase 4: Analytics (first 8 reports) =============
+import type { AnalyticsSummary } from "./types";
+
+export function useAnalyticsSummary(fromDate: string, toDate: string) {
+  return useQuery({
+    queryKey: ["analytics-summary", fromDate, toDate],
+    queryFn: () => api<AnalyticsSummary>(`/analytics/summary?fromDate=${fromDate}&toDate=${toDate}`),
+    enabled: !!fromDate && !!toDate,
+  });
+}

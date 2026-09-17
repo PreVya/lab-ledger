@@ -1,7 +1,7 @@
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth-context";
 import { useEffect } from "react";
-import { LogOut, ClipboardList, FlaskConical, Users, Search, CalendarClock, UserCheck, Receipt, Coffee } from "lucide-react";
+import { LogOut, ClipboardList, FlaskConical, Users, Search, CalendarClock, UserCheck, Receipt, Coffee, BarChart3 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -23,6 +23,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     { to: "/tea-coffee", icon: Coffee, label: "Tea / Coffee" },
     { to: "/tests", icon: FlaskConical, label: "Test Catalog" },
     { to: "/bills", icon: Receipt, label: "Bill Register" },
+    { to: "/analytics", icon: BarChart3, label: "Analytics" },
     { to: "/users", icon: Users, label: "Users", roles: ["admin"] as const },
   ];
 
