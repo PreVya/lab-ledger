@@ -747,5 +747,74 @@ export function demoHandle(path: string, init: RequestInit = {}): unknown {
     }
   }
 
+  // -------- Phase 4: analytics (first 8 reports) --------
+  // Collection = Payment rows by Payment.date. Patient business/discount =
+  // Patient rows by Patient.entryDate. Ledger balances are never read here.
+  if (path.startsWith("/analytics/summary") && method === "GET") {
+    const url = new URL(`http://x${path}`);
+    const fromDate = url.searchParams.get("fromDate") || todayIST();
+    const toDate = url.searchParams.get("toDate") || todayIST();
+
+    const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    const dayLabel = (k: string) => { const [y, m, d] = k.split("-"); return `${d}-${MONTHS[Number(m) - 1]}-${y}`; };
+    const shift = (k: string, days: number) => { const d = new Date(`${k}T00:00:00.000Z`); d.setUTCDate(d.getUTCDate() + days); return d.toISOString().slice(0, 10); };
+    const weekStart = (k: string) => shift(k, -(((new Date(`${k}T00:00:00.000Z`).getUTCDay()) + 6) % 7));
+
+    interface Row { key: string; label: string; cash: number; upi: number; card: number; other: number; advance: number; balance: number; net: number }
+    const blank = (key: string, label: string): Row => ({ key, label, cash: 0, upi: 0, card: 0, other: 0, advance: 0, balance: 0, net: 0 });
+    const daily = new Map<string, Row>(), weekly = new Map<string, Row>(), monthly = new Map<string, Row>();
+
+    let cash = 0, upi = 0, card = 0, other = 0, advance = 0, balance = 0, netCollection = 0;
+    const rows = netRows(store.payments.filter(p => p.date >= fromDate && p.date <= toDate));
+    for (const p of rows) {
+      const amount = Number(p.amount);
+      if (!(amount > 0)) continue;
+      netCollection += amount;
+      if (p.mode === "cash") cash += amount; else if (p.mode === "upi") upi += amount; else if (p.mode === "card") card += amount; else other += amount;
+      if (p.kind === "advance") advance += amount; else balance += amount;
+      const ws = weekStart(p.date);
+      const buckets: Array<[Map<string, Row>, string, string]> = [
+        [daily, p.date, dayLabel(p.date)],
+        [weekly, ws, `${dayLabel(ws)} — ${dayLabel(shift(ws, 6))}`],
+        [monthly, p.date.slice(0, 7), `${MONTHS[Number(p.date.slice(5, 7)) - 1]} ${p.date.slice(0, 4)}`],
+      ];
+      for (const [map, k, label] of buckets) {
+        const row = map.get(k) ?? blank(k, label);
+        row.net += amount;
+        if (p.mode === "cash") row.cash += amount; else if (p.mode === "upi") row.upi += amount; else if (p.mode === "card") row.card += amount; else row.other += amount;
+        if (p.kind === "advance") row.advance += amount; else row.balance += amount;
+        map.set(k, row);
+      }
+    }
+
+    const inRange = store.patients.filter(p => p.entryDate >= fromDate && p.entryDate <= toDate);
+    const totalPatientBusiness = inRange.reduce((s, p) => s + Number(p.net), 0);
+    const totalDiscount = inRange.reduce((s, p) => s + Number(p.discount), 0);
+    const pct = (v: number) => (netCollection > 0 ? (v / netCollection) * 100 : 0);
+    const sorted = (m: Map<string, Row>) => [...m.values()].sort((a, b) => (a.key < b.key ? -1 : 1));
+
+    return {
+      fromDate, toDate,
+      netCollection, cashCollection: cash, upiCollection: upi, cardCollection: card, otherCollection: other,
+      totalPatientBusiness, totalDiscount,
+      advanceReceived: advance, balanceReceived: balance,
+      collectionGap: totalPatientBusiness - netCollection,
+      patientCount: inRange.length,
+      paymentModeSplit: [
+        { mode: "cash", amount: cash, percent: pct(cash) },
+        { mode: "upi", amount: upi, percent: pct(upi) },
+        { mode: "card", amount: card, percent: pct(card) },
+        { mode: "other", amount: other, percent: pct(other) },
+      ],
+      advanceBalanceSplit: [
+        { kind: "advance", amount: advance, percent: pct(advance) },
+        { kind: "balance", amount: balance, percent: pct(balance) },
+      ],
+      dailyCollectionRows: sorted(daily),
+      weeklyCollectionRows: sorted(weekly),
+      monthlyCollectionRows: sorted(monthly),
+    };
+  }
+
   return null;
 }
