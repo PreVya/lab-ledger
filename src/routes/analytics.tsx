@@ -42,6 +42,10 @@ function quickRange(kind: "today" | "week" | "month") {
 
 type Preset = "today" | "week" | "month" | "custom";
 
+/** True when the API answered successfully but with no records at all. */
+const isEmpty = (d: AnalyticsSummary) =>
+  !d.netCollection && !d.totalPatientBusiness && !d.totalDiscount && !d.patientCount;
+
 function AnalyticsPage() {
   const initial = quickRange("month");
   const [preset, setPreset] = useState<Preset>("month");
