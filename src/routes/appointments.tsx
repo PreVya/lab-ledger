@@ -14,6 +14,16 @@ import { toast } from "sonner";
 import { CalendarClock, Plus } from "lucide-react";
 
 export const Route = createFileRoute("/appointments")({
+  head: () => ({
+    meta: [
+      { title: "Pratham — Appointments" },
+      { name: "description", content: "Schedule and track patient appointments at Pratham Pathology Lab." },
+      { property: "og:title", content: "Pratham — Appointments" },
+      { property: "og:description", content: "Schedule and track patient appointments at Pratham Pathology Lab." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
   component: () => <AppShell><AppointmentsPage /></AppShell>,
 });
 

@@ -17,7 +17,19 @@ import { formatAge } from "@/lib/types";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute("/")({ component: () => <AppShell><Register /></AppShell> });
+export const Route = createFileRoute("/")({
+  head: () => ({
+    meta: [
+      { title: "Pratham — Today Register" },
+      { name: "description", content: "Daily patient register, ledger and cash summary for Pratham Pathology Lab." },
+      { property: "og:title", content: "Pratham — Today Register" },
+      { property: "og:description", content: "Daily patient register, ledger and cash summary for Pratham Pathology Lab." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
+  component: () => <AppShell><Register /></AppShell>
+});
 
 const MIN_ENTRY_DATE = "2026-08-01";
 const BLOCKED_MSG = "Ledger starts from 01-Aug-2026. Entries before this date are blocked.";

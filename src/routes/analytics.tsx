@@ -12,9 +12,9 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/analytics")({
   head: () => ({
     meta: [
-      { title: "Collection Analytics — Pratham Pathology" },
+      { title: "Pratham — Collection Analytics" },
       { name: "description", content: "Collection, patient business, discount and payment-mode analytics for any date range." },
-      { property: "og:title", content: "Collection Analytics — Pratham Pathology" },
+      { property: "og:title", content: "Pratham — Collection Analytics" },
       { property: "og:description", content: "Daily, weekly and monthly collection reports with cash, UPI and card split." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -41,6 +41,10 @@ function quickRange(kind: "today" | "week" | "month") {
 }
 
 type Preset = "today" | "week" | "month" | "custom";
+
+/** True when the API answered successfully but with no records at all. */
+const isEmpty = (d: AnalyticsSummary) =>
+  !d.netCollection && !d.totalPatientBusiness && !d.totalDiscount && !d.patientCount;
 
 function AnalyticsPage() {
   const initial = quickRange("month");
@@ -105,10 +109,29 @@ function AnalyticsPage() {
         </div>
       </div>
 
-      {isLoading && <div className="text-sm text-muted-foreground">Loading analytics…</div>}
-      {error && <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">{(error as Error).message}</div>}
+      {isLoading && (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="h-20 animate-pulse rounded-lg border bg-muted/40" />
+          ))}
+        </div>
+      )}
 
-      {data && <AnalyticsBody data={data} />}
+      {error && (
+        <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+          Could not load analytics data. {(error as Error).message}
+        </div>
+      )}
+
+      {!isLoading && !error && data && isEmpty(data) && (
+        <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
+          No payment or patient records were returned for {range.from} to {range.to}. If your records live in the lab
+          server database, make sure that server is running and that you signed in with a real lab user — a demo login
+          only shows an empty offline dataset.
+        </div>
+      )}
+
+      {!isLoading && !error && data && <AnalyticsBody data={data} />}
     </div>
   );
 }

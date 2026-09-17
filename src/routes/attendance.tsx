@@ -17,6 +17,16 @@ import type { AttendanceStatus, Employee } from "@/lib/types";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/attendance")({
+  head: () => ({
+    meta: [
+      { title: "Pratham — Attendance & Salary" },
+      { name: "description", content: "Staff attendance, salary and advances for Pratham Pathology Lab." },
+      { property: "og:title", content: "Pratham — Attendance & Salary" },
+      { property: "og:description", content: "Staff attendance, salary and advances for Pratham Pathology Lab." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
   component: () => <AppShell><AttendancePage /></AppShell>,
 });
 

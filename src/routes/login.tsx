@@ -7,6 +7,16 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/login")({
+  head: () => ({
+    meta: [
+      { title: "Pratham — Sign In" },
+      { name: "description", content: "Sign in to the Pratham Pathology Lab management system." },
+      { property: "og:title", content: "Pratham — Sign In" },
+      { property: "og:description", content: "Sign in to the Pratham Pathology Lab management system." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
   validateSearch: (s: Record<string, unknown>) => ({ redirect: (s.redirect as string) || "/" }),
   component: LoginPage,
 });

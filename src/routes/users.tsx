@@ -9,7 +9,19 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/users")({ component: () => <AppShell><Users /></AppShell> });
+export const Route = createFileRoute("/users")({
+  head: () => ({
+    meta: [
+      { title: "Pratham — User Management" },
+      { name: "description", content: "Create and manage lab staff logins." },
+      { property: "og:title", content: "Pratham — User Management" },
+      { property: "og:description", content: "Create and manage lab staff logins." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
+  component: () => <AppShell><Users /></AppShell>
+});
 
 interface UserRow { id: string; username: string; fullName: string; role: string; active: boolean }
 

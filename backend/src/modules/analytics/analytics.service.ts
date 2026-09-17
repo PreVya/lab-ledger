@@ -110,6 +110,66 @@ export class AnalyticsService {
       }
     }
 
+    // ---- Legacy fallback: patients created before the Payment table became
+    // canonical hold their money only on the Patient row. Counted ONLY when the
+    // patient has no Payment rows at all, so nothing can ever be double counted.
+    const legacy = await this.prisma.patient.findMany({
+      where: {
+        payments: { none: {} },
+        OR: [
+          { entryDate: { gte: from, lte: to } },
+          { advancePaidOn: { gte: from, lte: to } },
+          { balancePaidOn: { gte: from, lte: to } },
+        ],
+      },
+      select: {
+        entryDate: true,
+        advanceCash: true, advanceUpi: true, advancePaidOn: true,
+        balanceCash: true, balanceUpi: true, balancePaidOn: true,
+      },
+    });
+
+    const addLegacy = (
+      when: Date | null,
+      fallback: Date,
+      kind: 'advance' | 'balance',
+      mode: 'cash' | 'upi',
+      raw: any,
+    ) => {
+      const amount = Number(new Prisma.Decimal(raw ?? 0));
+      if (!(amount > 0)) return;
+      const d = when ?? fallback;
+      const key = iso(d);
+      if (key < fromDate || key > toDate) return;
+
+      netCollection += amount;
+      if (mode === 'cash') cash += amount; else upi += amount;
+      if (kind === 'advance') advance += amount; else balance += amount;
+
+      const buckets: Array<[Map<string, PeriodRow>, string, string]> = [
+        [daily, key, dayLabel(key)],
+        [weekly, weekStart(key), weekLabel(weekStart(key))],
+        [monthly, key.slice(0, 7), monthLabel(key.slice(0, 7))],
+      ];
+      for (const [map, k, label] of buckets) {
+        const row = map.get(k) ?? blank(k, label);
+        row.net += amount;
+        if (mode === 'cash') row.cash += amount; else row.upi += amount;
+        if (kind === 'advance') row.advance += amount; else row.balance += amount;
+        map.set(k, row);
+      }
+    };
+
+    let legacyRows = 0;
+    for (const p of legacy) {
+      const before = netCollection;
+      addLegacy(p.advancePaidOn, p.entryDate, 'advance', 'cash', p.advanceCash);
+      addLegacy(p.advancePaidOn, p.entryDate, 'advance', 'upi', p.advanceUpi);
+      addLegacy(p.balancePaidOn, p.entryDate, 'balance', 'cash', p.balanceCash);
+      addLegacy(p.balancePaidOn, p.entryDate, 'balance', 'upi', p.balanceUpi);
+      if (netCollection !== before) legacyRows += 1;
+    }
+
     // ---- Patient business + discount: Patient rows only, by entryDate.
     const patients = await this.prisma.patient.findMany({
       where: { entryDate: { gte: from, lte: to } },
@@ -120,6 +180,17 @@ export class AnalyticsService {
       totalPatientBusiness += Number(new Prisma.Decimal(p.net));
       totalDiscount += Number(new Prisma.Decimal(p.discount));
     }
+
+    // Temporary diagnostics while the all-zero report is being verified.
+    // eslint-disable-next-line no-console
+    console.log(
+      `Analytics debug: fromDate=${fromDate} toDate=${toDate} ` +
+        `paymentsFound=${rawPayments.length} nettedPayments=${payments.length} ` +
+        `legacyPatientsCounted=${legacyRows} patientsFound=${patients.length} ` +
+        `modes=[${[...new Set(rawPayments.map((p) => p.mode))].join(', ')}] ` +
+        `kinds=[${[...new Set(rawPayments.map((p) => p.kind))].join(', ')}] ` +
+        `netCollection=${netCollection} patientBusiness=${totalPatientBusiness}`,
+    );
 
     const pct = (v: number) => (netCollection > 0 ? (v / netCollection) * 100 : 0);
     const sortRows = (m: Map<string, PeriodRow>) =>
