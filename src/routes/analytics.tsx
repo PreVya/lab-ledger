@@ -12,9 +12,9 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/analytics")({
   head: () => ({
     meta: [
-      { title: "Collection Analytics — Pratham Pathology" },
+      { title: "Pratham — Collection Analytics" },
       { name: "description", content: "Collection, patient business, discount and payment-mode analytics for any date range." },
-      { property: "og:title", content: "Collection Analytics — Pratham Pathology" },
+      { property: "og:title", content: "Pratham — Collection Analytics" },
       { property: "og:description", content: "Daily, weekly and monthly collection reports with cash, UPI and card split." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

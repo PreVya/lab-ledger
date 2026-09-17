@@ -11,7 +11,19 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import type { TestCatalog } from "@/lib/types";
 
-export const Route = createFileRoute("/tests")({ component: () => <AppShell><TestCatalogPage /></AppShell> });
+export const Route = createFileRoute("/tests")({
+  head: () => ({
+    meta: [
+      { title: "Pratham — Test Catalogue" },
+      { name: "description", content: "In-house and outsourced test catalogue with rates." },
+      { property: "og:title", content: "Pratham — Test Catalogue" },
+      { property: "og:description", content: "In-house and outsourced test catalogue with rates." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
+  component: () => <AppShell><TestCatalogPage /></AppShell>
+});
 
 const KNOWN_LABS = ["Metropolis", "Lupin"] as const;
 

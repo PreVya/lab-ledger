@@ -6,7 +6,19 @@ import { useSearch } from "@/lib/queries";
 import { PatientFormDialog } from "@/components/patient-form-dialog";
 import type { Patient } from "@/lib/types";
 
-export const Route = createFileRoute("/search")({ component: () => <AppShell><SearchPage /></AppShell> });
+export const Route = createFileRoute("/search")({
+  head: () => ({
+    meta: [
+      { title: "Pratham — Search Patients" },
+      { name: "description", content: "Search patients by register number, mobile or name." },
+      { property: "og:title", content: "Pratham — Search Patients" },
+      { property: "og:description", content: "Search patients by register number, mobile or name." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
+  component: () => <AppShell><SearchPage /></AppShell>
+});
 
 function SearchPage() {
   const [q, setQ] = useState("");

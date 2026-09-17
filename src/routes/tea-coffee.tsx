@@ -24,9 +24,9 @@ import type { TeaCoffeeItem } from "@/lib/types";
 export const Route = createFileRoute("/tea-coffee")({
   head: () => ({
     meta: [
-      { title: "Tea / Coffee Register — Pratham Pathology" },
+      { title: "Pratham — Tea / Coffee Register" },
       { name: "description", content: "Track daily staff tea and coffee consumption and settle the monthly tea/coffee bill." },
-      { property: "og:title", content: "Tea / Coffee Register — Pratham Pathology" },
+      { property: "og:title", content: "Pratham — Tea / Coffee Register" },
       { property: "og:description", content: "Daily tea/coffee consumption tracking and monthly bill payment." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
