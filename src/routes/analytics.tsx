@@ -1,13 +1,28 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAnalyticsSummary, todayKey } from "@/lib/queries";
-import type { AnalyticsPeriodRow, AnalyticsSummary } from "@/lib/types";
+import type { AnalyticsSummary } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/lib/auth-context";
+import { CollectionReports } from "@/components/collection-reports";
+
+function AdminGate() {
+  const { hasRole } = useAuth();
+  if (!hasRole("admin")) {
+    return (
+      <div className="p-6">
+        <div className="rounded-md border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
+          Access denied. Analytics is available to admin users only.
+        </div>
+      </div>
+    );
+  }
+  return <AnalyticsPage />;
+}
 
 export const Route = createFileRoute("/analytics")({
   head: () => ({
@@ -20,7 +35,7 @@ export const Route = createFileRoute("/analytics")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
-  component: () => <AppShell><AnalyticsPage /></AppShell>,
+  component: () => <AppShell><AdminGate /></AppShell>,
 });
 
 const rupee = (n: number) => `₹ ${Number(n || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -187,20 +202,8 @@ function AnalyticsBody({ data }: { data: AnalyticsSummary }) {
         </div>
       </section>
 
-      {/* F. Daily / weekly / monthly tabs */}
-      <section className="rounded-lg border bg-card p-4">
-        <h2 className="mb-3 text-sm font-semibold">Collection Trend</h2>
-        <Tabs defaultValue="daily">
-          <TabsList>
-            <TabsTrigger value="daily">Daily</TabsTrigger>
-            <TabsTrigger value="weekly">Weekly</TabsTrigger>
-            <TabsTrigger value="monthly">Monthly</TabsTrigger>
-          </TabsList>
-          <TabsContent value="daily"><PeriodTable rows={data.dailyCollectionRows} /></TabsContent>
-          <TabsContent value="weekly"><PeriodTable rows={data.weeklyCollectionRows} /></TabsContent>
-          <TabsContent value="monthly"><PeriodTable rows={data.monthlyCollectionRows} /></TabsContent>
-        </Tabs>
-      </section>
+      {/* F. Daily / Monthly collection reports */}
+      <CollectionReports />
     </div>
   );
 }
@@ -227,64 +230,6 @@ function Bar({ label, amount, percent }: { label: string; amount: number; percen
       <div className="h-2.5 w-full overflow-hidden rounded-full bg-secondary">
         <div className="h-full rounded-full bg-primary" style={{ width: `${Math.min(100, Math.max(0, percent))}%` }} />
       </div>
-    </div>
-  );
-}
-
-function PeriodTable({ rows }: { rows: AnalyticsPeriodRow[] }) {
-  const totals = useMemo(
-    () =>
-      rows.reduce(
-        (a, r) => ({
-          cash: a.cash + r.cash, upi: a.upi + r.upi, card: a.card + r.card,
-          advance: a.advance + r.advance, balance: a.balance + r.balance, net: a.net + r.net,
-        }),
-        { cash: 0, upi: 0, card: 0, advance: 0, balance: 0, net: 0 },
-      ),
-    [rows],
-  );
-
-  if (!rows.length) {
-    return <div className="py-8 text-center text-sm text-muted-foreground">No payments received in this period.</div>;
-  }
-
-  return (
-    <div className="mt-3 overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b text-left text-xs uppercase tracking-wide text-muted-foreground">
-            <th className="py-2 pr-3 font-medium">Period</th>
-            <th className="py-2 pr-3 text-right font-medium">Cash</th>
-            <th className="py-2 pr-3 text-right font-medium">UPI</th>
-            <th className="py-2 pr-3 text-right font-medium">Card</th>
-            <th className="py-2 pr-3 text-right font-medium">Advance</th>
-            <th className="py-2 pr-3 text-right font-medium">Balance</th>
-            <th className="py-2 text-right font-medium">Net Collection</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map(r => (
-            <tr key={r.key} className="border-b last:border-0">
-              <td className="py-2 pr-3">{r.label}</td>
-              <td className="py-2 pr-3 text-right tabular-nums">{rupee(r.cash)}</td>
-              <td className="py-2 pr-3 text-right tabular-nums">{rupee(r.upi)}</td>
-              <td className="py-2 pr-3 text-right tabular-nums">{rupee(r.card)}</td>
-              <td className="py-2 pr-3 text-right tabular-nums">{rupee(r.advance)}</td>
-              <td className="py-2 pr-3 text-right tabular-nums">{rupee(r.balance)}</td>
-              <td className="py-2 text-right font-semibold tabular-nums">{rupee(r.net)}</td>
-            </tr>
-          ))}
-          <tr className="bg-secondary/40 font-semibold">
-            <td className="py-2 pr-3">Total</td>
-            <td className="py-2 pr-3 text-right tabular-nums">{rupee(totals.cash)}</td>
-            <td className="py-2 pr-3 text-right tabular-nums">{rupee(totals.upi)}</td>
-            <td className="py-2 pr-3 text-right tabular-nums">{rupee(totals.card)}</td>
-            <td className="py-2 pr-3 text-right tabular-nums">{rupee(totals.advance)}</td>
-            <td className="py-2 pr-3 text-right tabular-nums">{rupee(totals.balance)}</td>
-            <td className="py-2 text-right tabular-nums">{rupee(totals.net)}</td>
-          </tr>
-        </tbody>
-      </table>
     </div>
   );
 }

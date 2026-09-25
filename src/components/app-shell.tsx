@@ -23,7 +23,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     { to: "/tea-coffee", icon: Coffee, label: "Tea / Coffee" },
     { to: "/tests", icon: FlaskConical, label: "Test Catalog" },
     { to: "/bills", icon: Receipt, label: "Bill Register" },
-    { to: "/analytics", icon: BarChart3, label: "Analytics" },
+    { to: "/analytics", icon: BarChart3, label: "Analytics", roles: ["admin"] as const },
     { to: "/users", icon: Users, label: "Users", roles: ["admin"] as const },
   ];
 
