@@ -8,7 +8,7 @@ function money(v: string | number) {
 /**
  * Printable A5 (148mm x 210mm) pathology bill.
  * Wrapped in `.bill-sheet` — print CSS lives in src/styles.css.
- * Header text: src/lib/lab-profile.ts · Logo image: public/lab-logo.png
+ * Header text: src/lib/lab-profile.ts · Logo image: public/pratham-logo.png
  */
 export function BillView({ bill }: { bill: Bill }) {
   return (
