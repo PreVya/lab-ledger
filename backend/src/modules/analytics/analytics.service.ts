@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { PaymentsService } from '../payments/payments.service';
+import { buildDailyReport, buildMonthlyReport, ReportPatient, ReportPayment, SettlementRow } from './report-builder';
 
 /**
  * Phase 4 Analytics — first 8 reports only.
@@ -224,5 +225,59 @@ export class AnalyticsService {
       weeklyCollectionRows: sortRows(weekly),
       monthlyCollectionRows: sortRows(monthly),
     };
+  }
+
+  // ================= Daily / Monthly Collection Reports =================
+  private num(v: any) { return Number(new Prisma.Decimal(v ?? 0)); }
+  private key(d: Date | string) { return typeof d === 'string' ? d.slice(0, 10) : iso(d); }
+
+  private toReportPatient(p: any): ReportPatient {
+    return {
+      id: p.id, registerNumber: p.registerNumber, financialYear: p.financialYear, name: p.name,
+      ageValue: p.ageValue ?? p.age, ageUnit: p.ageUnit, sex: p.sex, entryDate: this.key(p.entryDate),
+      total: this.num(p.total), discount: this.num(p.discount), net: this.num(p.net),
+      tests: (p.tests ?? []).map((t: any) => ({ name: t.test?.name ?? '', lab: t.test?.outsourced ? t.test?.outsourcedLab ?? null : null, rate: this.num(t.rateAtEntry) })),
+    };
+  }
+
+  private toReportPayments(rows: any[]): ReportPayment[] {
+    return this.payments.netRows(rows as any).map((x: any) => ({
+      patientId: x.patientId, date: this.key(x.date), kind: x.kind, mode: x.mode, amount: this.num(x.amount),
+    }));
+  }
+
+  async dailyReport(date: string) {
+    const d = parseDate(date);
+    const patients = await this.prisma.patient.findMany({
+      where: { entryDate: d },
+      include: { tests: { include: { test: true } }, payments: true },
+    });
+    const dayPayments = this.toReportPayments(patients.flatMap((p: any) => p.payments));
+
+    const prevRaw = await this.prisma.payment.findMany({
+      where: { date: d, kind: 'balance', patient: { entryDate: { lt: d } } },
+      include: { patient: { select: { registerNumber: true, financialYear: true, name: true, entryDate: true } } },
+      orderBy: { createdAt: 'asc' },
+    });
+    const previous: SettlementRow[] = this.payments.netRows(prevRaw as any).map((x: any) => ({
+      date, registerNumber: x.patient.registerNumber, financialYear: x.patient.financialYear, name: x.patient.name,
+      entryDate: this.key(x.patient.entryDate), amount: this.num(x.amount), mode: x.mode,
+    }));
+    return buildDailyReport(date, patients.map((p) => this.toReportPatient(p)), dayPayments, previous);
+  }
+
+  async monthlyReport(month: string) {
+    const from = parseDate(`${month}-01`);
+    const to = new Date(Date.UTC(from.getUTCFullYear(), from.getUTCMonth() + 1, 0));
+    const patients = await this.prisma.patient.findMany({
+      where: { entryDate: { gte: from, lte: to } },
+      include: { tests: { include: { test: true } }, payments: true },
+    });
+    const today = new Date(Date.now() + 5.5 * 3600 * 1000).toISOString().slice(0, 10);
+    return buildMonthlyReport(
+      month, today,
+      patients.map((p) => this.toReportPatient(p)),
+      this.toReportPayments(patients.flatMap((p: any) => p.payments)),
+    );
   }
 }
