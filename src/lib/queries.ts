@@ -573,3 +573,22 @@ export function useAnalyticsSummary(fromDate: string, toDate: string) {
     enabled: !!fromDate && !!toDate,
   });
 }
+
+// ============= Analytics: Daily / Monthly Collection Reports (admin only) =============
+import type { DailyReport, MonthlyReport } from "./analytics-report";
+
+export function useDailyCollectionReport(date: string, enabled = true) {
+  return useQuery({
+    queryKey: ["analytics-daily", date],
+    queryFn: () => api<DailyReport>(`/analytics/daily-report?date=${date}`),
+    enabled: enabled && !!date,
+  });
+}
+
+export function useMonthlyCollectionReport(month: string, enabled = true) {
+  return useQuery({
+    queryKey: ["analytics-monthly", month],
+    queryFn: () => api<MonthlyReport>(`/analytics/monthly-report?month=${month}`),
+    enabled: enabled && !!month,
+  });
+}
