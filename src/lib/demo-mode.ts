@@ -1,3 +1,4 @@
+import { buildDailyReport, buildMonthlyReport, type ReportPatient, type ReportPayment } from "./analytics-report";
 import type { AuthState, AuthUser } from "./api";
 import { amountInWords } from "./amount-in-words";
 import type { AgeUnit, CashAdded, CashHandover, PaymentMode, PaymentRow, Sex } from "./types";
@@ -814,6 +815,33 @@ export function demoHandle(path: string, init: RequestInit = {}): unknown {
       weeklyCollectionRows: sorted(weekly),
       monthlyCollectionRows: sorted(monthly),
     };
+  }
+
+  // -------- Analytics: Daily / Monthly Collection Reports (admin only) --------
+  if ((path.startsWith("/analytics/daily-report") || path.startsWith("/analytics/monthly-report")) && method === "GET") {
+    const me = DEMO_USERS.find(u => u.user.id === store.currentUserId);
+    if (me && me.user.role !== "admin") throw new Error("Insufficient role");
+    const url = new URL(`http://x${path}`);
+    const toRP = (p: DemoPatient): ReportPatient => ({
+      id: p.id, registerNumber: p.registerNumber, financialYear: p.financialYear, name: p.name,
+      ageValue: p.ageValue ?? p.age, ageUnit: p.ageUnit, sex: p.sex, entryDate: p.entryDate,
+      total: Number(p.total), discount: Number(p.discount), net: Number(p.net),
+      tests: p.tests.map(t => ({ name: t.test.name, lab: t.test.outsourced ? t.test.outsourcedLab ?? null : null, rate: Number(t.rateAtEntry) })),
+    });
+    const toPay = (rows: PaymentRow[]): ReportPayment[] => netRows(rows).map(x => ({ patientId: x.patientId, date: x.date, kind: x.kind, mode: x.mode, amount: Number(x.amount) }));
+    if (path.startsWith("/analytics/daily-report")) {
+      const date = url.searchParams.get("date") || todayIST();
+      const day = store.patients.filter(p => p.entryDate === date);
+      const ids = new Set(day.map(p => p.id));
+      const byId = new Map(store.patients.map(p => [p.id, p]));
+      const prev = netRows(store.payments.filter(x => x.date === date && x.kind === "balance" && (byId.get(x.patientId)?.entryDate ?? date) < date))
+        .map(x => { const p = byId.get(x.patientId)!; return { date, registerNumber: p.registerNumber, financialYear: p.financialYear, name: p.name, entryDate: p.entryDate, amount: Number(x.amount), mode: x.mode }; });
+      return buildDailyReport(date, day.map(toRP), toPay(store.payments.filter(x => ids.has(x.patientId))), prev);
+    }
+    const month = url.searchParams.get("month") || todayIST().slice(0, 7);
+    const pts = store.patients.filter(p => p.entryDate.startsWith(month));
+    const ids = new Set(pts.map(p => p.id));
+    return buildMonthlyReport(month, todayIST(), pts.map(toRP), toPay(store.payments.filter(x => ids.has(x.patientId))));
   }
 
   return null;
