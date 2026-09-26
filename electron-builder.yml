@@ -1,0 +1,34 @@
+appId: com.pratham.labledger
+productName: Pratham Lab Ledger
+directories:
+  output: release
+files:
+  - electron/**/*
+  - package.json
+extraResources:
+  # Backend runtime: built code, dependencies, prisma client, and the
+  # existing .env — copied as-is, never modified.
+  - from: backend/dist
+    to: backend/dist
+  - from: backend/node_modules
+    to: backend/node_modules
+  - from: backend/prisma
+    to: backend/prisma
+  - from: backend/.env
+    to: backend/.env
+  - from: backend/package.json
+    to: backend/package.json
+  # Built frontend (client assets with index.html).
+  - from: dist
+    to: frontend
+win:
+  target:
+    - nsis
+  # Add `icon: build/icon.ico` here once a 256x256 .ico is available;
+  # the build works fine with the default icon until then.
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Pratham Lab Ledger
