@@ -18,8 +18,8 @@ extraResources:
     to: backend/.env
   - from: backend/package.json
     to: backend/package.json
-  # Built frontend (client assets with index.html).
-  - from: dist
+  # Built frontend (Nitro-style output: .output/public).
+  - from: .output/public
     to: frontend
 win:
   target:

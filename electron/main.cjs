@@ -88,12 +88,11 @@ const MIME = {
 };
 
 function startStaticServer() {
-  // Built client assets (TanStack Start / Nitro client output).
-  const candidates = [
-    resourcePath("frontend", "client"),
-    resourcePath("frontend", "public"),
-    resourcePath("frontend"),
-  ];
+  // Built client assets: packaged -> resources/frontend (copied from
+  // .output/public); unpackaged -> <project>/.output/public.
+  const candidates = app.isPackaged
+    ? [resourcePath("frontend")]
+    : [resourcePath(".output", "public")];
   const root = candidates.find((p) => fs.existsSync(path.join(p, "index.html"))) || candidates[0];
 
   return new Promise((resolve, reject) => {
