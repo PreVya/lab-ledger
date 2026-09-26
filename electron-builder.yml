@@ -24,7 +24,8 @@ extraResources:
 win:
   target:
     - nsis
-  icon: public/lab-logo.png
+  # Add `icon: build/icon.ico` here once a 256x256 .ico is available;
+  # the build works fine with the default icon until then.
 nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true

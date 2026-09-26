@@ -3,12 +3,16 @@
   "private": true,
   "sideEffects": false,
   "type": "module",
+  "main": "electron/main.cjs",
   "packageManager": "yarn@1.22.22",
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
+    "electron:dev": "ELECTRON_DEV=1 electron .",
+    "electron:pack": "electron-builder --dir",
+    "electron:build": "electron-builder --win",
     "lint": "eslint .",
     "format": "prettier --write ."
   },
