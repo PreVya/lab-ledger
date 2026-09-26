@@ -34,7 +34,7 @@ cd backend
 yarn build
 cd ..
 
-# 2. Build the frontend
+# 2. Build the frontend (output goes to .output/public, not dist)
 yarn build
 
 # 3. Build the Windows installer
@@ -74,5 +74,6 @@ yarn electron:pack     # unpackaged app folder under release/ — quick check
 - App icon: the build uses the default Electron icon. To add a custom one,
   place a 256×256 `build/icon.ico` and add `icon: build/icon.ico` under
   `win:` in `electron-builder.yml`.
+- Frontend build output is `.output/public` (not `dist`); the installer copies it to `resources/frontend`.
 - Dev mode: `yarn electron:dev` opens Electron against the Vite dev server
   (`yarn dev`) with the backend running separately.
