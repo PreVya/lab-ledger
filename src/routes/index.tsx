@@ -257,13 +257,14 @@ function PatientTable({ patients, onEdit }: { patients: Patient[]; onEdit: (p: P
           {patients.map(p => {
             const paid = Number(p.advanceCash) + Number(p.advanceUpi) + Number(p.balanceCash) + Number(p.balanceUpi);
             return (
-              <tr key={p.id} onClick={() => onEdit(p)} className="cursor-pointer border-b hover:bg-secondary/40">
+              <tr key={p.id} onClick={() => onEdit(p)} className="cursor-pointer border-b hover:bg-secondary/40" style={p.whatsappReportRequired ? { backgroundColor: "var(--whatsapp-soft)", boxShadow: "inset 3px 0 0 var(--whatsapp)" } : undefined}>
                 <td className="px-3 py-2 font-mono">{p.registerNumber ?? p.dailySerial}</td>
                 <td className="px-3 py-2 font-mono text-xs text-muted-foreground">{p.financialYear ?? "—"}</td>
                 <td className="px-3 py-2">
                   <div className="flex items-center gap-2">
                     {p.notes && <span title={p.notes} className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: "var(--notes-indicator)" }} />}
                     <span className="font-medium">{p.name}</span>
+                    {p.whatsappReportRequired && <span title="WhatsApp report required" className="rounded px-1.5 py-0.5 text-[10px] font-bold" style={{ backgroundColor: "var(--whatsapp)", color: "var(--whatsapp-soft)" }}>WA</span>}
                   </div>
                 </td>
                 <td className="px-3 py-2">{p.mobile}</td>
