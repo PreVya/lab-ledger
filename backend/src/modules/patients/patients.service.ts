@@ -187,7 +187,8 @@ export class PatientsService {
         paymentRows.push({
           patientId: patient.id,
           date: this.resolvePaidOn(p.date) as Date,
-          kind: p.kind,
+          // A payment dated after the entry date is always a balance payment.
+          kind: PaymentsService.normalizeKind(p.kind, this.resolvePaidOn(p.date) as Date, entryDay),
           mode: p.mode,
           amount,
           notes: p.notes ?? null,
@@ -204,7 +205,7 @@ export class PatientsService {
           paymentRows.push({
             patientId: patient.id,
             date: (b.kind === 'advance' ? advanceDate : balanceDate) as Date,
-            kind: b.kind,
+            kind: PaymentsService.normalizeKind(b.kind, (b.kind === 'advance' ? advanceDate : balanceDate) as Date, entryDay),
             mode: b.mode,
             amount: new Prisma.Decimal(amount),
             createdById: input.createdById ?? null,

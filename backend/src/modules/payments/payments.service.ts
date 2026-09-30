@@ -317,7 +317,7 @@ export class PaymentsService {
       await this.prisma.payment.deleteMany({ where: { id: { in: toDelete } } });
     }
     for (const pid of affectedPatients) await this.resyncPatient(pid);
-    this.recomputeDates([...affectedDates].map((d) => new Date(d)));
+    void this.recomputeDates([...affectedDates].map((d) => new Date(d)));
 
     return { deleted: toDelete.length, patients: affectedPatients.size, dates: [...affectedDates] };
   }
