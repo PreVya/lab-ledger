@@ -17,6 +17,7 @@ dist-ssr
 *.local
 
 backup/
+release/
 
 # Wrangler / Cloudflare
 .wrangler/
