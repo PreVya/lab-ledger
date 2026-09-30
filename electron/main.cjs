@@ -34,7 +34,8 @@ function resourcePath(...parts) {
 
 function startBackend() {
   const backendDir = resourcePath("backend");
-  const entry = path.join(backendDir, "dist", "main.js");
+  // NestJS build output lives at dist/src/main.js, not dist/main.js.
+  const entry = path.join(backendDir, "dist", "src", "main.js");
   if (!fs.existsSync(entry)) {
     throw new Error(`Backend entry not found: ${entry}`);
   }
