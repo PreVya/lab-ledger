@@ -58,7 +58,7 @@ yarn electron:pack     # unpackaged app folder under release/ — quick check
 1. Installs like a normal Windows program (desktop + start menu shortcut).
 2. Double-click the shortcut — no terminal, no browser opens.
 3. The app starts the NestJS backend silently in the background
-   (`backend/dist/main.js`, reading the bundled `backend/.env`).
+   (`backend/dist/src/main.js`, reading the bundled `backend/.env`).
 4. Waits for `http://localhost:3000/api` to respond, then shows the UI.
 5. If the backend cannot start, the user sees:
    **"Pratham backend could not start. Please contact Prerana."**
