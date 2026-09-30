@@ -32,3 +32,4 @@ backup/
 *.njsproj
 *.sln
 *.sw?
+desktop-frontend
