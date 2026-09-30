@@ -2,8 +2,7 @@
  * Pratham Lab Ledger — Electron main process.
  *
  * Packaged mode:
- *   1. Starts the built NestJS backend (backend/dist/main.js) silently.
- *   2. Waits for http://localhost:3000/api to answer.
+ *   1. Starts the built NestJS backend (backend/dist/src/main.js) silently.
  *   3. Runs the built (server-rendered) frontend on a local port.
  *   4. Opens the desktop window. No terminal, no browser.
  *
