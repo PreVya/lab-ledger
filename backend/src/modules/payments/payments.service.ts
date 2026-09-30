@@ -92,16 +92,30 @@ export class PaymentsService {
     });
   }
 
-  private recomputeDates(dates: Array<Date | null | undefined>) {
-    const seen = new Set<string>();
-    for (const d of dates) {
-      if (!d) continue;
-      const key = d.toISOString().slice(0, 10);
-      if (seen.has(key)) continue;
-      seen.add(key);
-      void this.ledger
-        .recompute(new Date(key))
-        .catch((err) => console.error('[payments] background recompute failed', err));
+  /**
+   * A payment received AFTER the patient's entry date can never be an advance —
+   * it is always a balance payment. Enforced server-side (normalised to balance).
+   */
+  static normalizeKind(kind: PaymentKind, paymentDate: Date, entryDate: Date | null | undefined): PaymentKind {
+    if (!entryDate) return kind;
+    const p = paymentDate.toISOString().slice(0, 10);
+    const e = dateOnly(entryDate).toISOString().slice(0, 10);
+    return p > e ? 'balance' : kind;
+  }
+
+  /**
+   * Recompute closing cash for every affected date, in date order, and WAIT for
+   * it so the next ledger read already reflects the edited cash amount.
+   * Cash Taken Away / handover rows are never touched — closing moves around them.
+   */
+  private async recomputeDates(dates: Array<Date | null | undefined>) {
+    const keys = [...new Set(dates.filter((d): d is Date => !!d).map((d) => d.toISOString().slice(0, 10)))].sort();
+    for (const key of keys) {
+      try {
+        await this.ledger.recompute(new Date(key));
+      } catch (err) {
+        console.error('[payments] recompute failed', key, err);
+      }
     }
   }
 
@@ -119,7 +133,7 @@ export class PaymentsService {
       data: {
         patientId: input.patientId,
         date,
-        kind: input.kind,
+        kind: PaymentsService.normalizeKind(input.kind, date, patient.entryDate),
         mode: input.mode,
         amount,
         notes: input.notes ?? null,
@@ -128,7 +142,7 @@ export class PaymentsService {
     });
 
     const updated = await this.resyncPatient(input.patientId);
-    this.recomputeDates([date, patient.entryDate]);
+    await this.recomputeDates([date, patient.entryDate]);
     return { payment, patient: updated };
   }
 
@@ -150,11 +164,12 @@ export class PaymentsService {
       if (amount.lessThanOrEqualTo(0)) throw new BadRequestException('Payment amount must be greater than 0.');
     }
 
+    const owner = await this.prisma.patient.findUnique({ where: { id: existing.patientId }, select: { entryDate: true } });
     const payment = await this.prisma.payment.update({
       where: { id },
       data: {
         date,
-        kind: input.kind ?? existing.kind,
+        kind: PaymentsService.normalizeKind(input.kind ?? existing.kind, date, owner?.entryDate),
         mode: input.mode ?? existing.mode,
         amount,
         notes: input.notes !== undefined ? input.notes : existing.notes,
@@ -162,7 +177,7 @@ export class PaymentsService {
     });
 
     const patient = await this.resyncPatient(existing.patientId);
-    this.recomputeDates([existing.date, date, patient?.entryDate]);
+    await this.recomputeDates([existing.date, date, patient?.entryDate]);
     return { payment, patient };
   }
 
@@ -171,7 +186,7 @@ export class PaymentsService {
     if (!pay) throw new NotFoundException();
     await this.prisma.payment.delete({ where: { id } });
     const patient = await this.resyncPatient(pay.patientId);
-    this.recomputeDates([pay.date, patient?.entryDate]);
+    await this.recomputeDates([pay.date, patient?.entryDate]);
     return { ok: true, patient };
   }
 
@@ -302,7 +317,7 @@ export class PaymentsService {
       await this.prisma.payment.deleteMany({ where: { id: { in: toDelete } } });
     }
     for (const pid of affectedPatients) await this.resyncPatient(pid);
-    this.recomputeDates([...affectedDates].map((d) => new Date(d)));
+    void this.recomputeDates([...affectedDates].map((d) => new Date(d)));
 
     return { deleted: toDelete.length, patients: affectedPatients.size, dates: [...affectedDates] };
   }

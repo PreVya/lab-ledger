@@ -68,7 +68,11 @@ export async function downloadBillPdf(bill: Bill) {
   const top = y;
   if (logo) {
     try {
-      doc.addImage(logo, "PNG", center - logoSize / 2, top, logoSize, logoSize);
+      // Fit inside a logoSize box, preserving aspect ratio (never stretched).
+      const r = logo.naturalWidth && logo.naturalHeight ? logo.naturalWidth / logo.naturalHeight : 1;
+      const w = r >= 1 ? logoSize : logoSize * r;
+      const h = r >= 1 ? logoSize / r : logoSize;
+      doc.addImage(logo, "PNG", center - w / 2, top + (logoSize - h) / 2, w, h);
     } catch { /* ignore logo failures */ }
   }
   const mid = top + logoSize / 2;

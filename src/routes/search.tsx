@@ -50,11 +50,11 @@ function SearchPage() {
           </thead>
           <tbody>
             {data.map(p => (
-              <tr key={p.id} onClick={() => setEditing(p)} className="cursor-pointer border-b hover:bg-secondary/40">
+              <tr key={p.id} onClick={() => setEditing(p)} className="cursor-pointer border-b hover:bg-secondary/40" style={p.whatsappReportRequired ? { backgroundColor: "var(--whatsapp-soft)", boxShadow: "inset 3px 0 0 var(--whatsapp)" } : undefined}>
                 <td className="px-3 py-2">{new Date(p.entryDate).toLocaleDateString()}</td>
                 <td className="px-3 py-2 font-mono">{p.registerNumber ?? p.dailySerial}</td>
                 <td className="px-3 py-2 font-mono text-xs text-muted-foreground">{p.financialYear ?? "—"}</td>
-                <td className="px-3 py-2 font-medium">{p.name}</td>
+                <td className="px-3 py-2 font-medium"><span className="inline-flex items-center gap-2">{p.name}{p.whatsappReportRequired && <span title="WhatsApp report required" className="rounded px-1.5 py-0.5 text-[10px] font-bold" style={{ backgroundColor: "var(--whatsapp)", color: "var(--whatsapp-soft)" }}>WA</span>}</span></td>
                 <td className="px-3 py-2">{p.mobile}</td>
                 <td className="px-3 py-2 text-right tabular-nums">₹{Number(p.net).toFixed(2)}</td>
                 <td className="px-3 py-2 text-right tabular-nums">₹{Number(p.balance).toFixed(2)}</td>

@@ -84,6 +84,8 @@
   --input: oklch(0.92 0.01 230);
   --ring: oklch(0.55 0.1 200);
   --notes-indicator: oklch(0.72 0.18 60);
+  --whatsapp: oklch(0.62 0.15 150);
+  --whatsapp-soft: oklch(0.96 0.04 150);
   --success: oklch(0.6 0.13 150);
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);

@@ -379,7 +379,7 @@ export function PatientFormDialog({ open, onOpenChange, patient, entryDate, pref
 
         {/* Payment transactions stay full width below the main workspace. */}
         <div className="border-t bg-background px-3 py-2">
-          <PaymentTransactions patient={patient ?? null} net={net} draftPayments={draftPayments} setDraftPayments={setDraftPayments} />
+          <PaymentTransactions patient={patient ?? null} entryDate={patient?.entryDate?.slice(0, 10) ?? entryDate ?? null} net={net} draftPayments={draftPayments} setDraftPayments={setDraftPayments} />
         </div>
 
         <DialogFooter className="grid min-h-12 shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-4 overflow-visible border-t bg-muted/30 px-4 py-2">
@@ -473,9 +473,10 @@ function ActiveTestList({
 type DraftRow = PaymentInput & { id?: string };
 
 function PaymentTransactions({
-  patient, net, draftPayments, setDraftPayments,
+  patient, entryDate, net, draftPayments, setDraftPayments,
 }: {
   patient: Patient | null;
+  entryDate: string | null;
   net: number;
   draftPayments: PaymentInput[];
   setDraftPayments: (rows: PaymentInput[]) => void;
@@ -543,8 +544,9 @@ function PaymentTransactions({
         </Button>
       </div>
 
+      <div className="max-h-40 overflow-y-auto">
       <table className="w-full text-sm">
-        <thead className="bg-secondary/20 text-xs uppercase tracking-wide text-muted-foreground">
+        <thead className="sticky top-0 z-10 bg-secondary text-xs uppercase tracking-wide text-muted-foreground">
           <tr>
             <th className="px-3 py-2 text-left font-semibold">Date</th>
             <th className="px-3 py-2 text-left font-semibold">Kind</th>
@@ -577,6 +579,7 @@ function PaymentTransactions({
           )}
         </tbody>
       </table>
+      </div>
 
       <div className="flex flex-wrap items-center justify-end gap-6 border-t bg-secondary/20 px-3 py-2 text-sm">
         <span>Net <strong className="tabular-nums">₹{effectiveNet.toFixed(2)}</strong></span>
@@ -597,6 +600,7 @@ function PaymentTransactions({
         open={editorOpen}
         onOpenChange={setEditorOpen}
         initial={editing?.row ?? null}
+        entryDate={entryDate}
         onSubmit={async (row) => {
           await persist(row, editing ? editing.index : null);
           setEditorOpen(false);
@@ -608,8 +612,9 @@ function PaymentTransactions({
 }
 
 function PaymentEditorDialog({
-  open, onOpenChange, initial, onSubmit,
+  open, onOpenChange, initial, entryDate, onSubmit,
 }: {
+  entryDate: string | null;
   open: boolean;
   onOpenChange: (o: boolean) => void;
   initial: DraftRow | null;
@@ -633,6 +638,9 @@ function PaymentEditorDialog({
   }, [open, initial]);
 
   const dateError = date ? paymentDateError(date) : null;
+  // A payment dated after the entry date can never be an advance.
+  const afterEntry = !!(date && entryDate && date > entryDate);
+  useEffect(() => { if (afterEntry && kind === "advance") setKind("balance"); }, [afterEntry, kind]);
 
   async function submit() {
     const err = paymentDateError(date);
@@ -640,7 +648,7 @@ function PaymentEditorDialog({
     if (num(amount) <= 0) { toast.error("Amount must be greater than 0."); return; }
     setBusy(true);
     try {
-      await onSubmit({ id: initial?.id, date, kind, mode, amount: num(amount), notes: notes.trim() || null });
+      await onSubmit({ id: initial?.id, date, kind: afterEntry ? "balance" : kind, mode, amount: num(amount), notes: notes.trim() || null });
       toast.success(initial ? "Payment updated" : "Payment added");
     } catch (e: any) {
       toast.error(e.message || "Could not save the payment");
@@ -671,7 +679,7 @@ function PaymentEditorDialog({
               <Select value={kind} onValueChange={v => setKind(v as PaymentKind)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="advance">Advance</SelectItem>
+                  <SelectItem value="advance" disabled={afterEntry}>Advance</SelectItem>
                   <SelectItem value="balance">Balance</SelectItem>
                 </SelectContent>
               </Select>

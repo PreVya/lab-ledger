@@ -77,3 +77,25 @@ yarn electron:pack     # unpackaged app folder under release/ — quick check
 - Frontend build output is `.output/public` (not `dist`); the installer copies it to `resources/frontend`.
 - Dev mode: `yarn electron:dev` opens Electron against the Vite dev server
   (`yarn dev`) with the backend running separately.
+
+## Update — frontend output & app icon
+
+**Frontend build output.** `yarn build` produces a server-rendered build (no `index.html`).
+The output folder is detected from `nitro.json` — currently `dist/` (`dist/client` + `dist/server`),
+or `.output/` if the build preset is changed to Node. `yarn electron:pack` / `yarn electron:build`
+first run `scripts/prepare-desktop.cjs`, which copies whichever one exists into `desktop-frontend/`;
+electron-builder only packages that folder, so there is no "file source doesn't exist … dist" warning.
+At runtime the desktop app runs this built frontend on `http://127.0.0.1:5174` and opens it.
+
+Order: `yarn build` → `cd backend && yarn build` → `cd .. && yarn electron:pack`.
+
+**App icon.**
+1. The icon file lives at `build/icon.ico` (already generated from `public/lab-logo.png`, 16–256 px).
+2. It must be a real `.ico` file — never a renamed PNG/JPG.
+3. Recommended: include a 256x256 size.
+4. To replace it: convert your logo to `.ico` (e.g. an online PNG→ICO converter, or
+   `magick public/lab-logo.png -define icon:auto-resize=256,128,64,48,32,16 build/icon.ico`).
+   If `build/icon.ico` is missing, `electron:prepare` tries to create one from `public/lab-logo.png`.
+It is used for the app window, the Windows app, the installer and the uninstaller.
+
+**Bill logo.** The bill uses `public/lab-logo.png` — change `BILL_LOGO_PATH` in `src/lib/lab-profile.ts` to swap it.
