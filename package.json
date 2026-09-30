@@ -11,8 +11,9 @@
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "electron:dev": "ELECTRON_DEV=1 electron .",
-    "electron:pack": "electron-builder --dir",
-    "electron:build": "electron-builder --win",
+    "electron:prepare": "node scripts/prepare-desktop.cjs",
+    "electron:pack": "node scripts/prepare-desktop.cjs && electron-builder --dir",
+    "electron:build": "node scripts/prepare-desktop.cjs && electron-builder --win",
     "lint": "eslint .",
     "format": "prettier --write ."
   },

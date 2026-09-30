@@ -18,15 +18,18 @@ extraResources:
     to: backend/.env
   - from: backend/package.json
     to: backend/package.json
-  # Built frontend (Nitro-style output: .output/public).
-  - from: .output/public
+  # Built frontend server + client assets, staged by scripts/prepare-desktop.cjs
+  # from whatever `yarn build` actually produced (dist/ or .output/).
+  - from: desktop-frontend
     to: frontend
 win:
   target:
     - nsis
-  # Add `icon: build/icon.ico` here once a 256x256 .ico is available;
-  # the build works fine with the default icon until then.
+  # Real .ico generated from public/lab-logo.png (see README-desktop.md).
+  icon: build/icon.ico
 nsis:
+  installerIcon: build/icon.ico
+  uninstallerIcon: build/icon.ico
   oneClick: false
   allowToChangeInstallationDirectory: true
   createDesktopShortcut: true
