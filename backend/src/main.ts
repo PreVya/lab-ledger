@@ -20,8 +20,16 @@ async function bootstrap() {
     });
     next();
   });
+  // Desktop (Electron) frontend origins are always allowed, plus any
+  // comma-separated origins configured via CORS_ORIGIN in backend/.env.
+  const desktopOrigins = [
+    'http://127.0.0.1:5174',
+    'http://localhost:5174',
+    'http://127.0.0.1:5173',
+    'http://localhost:5173',
+  ];
   app.enableCors({
-    origin: env.CORS_ORIGIN,
+    origin: Array.from(new Set([...env.CORS_ORIGIN, ...desktopOrigins])),
     credentials: true,
   });
 
