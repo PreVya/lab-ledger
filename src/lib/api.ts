@@ -17,11 +17,31 @@ export interface AuthState {
   user: AuthUser;
 }
 
+/**
+ * Demo mode (in-memory fake data + demo logins) is ONLY allowed in the hosted
+ * web preview. It is fully disabled in the Electron desktop app and on any
+ * local machine (localhost / 127.0.0.1), where the real backend must be used.
+ */
+export function isDemoAllowed(): boolean {
+  if (typeof window === "undefined") return false;
+  const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
+  if (/Electron/i.test(ua)) return false;
+  const h = window.location.hostname;
+  if (h === "localhost" || h === "127.0.0.1" || h === "::1" || h === "") return false;
+  return true;
+}
+
 export function loadAuth(): AuthState | null {
   if (typeof window === "undefined") return null;
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as AuthState) : null;
+    const parsed = raw ? (JSON.parse(raw) as AuthState) : null;
+    // Purge any leftover demo session where demo mode is not allowed.
+    if (parsed && !isDemoAllowed() && String(parsed.accessToken ?? "").startsWith("demo.")) {
+      window.localStorage.removeItem(STORAGE_KEY);
+      return null;
+    }
+    return parsed;
   } catch {
     return null;
   }
@@ -57,7 +77,8 @@ export async function api<T = unknown>(
 
   // Demo-mode short-circuit: if signed in with a demo token, serve from in-memory store.
   const { isDemoToken, demoHandle } = await import("./demo-mode");
-  if (a && isDemoToken(a.accessToken)) {
+  const demoOk = isDemoAllowed();
+  if (demoOk && a && isDemoToken(a.accessToken)) {
     const out = demoHandle(path, init);
     if (out !== null) return out as T;
   }
@@ -70,11 +91,13 @@ export async function api<T = unknown>(
     res = await fetch(`${API_BASE_URL}/api${path}`, { ...rest, headers: h });
   } catch (netErr) {
     console.log(`${label} -> NETWORK ERROR in ${(performance.now() - t0).toFixed(0)}ms`);
-    if (a) {
+    if (demoOk && a) {
       const out = demoHandle(path, init);
       if (out !== null) return out as T;
     }
-    throw new ApiError(0, "Backend unreachable. Start NestJS at " + API_BASE_URL + " or sign in with a demo user (admin/admin, prer/prer, gaya/gaya).");
+    throw new ApiError(0, demoOk
+      ? "Backend unreachable. Start NestJS at " + API_BASE_URL + " or sign in with a demo user (admin/admin, prer/prer, gaya/gaya)."
+      : "Cannot reach the lab server at " + API_BASE_URL + ". Please make sure the backend is running.");
   }
   const tFetch = performance.now() - t0;
   const text = await res.text();
