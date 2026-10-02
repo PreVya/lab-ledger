@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { api, AuthState, AuthUser, clearAuth, loadAuth, saveAuth, Role } from "./api";
+import { api, isDemoAllowed, AuthState, AuthUser, clearAuth, loadAuth, saveAuth, Role } from "./api";
 
 interface Ctx {
   user: AuthUser | null;
@@ -41,6 +41,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setState(res);
       return;
     } catch (err) {
+      if (!isDemoAllowed()) throw err;
       const { tryDemoLogin } = await import("./demo-mode");
       const demo = tryDemoLogin(username, password);
       if (demo) {
