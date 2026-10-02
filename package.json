@@ -1,4 +1,6 @@
 {
+  "version":"1.0.0",
+  "author":"Prerana Vyavahare",
   "name": "tanstack_start_ts",
   "private": true,
   "sideEffects": false,
