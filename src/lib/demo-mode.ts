@@ -841,7 +841,10 @@ export function demoHandle(path: string, init: RequestInit = {}): unknown {
     const month = url.searchParams.get("month") || todayIST().slice(0, 7);
     const pts = store.patients.filter(p => p.entryDate.startsWith(month));
     const ids = new Set(pts.map(p => p.id));
-    return buildMonthlyReport(month, todayIST(), pts.map(toRP), toPay(store.payments.filter(x => ids.has(x.patientId))));
+    const byIdM = new Map(store.patients.map(p => [p.id, p]));
+    const prevBal = netRows(store.payments.filter(x => x.date.startsWith(month) && x.kind === "balance" && (byIdM.get(x.patientId)?.entryDate ?? x.date) < x.date))
+      .map(x => ({ date: x.date, amount: Number(x.amount) }));
+    return buildMonthlyReport(month, todayIST(), pts.map(toRP), toPay(store.payments.filter(x => ids.has(x.patientId))), prevBal);
   }
 
   return null;

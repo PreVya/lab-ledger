@@ -274,10 +274,21 @@ export class AnalyticsService {
       include: { tests: { include: { test: true } }, payments: true },
     });
     const today = new Date(Date.now() + 5.5 * 3600 * 1000).toISOString().slice(0, 10);
+    // Balance payments dated in this month (read-only); filtered below to patients entered before the payment date.
+    const balRaw = await this.prisma.payment.findMany({
+      where: { date: { gte: from, lte: to }, kind: 'balance' },
+      include: { patient: { select: { entryDate: true } } },
+      orderBy: { createdAt: 'asc' },
+    });
+    const previousBalance = this.payments.netRows(balRaw as any)
+      .map((x: any) => ({ date: this.key(x.date), entry: this.key(x.patient.entryDate), amount: this.num(x.amount) }))
+      .filter((x) => x.entry < x.date)
+      .map(({ date, amount }) => ({ date, amount }));
     return buildMonthlyReport(
       month, today,
       patients.map((p) => this.toReportPatient(p)),
       this.toReportPayments(patients.flatMap((p: any) => p.payments)),
+      previousBalance,
     );
   }
 }
