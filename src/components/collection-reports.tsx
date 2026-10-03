@@ -197,7 +197,7 @@ function SmallTable({ head, rows }: { head: string[]; rows: Array<Array<string |
 
 function MonthlyView({ r }: { r: MonthlyReport }) {
   const t = r.totals;
-  const cols = ["metropolis", "lupin", "qualilife", "tests", "total", "discount", "paid"] as const;
+  const cols = ["metropolis", "lupin", "qualilife", "tests", "total", "discount", "paid", "previousBalanceReceived", "balanceLeftOut"] as const;
   return (
     <div className="space-y-3">
       <h3 className="text-base font-semibold">Monthly Collection Report — {monthLabel(r.month)}</h3>
@@ -206,7 +206,7 @@ function MonthlyView({ r }: { r: MonthlyReport }) {
           <thead className="bg-secondary/60 text-left">
             <tr>
               <th className={th}>Date</th>
-              {["Metropolis", "Lupin", "Qualilife", "Tests", "Total", "Discount", "Paid"].map(h => <th key={h} className={`${th} text-right`}>{h}</th>)}
+              {["Metropolis", "Lupin", "Qualilife", "Tests", "Total", "Discount", "Paid", "Previous Balance Received", "Balance Left Out"].map(h => <th key={h} className={`${th} text-right`}>{h}</th>)}
             </tr>
           </thead>
           <tbody>
@@ -224,7 +224,7 @@ function MonthlyView({ r }: { r: MonthlyReport }) {
           </tbody>
         </table>
       </div>
-      <p className="text-xs text-muted-foreground">Paid = money received on that date from patients entered that same date. Previous balances are not included.</p>
+      <p className="text-xs text-muted-foreground">Paid = money received on that date from patients entered that same date. Previous Balance Received = balance paid that date by patients entered earlier. Balance Left Out = unpaid balance of that date's patients as of month end (or today for the current month).</p>
     </div>
   );
 }

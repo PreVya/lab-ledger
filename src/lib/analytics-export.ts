@@ -84,9 +84,9 @@ export async function downloadMonthlyPdf(r: MonthlyReport) {
   autoTable(doc, {
     ...tableStyle, startY: 19,
     styles: { ...tableStyle.styles, fontSize: 7.5, halign: "right" },
-    head: [["Date", "Metropolis", "Lupin", "Qualilife", "Tests", "Total", "Discount", "Paid"]],
-    body: r.rows.map(x => [dayLabel(x.date), amt(x.metropolis), amt(x.lupin), amt(x.qualilife), amt(x.tests), amt(x.total), amt(x.discount), amt(x.paid)]),
-    foot: [["TOTAL", amt(t.metropolis), amt(t.lupin), amt(t.qualilife), amt(t.tests), amt(t.total), amt(t.discount), amt(t.paid)]],
+    head: [["Date", "Metropolis", "Lupin", "Qualilife", "Tests", "Total", "Discount", "Paid", "Previous Balance Received", "Balance Left Out"]],
+    body: r.rows.map(x => [dayLabel(x.date), amt(x.metropolis), amt(x.lupin), amt(x.qualilife), amt(x.tests), amt(x.total), amt(x.discount), amt(x.paid), amt(x.previousBalanceReceived), amt(x.balanceLeftOut)]),
+    foot: [["TOTAL", amt(t.metropolis), amt(t.lupin), amt(t.qualilife), amt(t.tests), amt(t.total), amt(t.discount), amt(t.paid), amt(t.previousBalanceReceived), amt(t.balanceLeftOut)]],
     columnStyles: { 0: { halign: "left" } },
   });
   doc.save(`monthly-collection-${r.month}.pdf`);
@@ -119,8 +119,8 @@ export async function downloadMonthlyExcel(r: MonthlyReport) {
   const t = r.totals;
   await saveXlsx([["Monthly", [
     [LAB], [`Monthly Collection Report — ${monthLabel(r.month)}`], [],
-    ["Date", "Metropolis", "Lupin", "Qualilife", "Tests", "Total", "Discount", "Paid"],
-    ...r.rows.map(x => [dayLabel(x.date), x.metropolis, x.lupin, x.qualilife, x.tests, x.total, x.discount, x.paid]),
-    ["TOTAL", t.metropolis, t.lupin, t.qualilife, t.tests, t.total, t.discount, t.paid],
+    ["Date", "Metropolis", "Lupin", "Qualilife", "Tests", "Total", "Discount", "Paid", "Previous Balance Received", "Balance Left Out"],
+    ...r.rows.map(x => [dayLabel(x.date), x.metropolis, x.lupin, x.qualilife, x.tests, x.total, x.discount, x.paid, x.previousBalanceReceived, x.balanceLeftOut]),
+    ["TOTAL", t.metropolis, t.lupin, t.qualilife, t.tests, t.total, t.discount, t.paid, t.previousBalanceReceived, t.balanceLeftOut],
   ]]], `monthly-collection-${r.month}.xlsx`);
 }

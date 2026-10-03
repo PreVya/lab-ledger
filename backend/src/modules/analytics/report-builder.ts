@@ -83,6 +83,10 @@ export interface MonthlyRow {
   total: number;
   discount: number;
   paid: number;
+  /** Balance received on this date from patients entered before this date. */
+  previousBalanceReceived: number;
+  /** Unpaid balance (as of min(month end, today)) of patients entered on this date. */
+  balanceLeftOut: number;
 }
 
 export interface MonthlyReport {
@@ -221,16 +225,31 @@ export function monthDays(month: string, today: string) {
  * @param payments  payments (any date) of those patients
  * Paid for a date = payments made on that date by patients entered that same date.
  */
-export function buildMonthlyReport(month: string, today: string, patients: ReportPatient[], payments: ReportPayment[]): MonthlyReport {
+export function buildMonthlyReport(
+  month: string,
+  today: string,
+  patients: ReportPatient[],
+  payments: ReportPayment[],
+  previousBalance: Array<{ date: string; amount: number }> = [],
+): MonthlyReport {
   const entryOf = new Map(patients.map(p => [p.id, p.entryDate]));
+  const [yy, mm] = month.split("-").map(Number);
+  const monthEnd = new Date(Date.UTC(yy, mm, 0)).toISOString().slice(0, 10);
+  const cutoff = monthEnd < today ? monthEnd : today;
+  const paidUpTo = new Map<string, number>();
+  for (const x of payments) {
+    if (x.amount > 0 && x.date <= cutoff) paidUpTo.set(x.patientId, (paidUpTo.get(x.patientId) ?? 0) + x.amount);
+  }
   const rows: MonthlyRow[] = monthDays(month, today).map(date => {
-    const row: MonthlyRow = { date, metropolis: 0, lupin: 0, qualilife: 0, tests: 0, total: 0, discount: 0, paid: 0 };
+    const row: MonthlyRow = { date, metropolis: 0, lupin: 0, qualilife: 0, tests: 0, total: 0, discount: 0, paid: 0, previousBalanceReceived: 0, balanceLeftOut: 0 };
     for (const p of patients) {
       if (p.entryDate !== date) continue;
       const s = labSplit(p);
       row.metropolis += s.metropolis; row.lupin += s.lupin; row.qualilife += s.qualilife; row.tests += s.tests;
       row.discount += p.discount;
+      row.balanceLeftOut += Math.max(0, p.net - (paidUpTo.get(p.id) ?? 0));
     }
+    for (const b of previousBalance) if (b.date === date && b.amount > 0) row.previousBalanceReceived += b.amount;
     row.total = row.metropolis + row.lupin + row.qualilife + row.tests;
     for (const x of payments) {
       if (x.date === date && entryOf.get(x.patientId) === date && x.amount > 0) row.paid += x.amount;
@@ -238,7 +257,7 @@ export function buildMonthlyReport(month: string, today: string, patients: Repor
     (Object.keys(row) as Array<keyof MonthlyRow>).forEach(k => { if (k !== "date") (row as any)[k] = r2(row[k] as number); });
     return row;
   });
-  const totals = { metropolis: 0, lupin: 0, qualilife: 0, tests: 0, total: 0, discount: 0, paid: 0 };
+  const totals = { metropolis: 0, lupin: 0, qualilife: 0, tests: 0, total: 0, discount: 0, paid: 0, previousBalanceReceived: 0, balanceLeftOut: 0 };
   for (const r of rows) (Object.keys(totals) as Array<keyof typeof totals>).forEach(k => { totals[k] = r2(totals[k] + r[k]); });
   return { month, rows, totals };
 }
