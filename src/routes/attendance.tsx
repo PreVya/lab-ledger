@@ -4,6 +4,7 @@ import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useAuth } from "@/lib/auth-context";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -31,21 +32,23 @@ export const Route = createFileRoute("/attendance")({
 });
 
 function AttendancePage() {
+  const { hasRole } = useAuth();
+  const isAdmin = hasRole("admin");
   return (
     <div className="p-6">
       <Tabs defaultValue="attendance">
         <TabsList>
           <TabsTrigger value="attendance">Attendance</TabsTrigger>
           <TabsTrigger value="employees">Employees</TabsTrigger>
-          <TabsTrigger value="salary">Salary</TabsTrigger>
-          <TabsTrigger value="advances">Advances</TabsTrigger>
-          <TabsTrigger value="holidays">Holidays</TabsTrigger>
+          {isAdmin && <TabsTrigger value="salary">Salary</TabsTrigger>}
+          {isAdmin && <TabsTrigger value="advances">Advances</TabsTrigger>}
+          {isAdmin && <TabsTrigger value="holidays">Holidays</TabsTrigger>}
         </TabsList>
         <TabsContent value="attendance"><AttendanceTab /></TabsContent>
         <TabsContent value="employees"><EmployeesTab /></TabsContent>
-        <TabsContent value="salary"><SalaryTab /></TabsContent>
-        <TabsContent value="advances"><AdvancesTab /></TabsContent>
-        <TabsContent value="holidays"><HolidaysTab /></TabsContent>
+        {isAdmin && <TabsContent value="salary"><SalaryTab /></TabsContent>}
+        {isAdmin && <TabsContent value="advances"><AdvancesTab /></TabsContent>}
+        {isAdmin && <TabsContent value="holidays"><HolidaysTab /></TabsContent>}
       </Tabs>
     </div>
   );
@@ -58,6 +61,7 @@ function AttendanceTab() {
   const { data } = useAttendanceByDate(date);
   const save = useSaveAttendanceBulk();
   const createHoliday = useCreateHoliday();
+  const isAdmin = useAuth().hasRole("admin");
   const [draft, setDraft] = useState<Record<string, { status: AttendanceStatus; notes?: string }>>({});
   const [holidayOpen, setHolidayOpen] = useState(false);
   const [holidayName, setHolidayName] = useState("");
@@ -80,7 +84,7 @@ function AttendanceTab() {
           try { await save.mutateAsync({ date, entries: list }); toast.success("Attendance saved"); setDraft({}); }
           catch (e: any) { toast.error(e?.message ?? "Failed"); }
         }}>Save</Button>
-        {!isHoliday && (
+        {!isHoliday && isAdmin && (
           <Button variant="outline" onClick={() => setHolidayOpen(true)}>Mark as Holiday</Button>
         )}
         {isHoliday && data?.holiday && (

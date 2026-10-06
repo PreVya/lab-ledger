@@ -98,7 +98,6 @@ export async function downloadBillPdf(bill: Bill) {
   doc.setFontSize(9);
   const colX = [M, center + 2];
   const pairs: Array<[string, string]> = [
-    ["Bill No.", String(bill.billNumber)],
     ["Bill Date", bill.billDate.slice(0, 10)],
     ["Patient Reg No.", String(bill.patientRegisterNumberSnapshot)],
     ["Patient FY", bill.patientFinancialYearSnapshot],

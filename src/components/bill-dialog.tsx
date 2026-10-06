@@ -40,7 +40,7 @@ export function BillDialog({
       <DialogContent className="flex h-[90vh] max-h-[90vh] w-[90vw] max-w-[1100px] flex-col gap-3 overflow-hidden sm:max-w-[1100px]">
         <DialogHeader className="no-print">
           <DialogTitle>
-            {bill ? `Bill No. ${bill.billNumber}` : "Bill"}
+            Bill
             {bill && bill.printCount > 0 && (
               <span className="ml-2 text-xs font-normal text-muted-foreground">
                 printed {bill.printCount}×
@@ -85,7 +85,7 @@ export function BillActions({ patientId, compact }: { patientId: string; compact
     try {
       const b = await generate.mutateAsync(patientId);
       setOpenId(b.id);
-      toast.success(`Bill No. ${b.billNumber} generated`);
+      toast.success("Bill generated");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not generate bill");
     }
@@ -95,13 +95,8 @@ export function BillActions({ patientId, compact }: { patientId: string; compact
     <div className="flex items-center gap-2">
       {existing ? (
         <>
-          {!compact && (
-            <span className="text-xs text-muted-foreground">
-              Bill No. <span className="font-mono font-medium text-foreground">{existing.billNumber}</span>
-            </span>
-          )}
           <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={() => setOpenId(existing.id)}>
-            <FileText className="h-3.5 w-3.5" /> {compact ? `Bill ${existing.billNumber}` : "View Bill"}
+            <FileText className="h-3.5 w-3.5" /> {compact ? "Bill" : "View Bill"}
           </Button>
           {!compact && (
             <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={() => setOpenId(existing.id)}>
