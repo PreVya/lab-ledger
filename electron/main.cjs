@@ -17,6 +17,21 @@ const path = require("path");
 const fs = require("fs");
 const http = require("http");
 
+/** Startup timing log (userData/startup.log) — for support only, never shown to staff. */
+const T0 = Date.now();
+function logStep(msg) {
+  try {
+    const f = path.join(app.getPath("userData"), "startup.log");
+    fs.appendFileSync(f, `[${new Date().toISOString()}] +${Date.now() - T0}ms ${msg}\n`);
+  } catch { /* ignore */ }
+}
+
+const SPLASH_HTML = "data:text/html;charset=utf-8," + encodeURIComponent(
+  '<html><body style="margin:0;height:100vh;display:flex;align-items:center;justify-content:center;font-family:Segoe UI,sans-serif;background:#f8fafc;color:#0f766e">' +
+  '<div style="text-align:center"><div style="font-size:22px;font-weight:600">Starting Pratham…</div>' +
+  '<div style="margin-top:8px;font-size:13px;color:#64748b">Connecting to the lab server, please wait.</div></div></body></html>'
+);
+
 const BACKEND_PORT = 3000;
 const BACKEND_URL = `http://localhost:${BACKEND_PORT}/api`;
 const FRONTEND_PORT = 5174;
@@ -53,7 +68,7 @@ function startBackend() {
   });
 }
 
-function waitForBackend(timeoutMs = 60000) {
+function waitForBackend(timeoutMs = 120000) {
   const started = Date.now();
   return new Promise((resolve, reject) => {
     const tryOnce = () => {
@@ -187,6 +202,7 @@ async function createWindow() {
     title: "Pratham Lab Ledger",
     icon: fs.existsSync(path.join(__dirname, "..", "build", "icon.ico")) ? path.join(__dirname, "..", "build", "icon.ico") : undefined,
     autoHideMenuBar: true,
+    backgroundColor: "#f8fafc",
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
@@ -198,12 +214,36 @@ async function createWindow() {
     return;
   }
 
+  // Logout on real close (X button / quit) only. Ctrl+R reload does not fire "close".
+  let authCleared = false;
+  mainWindow.on("close", (e) => {
+    if (authCleared || mainWindow.webContents.getURL().startsWith("data:")) return;
+    e.preventDefault();
+    const done = () => { authCleared = true; if (!mainWindow.isDestroyed()) mainWindow.close(); };
+    const timer = setTimeout(done, 1500);
+    mainWindow.webContents
+      .executeJavaScript('try{localStorage.removeItem("lab.auth")}catch(e){};true')
+      .catch(() => {})
+      .finally(() => { clearTimeout(timer); done(); });
+  });
+
+  // Show a lightweight splash immediately so the window is never blank.
+  mainWindow.loadURL(SPLASH_HTML).catch(() => {});
+  logStep("window shown");
+
   try {
+    // Backend and frontend start in parallel; login page opens once both are up,
+    // so the first login request always reaches a ready backend.
     startBackend();
-    await waitForBackend();
-    await startFrontendServer();
+    logStep("backend spawned");
+    await Promise.all([
+      waitForBackend().then(() => logStep("backend ready")),
+      startFrontendServer().then(() => logStep("frontend ready")),
+    ]);
     await mainWindow.loadURL(`http://127.0.0.1:${FRONTEND_PORT}/`);
+    logStep("login page loaded");
   } catch (err) {
+    logStep("startup failed: " + (err && err.message));
     showFatalError(err && err.message);
   }
 }
