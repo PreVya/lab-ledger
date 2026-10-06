@@ -99,14 +99,13 @@ It is used for the app window, the Windows app, the installer and the uninstalle
 
 ## Logos & desktop icon
 
-1. `public/lab-logo.png` — used for the bill header and in-app display (unchanged).
-2. `public/lab-logo.jpg` — used **only** as the source for the desktop app icon.
-3. Generated Windows icon: `build/icon.ico` (app window, exe, installer, uninstaller via `electron-builder.yml`).
-4. It must be a real ICO file, never a renamed JPG/PNG. Recommended size: 256x256 (with smaller sizes embedded).
-5. The current `build/icon.ico` is already generated from `lab-logo.jpg` (256/128/64/48/32/16 px). After replacing the JPG, regenerate it manually, e.g.:
-   `magick public/lab-logo.jpg -resize 256x256 -define icon:auto-resize=256,128,64,48,32,16 build/icon.ico`
-   (or any online JPG→ICO converter). If the icon is missing, the build still works using the default Electron icon.
-6. Rebuild after changing the icon:
+1. `public/lab-logo.png` is the single logo source: bill header, in-app display, and the desktop app icon.
+2. Generated Windows icon: `build/icon.ico` (app window, exe, installer, uninstaller via `electron-builder.yml`).
+3. It must be a real ICO file, never a renamed PNG. It contains 256/128/64/48/32/16 px sizes.
+4. After replacing the PNG, regenerate the icon, e.g.:
+   `magick public/lab-logo.png -background none -gravity center -extent %[fx:max(w,h)]x%[fx:max(w,h)] -resize 256x256 -define icon:auto-resize=256,128,64,48,32,16 build/icon.ico`
+   If the icon is missing, the build still works with the default Electron icon.
+5. Rebuild after changing the icon:
    ```bash
    yarn build
    yarn electron:pack
