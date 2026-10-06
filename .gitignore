@@ -20,7 +20,7 @@ backup/
 release/
 release-new/
 release-final/
-
+release-v2/
 # Wrangler / Cloudflare
 .wrangler/
 .dev.vars
