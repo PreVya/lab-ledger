@@ -71,9 +71,6 @@ yarn electron:pack     # unpackaged app folder under release/ — quick check
   Windows engines.
 - The backend keeps using the existing Supabase pooler URLs — the target
   Windows machines need internet access to reach Supabase, same as today.
-- App icon: the build uses the default Electron icon. To add a custom one,
-  place a 256×256 `build/icon.ico` and add `icon: build/icon.ico` under
-  `win:` in `electron-builder.yml`.
 - Frontend build output is `.output/public` (not `dist`); the installer copies it to `resources/frontend`.
 - Dev mode: `yarn electron:dev` opens Electron against the Vite dev server
   (`yarn dev`) with the backend running separately.
@@ -89,7 +86,7 @@ At runtime the desktop app runs this built frontend on `http://127.0.0.1:5174` a
 
 Order: `yarn build` → `cd backend && yarn build` → `cd .. && yarn electron:pack`.
 
-**App icon.**
+**App icon (outdated section — see "Logos & desktop icon" below).**
 1. The icon file lives at `build/icon.ico` (already generated from `public/lab-logo.png`, 16–256 px).
 2. It must be a real `.ico` file — never a renamed PNG/JPG.
 3. Recommended: include a 256x256 size.
@@ -99,3 +96,19 @@ Order: `yarn build` → `cd backend && yarn build` → `cd .. && yarn electron:p
 It is used for the app window, the Windows app, the installer and the uninstaller.
 
 **Bill logo.** The bill uses `public/lab-logo.png` — change `BILL_LOGO_PATH` in `src/lib/lab-profile.ts` to swap it.
+
+## Logos & desktop icon
+
+1. `public/lab-logo.png` — used for the bill header and in-app display (unchanged).
+2. `public/lab-logo.jpg` — used **only** as the source for the desktop app icon.
+3. Generated Windows icon: `build/icon.ico` (app window, exe, installer, uninstaller via `electron-builder.yml`).
+4. It must be a real ICO file, never a renamed JPG/PNG. Recommended size: 256x256 (with smaller sizes embedded).
+5. The current `build/icon.ico` is already generated from `lab-logo.jpg` (256/128/64/48/32/16 px). After replacing the JPG, regenerate it manually, e.g.:
+   `magick public/lab-logo.jpg -resize 256x256 -define icon:auto-resize=256,128,64,48,32,16 build/icon.ico`
+   (or any online JPG→ICO converter). If the icon is missing, the build still works using the default Electron icon.
+6. Rebuild after changing the icon:
+   ```bash
+   yarn build
+   yarn electron:pack
+   yarn electron:build
+   ```

@@ -24,27 +24,14 @@ fs.rmSync(target, { recursive: true, force: true });
 fs.cpSync(src, target, { recursive: true });
 console.log(`[prepare-desktop] copied ${path.relative(root, src)} -> desktop-frontend`);
 
-// Optional: generate build/icon.ico from the public logo (PNG-embedded ICO, a real .ico).
+// Desktop icon: build/icon.ico is generated from DESKTOP_ICON_SOURCE (JPG).
+// The PNG logo (public/lab-logo.png) is for bills/in-app only and is never used here.
+const DESKTOP_ICON_SOURCE = path.join(root, "public", "lab-logo.jpg");
 const ico = path.join(root, "build", "icon.ico");
-const png = path.join(root, "public", "lab-logo.png");
-if (!fs.existsSync(ico) && fs.existsSync(png)) {
-  try {
-    const data = fs.readFileSync(png);
-    const w = data.readUInt32BE(16);
-    const h = data.readUInt32BE(20);
-    if (w > 256 || h > 256) {
-      console.log("[prepare-desktop] logo is larger than 256px; resize to 256x256 and create build/icon.ico manually (see README-desktop.md). Using default icon.");
-    } else {
-      const header = Buffer.alloc(22);
-      header.writeUInt16LE(0, 0); header.writeUInt16LE(1, 2); header.writeUInt16LE(1, 4);
-      header.writeUInt8(w === 256 ? 0 : w, 6); header.writeUInt8(h === 256 ? 0 : h, 7);
-      header.writeUInt16LE(1, 10); header.writeUInt16LE(32, 12);
-      header.writeUInt32LE(data.length, 14); header.writeUInt32LE(22, 18);
-      fs.mkdirSync(path.dirname(ico), { recursive: true });
-      fs.writeFileSync(ico, Buffer.concat([header, data]));
-      console.log("[prepare-desktop] generated build/icon.ico from public/lab-logo.png");
-    }
-  } catch (e) {
-    console.log("[prepare-desktop] could not generate icon, using default:", e.message);
-  }
+if (!fs.existsSync(ico)) {
+  console.log("[prepare-desktop] build/icon.ico is missing — the default Electron icon will be used.");
+  console.log("  Create it from public/lab-logo.jpg (see README-desktop.md), e.g.:");
+  console.log("  magick public/lab-logo.jpg -resize 256x256 -define icon:auto-resize=256,128,64,48,32,16 build/icon.ico");
+} else if (fs.existsSync(DESKTOP_ICON_SOURCE) && fs.statSync(DESKTOP_ICON_SOURCE).mtimeMs > fs.statSync(ico).mtimeMs) {
+  console.log("[prepare-desktop] public/lab-logo.jpg is newer than build/icon.ico — regenerate the icon (see README-desktop.md).");
 }
