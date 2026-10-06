@@ -73,7 +73,7 @@ function useRange() {
         <Input type="date" className="h-9 w-40" value={to} onChange={e => { setTo(e.target.value); setMonth(""); }} />
       </div>
       {!month && (
-        <Button size="sm" disabled={!from || !to || to < from} onClick={() => setRange({ from, to })}>Apply</Button>
+        <Button size="sm" disabled={!validCustom} onClick={() => validCustom && setRange({ from, to })}>Apply</Button>
       )}
     </>
   );
