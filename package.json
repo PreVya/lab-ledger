@@ -1,6 +1,6 @@
 {
-  "version":"1.0.0",
-  "author":"Prerana Vyavahare",
+  "version": "1.0.0",
+  "author": "Prerana Vyavahare",
   "name": "tanstack_start_ts",
   "private": true,
   "sideEffects": false,
@@ -81,7 +81,7 @@
     "@eslint/js": "^9.32.0",
     "electron": "^33.0.0",
     "electron-builder": "^25.0.0",
-    "@lovable.dev/vite-tanstack-config": "2.23.1",
+    "@lovable.dev/vite-tanstack-config": "2.25.2",
     "@types/node": "^22.16.5",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
