@@ -86,28 +86,20 @@ At runtime the desktop app runs this built frontend on `http://127.0.0.1:5174` a
 
 Order: `yarn build` → `cd backend && yarn build` → `cd .. && yarn electron:pack`.
 
-**App icon (outdated section — see "Logos & desktop icon" below).**
-1. The icon file lives at `build/icon.ico` (already generated from `public/lab-logo.png`, 16–256 px).
-2. It must be a real `.ico` file — never a renamed PNG/JPG.
-3. Recommended: include a 256x256 size.
-4. To replace it: convert your logo to `.ico` (e.g. an online PNG→ICO converter, or
-   `magick public/lab-logo.png -define icon:auto-resize=256,128,64,48,32,16 build/icon.ico`).
-   If `build/icon.ico` is missing, `electron:prepare` tries to create one from `public/lab-logo.png`.
-It is used for the app window, the Windows app, the installer and the uninstaller.
+**App icon.** See "Logos & desktop icon" below.
 
 **Bill logo.** The bill uses `public/lab-logo.png` — change `BILL_LOGO_PATH` in `src/lib/lab-profile.ts` to swap it.
 
 ## Logos & desktop icon
 
-1. `public/lab-logo.png` is the single logo source: bill header, in-app display, and the desktop app icon.
-2. Generated Windows icon: `build/icon.ico` (app window, exe, installer, uninstaller via `electron-builder.yml`).
-3. It must be a real ICO file, never a renamed PNG. It contains 256/128/64/48/32/16 px sizes.
-4. After replacing the PNG, regenerate the icon, e.g.:
-   `magick public/lab-logo.png -background none -gravity center -extent %[fx:max(w,h)]x%[fx:max(w,h)] -resize 256x256 -define icon:auto-resize=256,128,64,48,32,16 build/icon.ico`
-   If the icon is missing, the build still works with the default Electron icon.
-5. Rebuild after changing the icon:
+1. `public/lab-logo.png` (transparent PNG) is the single logo source: bill header, in-app display and desktop icon.
+2. `build/icon.ico` is **auto-generated** by `scripts/prepare-desktop.cjs` (run by `yarn electron:pack` / `yarn electron:build`):
+   a real multi-size ICO (256, 128, 64, 48, 32, 16 px), regenerated when missing or when the PNG is newer.
+3. No manual ImageMagick step is required.
+4. If the icon looks stale, delete `build/icon.ico` and rerun `yarn electron:build`.
+5. Rebuild:
    ```bash
+   yarn install
    yarn build
-   yarn electron:pack
    yarn electron:build
    ```
