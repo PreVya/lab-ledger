@@ -29,10 +29,16 @@ function monthOptions(today: string) {
   return out.reverse();
 }
 
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
+
+/** Safe YYYY-MM → { from, to }; falls back to the current month for empty/invalid input. */
 function monthRange(m: string, today: string) {
-  const [y, mm] = m.split("-").map(Number);
-  const end = new Date(Date.UTC(y, mm, 0)).toISOString().slice(0, 10);
-  return { from: `${m}-01`, to: end < today ? end : today };
+  const month = MONTH_RE.test(m) ? m : today.slice(0, 7);
+  const [y, mm] = month.split("-").map(Number);
+  const d = new Date(Date.UTC(y, mm, 0));
+  const end = isNaN(d.getTime()) ? today : d.toISOString().slice(0, 10);
+  return { from: `${month}-01`, to: end < today ? end : today };
 }
 
 /** Month selector (quick) + custom from/to date range. */
@@ -40,10 +46,11 @@ function useRange() {
   const today = todayKey();
   const months = useMemo(() => monthOptions(today), [today]);
   const [month, setMonth] = useState(months[0] ?? FIRST_MONTH);
-  const init = monthRange(month, today);
+  const [init] = useState(() => monthRange(months[0] ?? FIRST_MONTH, today));
   const [from, setFrom] = useState(init.from);
   const [to, setTo] = useState(init.to);
   const [range, setRange] = useState(init);
+  const validCustom = DATE_RE.test(from) && DATE_RE.test(to) && to >= from;
   const ui = (
     <>
       <div className="space-y-1">
@@ -66,7 +73,7 @@ function useRange() {
         <Input type="date" className="h-9 w-40" value={to} onChange={e => { setTo(e.target.value); setMonth(""); }} />
       </div>
       {!month && (
-        <Button size="sm" disabled={!from || !to || to < from} onClick={() => setRange({ from, to })}>Apply</Button>
+        <Button size="sm" disabled={!validCustom} onClick={() => validCustom && setRange({ from, to })}>Apply</Button>
       )}
     </>
   );
