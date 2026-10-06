@@ -623,10 +623,10 @@
     "@jridgewell/resolve-uri" "^3.1.0"
     "@jridgewell/sourcemap-codec" "^1.4.14"
 
-"@lovable.dev/vite-tanstack-config@2.23.1":
-  version "2.23.1"
-  resolved "https://registry.yarnpkg.com/@lovable.dev/vite-tanstack-config/-/vite-tanstack-config-2.23.1.tgz#7de8f4b87b11cd5f978967a965b28158acb756f2"
-  integrity sha512-EA5YKYurkQ7bhfWXhbXt2igBoUVTKL1EXDbolfboV7IWlnvp7ERiho3C3aii1h88Tm4nnDQZki4o2Gugj3a8Yw==
+"@lovable.dev/vite-tanstack-config@2.25.2":
+  version "2.25.2"
+  resolved "https://registry.yarnpkg.com/@lovable.dev/vite-tanstack-config/-/vite-tanstack-config-2.25.2.tgz#6f142785b458f8e9be3301991b680a517280224f"
+  integrity sha512-4kKPzMCMBHXxTSmHfoO479j0RG8Xe18nzry2bBVB+B5CTXfyQ4XNla481fMgsaA6S27Rm/rp011IcA8MUQEFbw==
   dependencies:
     "@tanstack/devtools-vite" "^0.8.1"
     lightningcss "^1.30.0"
