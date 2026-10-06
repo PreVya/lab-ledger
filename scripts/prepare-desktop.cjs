@@ -24,14 +24,14 @@ fs.rmSync(target, { recursive: true, force: true });
 fs.cpSync(src, target, { recursive: true });
 console.log(`[prepare-desktop] copied ${path.relative(root, src)} -> desktop-frontend`);
 
-// Desktop icon: build/icon.ico is generated from DESKTOP_ICON_SOURCE (JPG).
-// The PNG logo (public/lab-logo.png) is for bills/in-app only and is never used here.
-const DESKTOP_ICON_SOURCE = path.join(root, "public", "lab-logo.jpg");
+// Desktop icon: build/icon.ico is generated from DESKTOP_ICON_SOURCE (PNG — same logo as the bill).
+// The same PNG is also used for the bill logo.
+const DESKTOP_ICON_SOURCE = path.join(root, "public", "lab-logo.png");
 const ico = path.join(root, "build", "icon.ico");
 if (!fs.existsSync(ico)) {
   console.log("[prepare-desktop] build/icon.ico is missing — the default Electron icon will be used.");
-  console.log("  Create it from public/lab-logo.jpg (see README-desktop.md), e.g.:");
-  console.log("  magick public/lab-logo.jpg -resize 256x256 -define icon:auto-resize=256,128,64,48,32,16 build/icon.ico");
+  console.log("  Create it from public/lab-logo.png (see README-desktop.md), e.g.:");
+  console.log("  magick public/lab-logo.png -resize 256x256 -define icon:auto-resize=256,128,64,48,32,16 build/icon.ico");
 } else if (fs.existsSync(DESKTOP_ICON_SOURCE) && fs.statSync(DESKTOP_ICON_SOURCE).mtimeMs > fs.statSync(ico).mtimeMs) {
-  console.log("[prepare-desktop] public/lab-logo.jpg is newer than build/icon.ico — regenerate the icon (see README-desktop.md).");
+  console.log("[prepare-desktop] public/lab-logo.png is newer than build/icon.ico — regenerate the icon (see README-desktop.md).");
 }
