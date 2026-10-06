@@ -1,6 +1,9 @@
 import { BadRequestException, Body, Controller, Delete, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
 import { IsNumber, IsOptional, IsString, Min } from 'class-validator';
+import { Role } from '@prisma/client';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser, JwtUser } from '../../common/decorators/current-user.decorator';
 import { SalaryService } from './salary.service';
 
@@ -11,7 +14,9 @@ class AdvanceDto {
   @IsOptional() @IsString() notes?: string;
 }
 
-@UseGuards(JwtAuthGuard)
+/** Admin only (salary / advances / holidays). */
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(Role.admin)
 @Controller()
 export class SalaryController {
   constructor(private svc: SalaryService) {}

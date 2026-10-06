@@ -54,7 +54,6 @@ export function BillView({ bill }: { bill: Bill }) {
 
       {/* ---- Bill & patient details ---- */}
       <section className="mt-2 grid grid-cols-2 gap-x-8 gap-y-1 text-[12px]">
-        <Row label="Bill No." value={String(bill.billNumber)} />
         <Row label="Bill Date" value={bill.billDate.slice(0, 10)} />
         <Row label="Patient Reg No." value={String(bill.patientRegisterNumberSnapshot)} />
         <Row label="Patient FY" value={bill.patientFinancialYearSnapshot} />

@@ -42,7 +42,6 @@ function BillsPage() {
         <Field label="From"><Input type="date" value={from} onChange={e => setFrom(e.target.value)} className="h-9 w-40" /></Field>
         <Field label="To"><Input type="date" value={to} onChange={e => setTo(e.target.value)} className="h-9 w-40" /></Field>
         <Field label="Patient name"><Input value={q} onChange={e => setQ(e.target.value)} placeholder="Name" className="h-9 w-48" /></Field>
-        <Field label="Bill No."><Input value={billNumber} onChange={e => setBillNumber(e.target.value.replace(/\D/g, ""))} placeholder="e.g. 12" className="h-9 w-28" /></Field>
         <Button variant="ghost" size="sm" onClick={() => { setFrom(""); setTo(""); setQ(""); setBillNumber(""); }}>Clear</Button>
       </div>
 
@@ -50,7 +49,6 @@ function BillsPage() {
         <table className="w-full text-sm">
           <thead className="bg-secondary text-xs uppercase text-muted-foreground">
             <tr>
-              <th className="px-3 py-2 text-left">Bill No.</th>
               <th className="px-3 py-2 text-left">Bill Date</th>
               <th className="px-3 py-2 text-left">Patient</th>
               <th className="px-3 py-2 text-left">Reg No.</th>
@@ -62,13 +60,12 @@ function BillsPage() {
             </tr>
           </thead>
           <tbody>
-            {isLoading && <tr><td colSpan={9} className="p-6 text-center text-muted-foreground">Loading…</td></tr>}
+            {isLoading && <tr><td colSpan={8} className="p-6 text-center text-muted-foreground">Loading…</td></tr>}
             {!isLoading && data.length === 0 && (
-              <tr><td colSpan={9} className="p-6 text-center text-muted-foreground">No bills generated yet.</td></tr>
+              <tr><td colSpan={8} className="p-6 text-center text-muted-foreground">No bills generated yet.</td></tr>
             )}
             {data.map(b => (
               <tr key={b.id} className="border-b hover:bg-secondary/40">
-                <td className="px-3 py-2 font-mono font-medium">{b.billNumber}</td>
                 <td className="px-3 py-2">{b.billDate.slice(0, 10)}</td>
                 <td className="px-3 py-2 font-medium">{b.patientNameSnapshot}</td>
                 <td className="px-3 py-2 font-mono">{b.patientRegisterNumberSnapshot}</td>
