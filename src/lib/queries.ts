@@ -101,6 +101,9 @@ export function useCreatePatient() {
     onSuccess: (patient) => {
       const date = patient.entryDate.slice(0, 10);
       qc.invalidateQueries({ queryKey: qk.ledger(date) });
+      // Move the delete (dustbin) icon to the new latest entry immediately.
+      qc.invalidateQueries({ queryKey: ["latest-register"] });
+      qc.invalidateQueries({ queryKey: ["search"] });
     },
   });
 }
