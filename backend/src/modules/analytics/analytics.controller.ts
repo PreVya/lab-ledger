@@ -34,4 +34,34 @@ export class AnalyticsController {
     if (!month || !MONTH_RE.test(month)) throw new BadRequestException('month (YYYY-MM) is required.');
     return this.svc.monthlyReport(month);
   }
+
+  private checkRange(fromDate?: string, toDate?: string) {
+    if (!fromDate || !DATE_RE.test(fromDate)) throw new BadRequestException('fromDate (YYYY-MM-DD) is required.');
+    if (!toDate || !DATE_RE.test(toDate)) throw new BadRequestException('toDate (YYYY-MM-DD) is required.');
+    if (toDate < fromDate) throw new BadRequestException('toDate must not be before fromDate.');
+  }
+
+  @Get('expenses')
+  expenses(@Query('fromDate') fromDate?: string, @Query('toDate') toDate?: string) {
+    this.checkRange(fromDate, toDate);
+    return this.svc.expenseReport(fromDate!, toDate!);
+  }
+
+  @Get('closing-balance')
+  closingBalance(@Query('fromDate') fromDate?: string, @Query('toDate') toDate?: string) {
+    this.checkRange(fromDate, toDate);
+    return this.svc.closingBalanceReport(fromDate!, toDate!);
+  }
+
+  @Get('doctor-referrals')
+  doctorReferrals(@Query('fromDate') fromDate?: string, @Query('toDate') toDate?: string) {
+    this.checkRange(fromDate, toDate);
+    return this.svc.doctorReport(fromDate!, toDate!);
+  }
+
+  @Get('outsourced-labs')
+  outsourcedLabs(@Query('fromDate') fromDate?: string, @Query('toDate') toDate?: string) {
+    this.checkRange(fromDate, toDate);
+    return this.svc.outsourcedReport(fromDate!, toDate!);
+  }
 }

@@ -592,3 +592,17 @@ export function useMonthlyCollectionReport(month: string, enabled = true) {
     enabled: enabled && !!month,
   });
 }
+
+// ---- Extra analytics reports (admin only, read-only) ----
+import type { ExpenseReport, ClosingBalanceReport, DoctorReport, OutsourcedReport } from "./analytics-extra";
+function rangeReport<T>(name: string, path: string) {
+  return (from: string, to: string) => useQuery({
+    queryKey: [name, from, to],
+    queryFn: () => api<T>(`/analytics/${path}?fromDate=${from}&toDate=${to}`),
+    enabled: !!from && !!to && to >= from,
+  });
+}
+export const useExpenseReport = rangeReport<ExpenseReport>("analytics-expenses", "expenses");
+export const useClosingBalanceReport = rangeReport<ClosingBalanceReport>("analytics-closing", "closing-balance");
+export const useDoctorReport = rangeReport<DoctorReport>("analytics-doctor", "doctor-referrals");
+export const useOutsourcedReport = rangeReport<OutsourcedReport>("analytics-outsourced", "outsourced-labs");

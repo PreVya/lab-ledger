@@ -817,6 +817,66 @@ export function demoHandle(path: string, init: RequestInit = {}): unknown {
     };
   }
 
+  // -------- Analytics: Expense / Closing Balance / Doctor / Outsourced (admin only, read-only) --------
+  {
+    const m = path.match(/^\/analytics\/(expenses|closing-balance|doctor-referrals|outsourced-labs)(\?|$)/);
+    if (m && method === "GET") {
+      const me = DEMO_USERS.find(u => u.user.id === store.currentUserId);
+      if (me && me.user.role !== "admin") throw new Error("Insufficient role");
+      const url = new URL(`http://x${path}`);
+      const fromDate = url.searchParams.get("fromDate") || todayIST();
+      const toDate = url.searchParams.get("toDate") || fromDate;
+      const inRange = (d: string) => d >= fromDate && d <= toDate;
+      const r2 = (n: number) => Math.round(n * 100) / 100;
+      if (m[1] === "expenses") {
+        return { fromDate, toDate, rows: store.expenses.filter(e => inRange(e.date)).sort((a, b) => a.date.localeCompare(b.date))
+          .map(e => ({ id: e.id, date: e.date, description: e.description, mode: e.mode, amount: Number(e.amount) })) };
+      }
+      if (m[1] === "closing-balance") {
+        const today = todayIST();
+        const rows: any[] = [];
+        const sum = (list: Array<{ date: string; amount: string }>, d: string) => list.filter(x => x.date === d).reduce((s, x) => s + Number(x.amount), 0);
+        for (let d = fromDate < LEDGER_START ? LEDGER_START : fromDate; d <= toDate && d <= today;) {
+          if (!isSundayStr(d)) {
+            const opening = openingFor(d);
+            const c = netRows(store.payments.filter(p => p.date === d && p.mode === "cash")).reduce((s, p) => s + Number(p.amount), 0);
+            const e = sum(store.expenses.filter(x => x.mode === "cash"), d);
+            const h = sum(store.handovers as any, d);
+            const a = sum(store.cashAdded as any, d);
+            rows.push({ date: d, openingCash: r2(opening), cashCollection: r2(c), addedCash: r2(a), cashExpenses: r2(e), cashTakenAway: r2(h), closingCash: r2(opening + c + a - e - h), closed: isClosed(d) });
+          }
+          const nx = new Date(`${d}T00:00:00.000Z`); nx.setUTCDate(nx.getUTCDate() + 1); d = nx.toISOString().slice(0, 10);
+        }
+        return { fromDate, toDate, rows };
+      }
+      const pts = store.patients.filter(p => inRange(p.entryDate));
+      if (m[1] === "doctor-referrals") {
+        const g = new Map<string, any>();
+        for (const p of pts) {
+          const doctor = (p.referredDoctor ?? "").trim() || "Self / Not specified";
+          const k = doctor.toLowerCase();
+          const row = g.get(k) ?? { doctor, patientCount: 0, total: 0, discount: 0, net: 0, paid: 0, balance: 0 };
+          const net = Number(p.net);
+          const paid = netRows(store.payments.filter(x => x.patientId === p.id)).reduce((s, x) => s + Math.max(0, Number(x.amount)), 0);
+          row.patientCount++; row.total += Number(p.total); row.discount += Number(p.discount); row.net += net; row.paid += paid; row.balance += Math.max(0, net - paid);
+          g.set(k, row);
+        }
+        const rows = [...g.values()].map(r => ({ ...r, total: r2(r.total), discount: r2(r.discount), net: r2(r.net), paid: r2(r.paid), balance: r2(r.balance) }))
+          .sort((a, b) => b.net - a.net || a.doctor.localeCompare(b.doctor));
+        return { fromDate, toDate, rows };
+      }
+      const details: any[] = [];
+      for (const p of [...pts].sort((a, b) => a.entryDate.localeCompare(b.entryDate) || a.registerNumber - b.registerNumber)) {
+        for (const t of p.tests) {
+          const lab = (t.test.outsourced ? t.test.outsourcedLab ?? "" : "").trim();
+          if (!lab || /in-?house/i.test(lab)) continue;
+          details.push({ date: p.entryDate, registerNumber: p.registerNumber, patientId: p.id, name: p.name, testName: t.test.name, lab, rate: Number(t.rateAtEntry) });
+        }
+      }
+      return { fromDate, toDate, details };
+    }
+  }
+
   // -------- Analytics: Daily / Monthly Collection Reports (admin only) --------
   if ((path.startsWith("/analytics/daily-report") || path.startsWith("/analytics/monthly-report")) && method === "GET") {
     const me = DEMO_USERS.find(u => u.user.id === store.currentUserId);

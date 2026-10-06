@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { PaymentsService } from '../payments/payments.service';
+import { isSunday, isLedgerStartDay, LEDGER_START_DATE, LEDGER_START_OPENING_CASH } from '../../config/ledger.config';
 import { buildDailyReport, buildMonthlyReport, ReportPatient, ReportPayment, SettlementRow } from './report-builder';
 
 /**
@@ -290,5 +291,111 @@ export class AnalyticsService {
       this.toReportPayments(patients.flatMap((p: any) => p.payments)),
       previousBalance,
     );
+  }
+
+  // ================= Expense / Closing Balance / Doctor / Outsourced reports =================
+  // All READ-ONLY. Nothing here creates, updates or deletes any row.
+
+  private range(fromDate: string, toDate: string) {
+    return { gte: parseDate(fromDate), lte: parseDate(toDate) };
+  }
+
+  /** Expense report — Expense table only. */
+  async expenseReport(fromDate: string, toDate: string) {
+    const rows = await this.prisma.expense.findMany({
+      where: { date: this.range(fromDate, toDate) },
+      orderBy: [{ date: 'asc' }, { createdAt: 'asc' }],
+    });
+    return {
+      fromDate, toDate,
+      rows: rows.map((e) => ({ id: e.id, date: this.key(e.date), description: e.description, mode: e.mode as string, amount: this.num(e.amount) })),
+    };
+  }
+
+  /**
+   * Closing balance report — same cash formula as the daily ledger summary:
+   * closing = opening + cash collection + added cash − cash expenses − cash taken away.
+   * Opening follows the ledger rule (start-day cash, else previous ledger day's closing
+   * only when that day is closed, else 0). Reads DailyLedger; never writes it.
+   */
+  async closingBalanceReport(fromDate: string, toDate: string) {
+    const today = new Date(Date.now() + 5.5 * 3600 * 1000).toISOString().slice(0, 10);
+    const start = fromDate < LEDGER_START_DATE ? LEDGER_START_DATE : fromDate;
+    const end = toDate > today ? today : toDate;
+    if (end < start) return { fromDate, toDate, rows: [] };
+    const range = this.range(start, end);
+    const [ledgers, before, payments, expenses, handovers, added] = await Promise.all([
+      this.prisma.dailyLedger.findMany({ where: { date: range } }),
+      this.prisma.dailyLedger.findFirst({ where: { date: { lt: parseDate(start) } }, orderBy: { date: 'desc' } }),
+      this.prisma.payment.findMany({ where: { date: range, mode: 'cash' }, select: { date: true, amount: true } }),
+      this.prisma.expense.findMany({ where: { date: range, mode: 'cash' }, select: { date: true, amount: true } }),
+      this.prisma.cashHandover.findMany({ where: { date: range }, select: { date: true, amount: true } }),
+      this.prisma.cashAdded.findMany({ where: { date: range }, select: { date: true, amount: true } }),
+    ]);
+    const sumBy = (list: Array<{ date: Date; amount: any }>) => {
+      const m = new Map<string, number>();
+      for (const x of list) m.set(this.key(x.date), (m.get(this.key(x.date)) ?? 0) + this.num(x.amount));
+      return m;
+    };
+    const cash = sumBy(payments), exp = sumBy(expenses), hand = sumBy(handovers), add = sumBy(added);
+    const byDate = new Map(ledgers.map((l) => [this.key(l.date), l]));
+    let last: { closingBalance: any; closedAt: Date | null } | null = before;
+    const r2 = (n: number) => Math.round(n * 100) / 100;
+    const rows: any[] = [];
+    for (let d = start; d <= end; d = iso(new Date(parseDate(d).getTime() + 86400000))) {
+      const day = parseDate(d);
+      if (isSunday(day)) continue;
+      const opening = isLedgerStartDay(day) ? LEDGER_START_OPENING_CASH : last && last.closedAt ? this.num(last.closingBalance) : 0;
+      const row = byDate.get(d);
+      const c = cash.get(d) ?? 0, a = add.get(d) ?? 0, e = exp.get(d) ?? 0, h = hand.get(d) ?? 0;
+      rows.push({
+        date: d, openingCash: r2(opening), cashCollection: r2(c), addedCash: r2(a), cashExpenses: r2(e), cashTakenAway: r2(h),
+        closingCash: r2(opening + c + a - e - h), closed: !!row?.closedAt,
+      });
+      if (row) last = row;
+    }
+    return { fromDate, toDate, rows };
+  }
+
+  /** Doctor / referral-wise report — Patient rows by entryDate, paid from canonical Payment rows. */
+  async doctorReport(fromDate: string, toDate: string) {
+    const patients = await this.prisma.patient.findMany({
+      where: { entryDate: this.range(fromDate, toDate) },
+      include: { payments: true },
+    });
+    const groups = new Map<string, { doctor: string; patientCount: number; total: number; discount: number; net: number; paid: number; balance: number }>();
+    for (const p of patients as any[]) {
+      const doctor = (p.referredDoctor ?? '').trim() || 'Self / Not specified';
+      const k = doctor.toLowerCase();
+      const g = groups.get(k) ?? { doctor, patientCount: 0, total: 0, discount: 0, net: 0, paid: 0, balance: 0 };
+      const net = this.num(p.net);
+      const paid = this.toReportPayments(p.payments).reduce((s, x) => s + (x.amount > 0 ? x.amount : 0), 0);
+      g.patientCount += 1; g.total += this.num(p.total); g.discount += this.num(p.discount);
+      g.net += net; g.paid += paid; g.balance += Math.max(0, net - paid);
+      groups.set(k, g);
+    }
+    const r2 = (n: number) => Math.round(n * 100) / 100;
+    const rows = [...groups.values()]
+      .map((g) => ({ ...g, total: r2(g.total), discount: r2(g.discount), net: r2(g.net), paid: r2(g.paid), balance: r2(g.balance) }))
+      .sort((a, b) => b.net - a.net || a.doctor.localeCompare(b.doctor));
+    return { fromDate, toDate, rows };
+  }
+
+  /** Outsourced lab-wise report — outsourced PatientTest rows only, by Patient.entryDate. */
+  async outsourcedReport(fromDate: string, toDate: string) {
+    const patients = await this.prisma.patient.findMany({
+      where: { entryDate: this.range(fromDate, toDate) },
+      include: { tests: { include: { test: true } } },
+      orderBy: [{ entryDate: 'asc' }, { registerNumber: 'asc' }],
+    });
+    const details: any[] = [];
+    for (const p of patients as any[]) {
+      for (const t of p.tests ?? []) {
+        const lab = (t.test?.outsourced ? t.test?.outsourcedLab ?? '' : '').trim();
+        if (!lab || /in-?house/i.test(lab)) continue;
+        details.push({ date: this.key(p.entryDate), registerNumber: p.registerNumber, patientId: p.id, name: p.name, testName: t.test?.name ?? '', lab, rate: this.num(t.rateAtEntry) });
+      }
+    }
+    return { fromDate, toDate, details };
   }
 }
