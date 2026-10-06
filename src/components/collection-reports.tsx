@@ -11,6 +11,7 @@ import {
   downloadDailyExcel, downloadDailyPdf, downloadMonthlyExcel, downloadMonthlyPdf,
 } from "@/lib/analytics-export";
 import { toast } from "sonner";
+import { ClosingBalanceReportTab, DoctorReportTab, ExpenseReportTab, OutsourcedReportTab } from "@/components/extra-reports";
 
 const FIRST_MONTH = "2026-08";
 const th = "px-2 py-1.5 font-medium";
@@ -43,11 +44,15 @@ export function CollectionReports() {
 
   return (
     <section className="rounded-lg border bg-card p-4">
-      <h2 className="mb-3 text-sm font-semibold">Collection Reports</h2>
+      <h2 className="mb-3 text-sm font-semibold">Reports</h2>
       <Tabs defaultValue="daily">
-        <TabsList>
+        <TabsList className="h-auto flex-wrap">
           <TabsTrigger value="daily">Daily Collection Report</TabsTrigger>
           <TabsTrigger value="monthly">Monthly Collection Report</TabsTrigger>
+          <TabsTrigger value="expenses">Expense Report</TabsTrigger>
+          <TabsTrigger value="closing">Closing Balance Report</TabsTrigger>
+          <TabsTrigger value="doctor">Doctor / Referral-wise</TabsTrigger>
+          <TabsTrigger value="outsourced">Outsourced Lab-wise</TabsTrigger>
         </TabsList>
 
         <TabsContent value="daily" className="space-y-4">
@@ -85,6 +90,10 @@ export function CollectionReports() {
           <State q={monthly} />
           {monthly.data && <MonthlyView r={monthly.data} />}
         </TabsContent>
+        <TabsContent value="expenses"><ExpenseReportTab /></TabsContent>
+        <TabsContent value="closing"><ClosingBalanceReportTab /></TabsContent>
+        <TabsContent value="doctor"><DoctorReportTab /></TabsContent>
+        <TabsContent value="outsourced"><OutsourcedReportTab /></TabsContent>
       </Tabs>
     </section>
   );
