@@ -21,6 +21,7 @@ release/
 release-new/
 release-final/
 release-v2/
+release-v2-32bit/
 # Wrangler / Cloudflare
 .wrangler/
 .dev.vars
